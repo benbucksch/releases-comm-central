@@ -18,10 +18,14 @@ namespace mozilla::mime {
  * This implementation was based on the earlier draft
  * <ftp://ftp.ietf.org/internet-drafts/draft-gellens-format-06.txt>
  */
-class TextPlainFlowed : Text {
+class TextPlainFlowed : public Text {
 public:
   TextPlainFlowed();
   virtual ~TextPlainFlowed();
+
+  override int ParseBegin();
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
 
   bool            delSp;                // DelSp=yes (RFC 3676)
   int32_t         mQuotedSizeSetting;   // mail.quoted_size

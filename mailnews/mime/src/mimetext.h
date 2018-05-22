@@ -41,11 +41,15 @@ namespace mozilla::mime {
     It's a nice coincidence that HTML's critical characters ("<", ">",
     and "&") have values under 0x40...
  */
-abstract class Text : Leaf {
+abstract class Text : public Leaf {
 public:
   Text();
   virtual ~Text();
 
+  override int ParseDecodedBuffer(const char* buf, int32_t size);
+  override int ParseEOF(bool abort_p);
+
+  int OpenDAM(char* line, int32_t length);
   int ROT13Line(char* line, int32_t length);
   int ConvertLineCharset(char* line, int32_t length);
   int InitializeCharset();

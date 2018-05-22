@@ -17,7 +17,8 @@ namespace mozilla::mime {
 
 #define SUPERCLASS Leaf
 
-int InlineImage::ParseBegin()
+int
+InlineImage::ParseBegin()
 {
   int status;
 
@@ -113,8 +114,8 @@ int InlineImage::ParseBegin()
   return 0;
 }
 
-
-int InlineImage::ParseEOF(bool abort_p)
+int
+InlineImage::ParseEOF(bool abort_p)
 {
   int status;
   if (this.closed_p) return 0;
@@ -133,8 +134,8 @@ int InlineImage::ParseEOF(bool abort_p)
   return status;
 }
 
-
-int InlineImage::ParseDecodedBuffer(const char *buf, int32_t size)
+int
+InlineImage::ParseDecodedBuffer(const char *buf, int32_t size)
 {
   /* This is called by Leaf.ParseBuffer() with blocks of data
    that have already been base64-decoded.  Pass this raw image data
@@ -197,7 +198,8 @@ int InlineImage::ParseDecodedBuffer(const char *buf, int32_t size)
 }
 
 
-int InlineImage::ParseLine(const char *line, int32_t length)
+int
+InlineImage::ParseLine(const char *line, int32_t length)
 {
   NS_ERROR("This method should never be called. Inline images do no line buffering.");
   return -1;

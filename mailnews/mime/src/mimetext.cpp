@@ -31,13 +31,14 @@ namespace mozilla::mime {
 
 #define SUPERCLASS Leaf
 
-int Text::Text()
+Text::Text()
 {
   this.initializedCharset = false;
   this.needUpdateMsgWinCharset = false;
 }
 
-int Text::InitializeCharset()
+int
+Text::InitializeCharset()
 {
   this.inputAutodetect = false;
   this.charsetOverridable = false;
@@ -151,7 +152,8 @@ Text::~Text()
 }
 
 
-int Text::ParseEOF(bool abort_p)
+int
+Text::ParseEOF(bool abort_p)
 {
   int status;
 
@@ -191,7 +193,7 @@ int Text::ParseEOF(bool abort_p)
      // TODO check status
   }
 
-  return SUPERCLASS::ParseOEF(abort_p);
+  return SUPERCLASS::ParseEOF(abort_p);
 }
 
 int Text:ParseEnd(bool abort_p)
@@ -231,7 +233,8 @@ const unsigned char rot13_table[256] = {
   232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246,
   247, 248, 249, 250, 251, 252, 253, 254, 255 };
 
-int Text:ROT13Line(char *line, int32_t length)
+int
+Text:ROT13Line(char *line, int32_t length)
 {
   unsigned char *s, *end;
   PR_ASSERT(line);
@@ -247,7 +250,8 @@ int Text:ROT13Line(char *line, int32_t length)
 }
 
 
-int Text::ParseDecodedBuffer(const char *buf, int32_t size)
+int
+Text::ParseDecodedBuffer(const char *buf, int32_t size)
 {
   PR_ASSERT(!this.closed_p);
   if (this.closed_p) return -1;
@@ -272,7 +276,8 @@ int Text::ParseDecodedBuffer(const char *buf, int32_t size)
              this);
 }
 
-int Text::ConvertAndParseLine(char* line, int32_t length)
+int
+Text::ConvertAndParseLine(char* line, int32_t length)
 {
   int status;
   nsAutoCString converted;
@@ -312,7 +317,8 @@ int Text::ConvertAndParseLine(char* line, int32_t length)
 
 // In this function, all buffered lines in lineDam will be sent to charset detector
 // and a charset will be used to parse all those line and following lines in this mime obj.
-int Text::OpenDAM(char* line, int32_t length)
+int
+Text::OpenDAM(char* line, int32_t length)
 {
   const char* detectedCharset = nullptr;
   nsresult res = NS_OK;
@@ -364,8 +370,8 @@ int Text::OpenDAM(char* line, int32_t length)
   return status;
 }
 
-
-int Text::RotateConvertAndParseLine(char* line, int32_t length)
+int
+Text::RotateConvertAndParseLine(char* line, int32_t length)
 {
   int status = 0;
 

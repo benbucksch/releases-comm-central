@@ -101,21 +101,21 @@ int Leaf::ParseBuffer(const char* buffer, int32_t size)
   return status;
 }
 
-
-int Leaf::ParseLine(const char* line, int32_t length)
+int
+Leaf::ParseLine(const char* line, int32_t length)
 {
   NS_ERROR("abstract function");
   return -1;
 }
 
-
-bool Leaf::DisplayableInline(MimeHeaders *hdrs)
+bool
+Leaf::DisplayableInline(MimeHeaders *hdrs)
 {
   return true;
 }
 
-
-int Leaf::ParseEOF(bool abort_p)
+int
+Leaf::ParseEOF(bool abort_p)
 {
   if (this.closed_p) return 0;
 
@@ -135,8 +135,8 @@ int Leaf::ParseEOF(bool abort_p)
   return SUPERCLASS::ParseEOF(abort_p);
 }
 
-
-int Leaf::CloseDecoder()
+int
+Leaf::CloseDecoder()
 {
   if (this.decoder_data)
   {

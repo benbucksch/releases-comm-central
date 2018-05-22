@@ -19,10 +19,17 @@ namespace mozilla::mime {
  *
  * This class provides that service in its ParseBuffer() method.
  */
-abstract public class Leaf {
+abstract class Leaf : public Part {
 public:
   Leaf();
   virtual ~Leaf();
+
+  override int ParseBegin();
+  override int ParseBuffer(const char *buf, int32_t size);
+  override int ParseDecodedBuffer(const char* buf, int32_t size);
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
+  override static bool DisplayableInline(Headers *hdrs);
 
   /**
    * This is the callback that is handed to the decoder.
@@ -37,8 +44,9 @@ public:
    * to the decoded data before it is line-buffered), the ParseDecodedBuffer()
    * method should be overridden. ExternalObject does this.
    */
-  int ParseDecodedBuffer(const char* buf, int32_t size);
-  int CloseDecoder();
+  virtual int ParseDecodedBuffer(const char* buf, int32_t size);
+
+  virtual int CloseDecoder();
 
   /**
    * If we're doing Base64, Quoted-Printable, or UU decoding,

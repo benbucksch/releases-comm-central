@@ -15,7 +15,7 @@ namespace mozilla::mime {
  * This is the base-class for the objects representing all other MIME types.
  * was: MimeObject
  */
-abstract public class Part {
+abstract class Part {
 public:
   Part(Headers* hdrs, const char* contentTypeOverride);
 
@@ -38,7 +38,7 @@ public:
    * Called after constructor but before ParseLine() or ParseBuffer().
    * Can be used to initialize various parsing machinery.
    */
-  int ParseBegin();
+  virtual int ParseBegin();
 
   /**
    * This is the method by which you feed arbitrary data into the parser
@@ -49,7 +49,7 @@ public:
   * then the data may be decoded by ParseBuffer() before ParseLine()
   * is called.  (The MimeLeaf class provides this functionality.)
   */
-  int ParseBuffer(const char *buf, int32_t size);
+  virtual int ParseBuffer(const char *buf, int32_t size);
 
   /**
    * This method is called (by ParseBuffer()) for each complete line of
@@ -64,7 +64,7 @@ public:
    * You should generally not call ParseLine() directly, since that could
    * bypass decoding. You should call ParseBuffer() instead.
    */
-  int ParseLine(const char *line, int32_t length);
+  virtual int ParseLine(const char *line, int32_t length);
 
   /**
    * This is called when there is no more data to be handed to the object:
@@ -76,7 +76,7 @@ public:
    *
    * The closed_p instance variable is used to prevent multiple calls to ParseEOF().
    */
-  int ParseEOF(bool abort_p);
+  virtual int ParseEOF(bool abort_p);
 
   /**
    * Called after ParseEOF() but before the destructor.
@@ -91,7 +91,7 @@ public:
    * The parsed_p instance variable is used to prevent multiple calls to
    * ParseEnd().
    */
-  int ParseEnd(bool abort_p);
+  virtual int ParseEnd(bool abort_p);
 
   /**
    * This method should return true if this class of object will be displayed
@@ -103,7 +103,7 @@ public:
    * might be instantiated -- from this, the method may extract additional
    * information that it might need to make its decision.
    */
-  static bool DisplayableInline(Headers *hdrs);
+  virtual static bool DisplayableInline(Headers *hdrs);
 
   //////////////////////////////
   // Properties

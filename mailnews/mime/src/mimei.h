@@ -238,6 +238,7 @@ extern int Options::Write(Headers*, DisplayOptions*,
  * to remember info about the last MIME object we've parsed and displayed.
  * @see GuessURLContentName(). */
 class DisplayData {
+public:
   Part* lastParsedPbject;
   char* lastParsedURL;
 };

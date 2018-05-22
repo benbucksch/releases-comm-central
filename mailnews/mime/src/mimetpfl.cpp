@@ -34,7 +34,8 @@ static nsresult Line_convert_whitespace(const nsString& a_line,
                                  const bool a_convert_all_whitespace,
                                  nsString& a_out_line);
 
-static int TextPlainFlowed::ParseBegin()
+int
+TextPlainFlowed::ParseBegin()
 {
   int status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
@@ -161,7 +162,8 @@ static int TextPlainFlowed::ParseBegin()
   return 0;
 }
 
-static int TextPlainFlowed::ParseEOF(bool abort_p)
+int
+TextPlainFlowed::ParseEOF(bool abort_p)
 {
   int status = 0;
   struct TextPlainFlowedExData *exdata = nullptr;
@@ -226,7 +228,8 @@ EarlyOut:
 }
 
 
-static int TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
+int
+TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
 {
   int status;
   bool quoting = ( this.options

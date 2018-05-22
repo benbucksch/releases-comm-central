@@ -13,8 +13,13 @@ namespace mozilla::mime {
 /** The InlineImage class implements those MIME image types which can be
  * displayed inline.
  */
-public class InlineImage : Leaf {
+class InlineImage : public Leaf {
 public:
+  override int ParseBegin();
+  override int ParseDecodedBuffer(const char* buf, int32_t size);
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
+
   /**
    * Opaque data object for the backend-specific inline-image-display code
    * (internal-external-reconnect nastiness).
