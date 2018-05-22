@@ -18,53 +18,53 @@
 MimeDefClass(MimeEncrypted, MimeEncryptedClass, mimeEncryptedClass,
        &MIME_SUPERCLASS);
 
-static int MimeEncrypted_initialize (MimeObject *);
-static void MimeEncrypted_finalize (MimeObject *);
-static int MimeEncrypted_parse_begin (MimeObject *);
-static int MimeEncrypted_parse_buffer (const char *, int32_t, MimeObject *);
-static int MimeEncrypted_parse_line (const char *, int32_t, MimeObject *);
-static int MimeEncrypted_parse_decoded_buffer (const char *, int32_t, MimeObject *);
-static int MimeEncrypted_parse_eof (MimeObject *, bool);
-static int MimeEncrypted_parse_end (MimeObject *, bool);
-static int MimeEncrypted_add_child (MimeObject *, MimeObject *);
+static int MimeEncrypted_initialize (Part *);
+static void MimeEncrypted_finalize (Part *);
+static int MimeEncrypted_ParseBegin (Part *);
+static int MimeEncrypted_ParseBuffer (const char *, int32_t, Part *);
+static int MimeEncrypted_ParseLine (const char *, int32_t, Part *);
+static int MimeEncrypted_ParseDecodedBuffer (const char *, int32_t, Part *);
+static int MimeEncrypted_ParseEOF (Part *, bool);
+static int MimeEncrypted_ParseEnd (Part *, bool);
+static int MimeEncrypted_add_child (Part *, MimeObject *);
 
 static int MimeHandleDecryptedOutput (const char *, int32_t, void *);
-static int MimeHandleDecryptedOutputLine (char *, int32_t, MimeObject *);
-static int MimeEncrypted_close_headers (MimeObject *);
-static int MimeEncrypted_emit_buffered_child(MimeObject *);
+static int MimeHandleDecryptedOutputLine (char *, int32_t, Part *);
+static int MimeEncrypted_close_headers (Part *);
+static int MimeEncrypted_emit_buffered_child(Part *);
 
 static int
 MimeEncryptedClassInitialize(MimeEncryptedClass *clazz)
 {
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   MimeContainerClass *cclass = (MimeContainerClass *) clazz;
 
   NS_ASSERTION(!oclass->class_initialized, "1.2 <mscott@netscape.com> 01 Nov 2001 17:59");
   oclass->initialize   = MimeEncrypted_initialize;
   oclass->finalize     = MimeEncrypted_finalize;
-  oclass->parse_begin  = MimeEncrypted_parse_begin;
-  oclass->parse_buffer = MimeEncrypted_parse_buffer;
-  oclass->parse_line   = MimeEncrypted_parse_line;
-  oclass->parse_eof    = MimeEncrypted_parse_eof;
-  oclass->parse_end    = MimeEncrypted_parse_end;
+  oclass->ParseBegin  = MimeEncrypted_parse_begin;
+  oclass->ParseBuffer = MimeEncrypted_parse_buffer;
+  oclass->ParseLine   = MimeEncrypted_parse_line;
+  oclass->ParseEOF    = MimeEncrypted_parse_eof;
+  oclass->ParseEnd    = MimeEncrypted_parse_end;
 
   cclass->add_child    = MimeEncrypted_add_child;
 
-  clazz->parse_decoded_buffer = MimeEncrypted_parse_decoded_buffer;
+  clazz->ParseDecodedBuffer = MimeEncrypted_parse_decoded_buffer;
 
   return 0;
 }
 
 
 static int
-MimeEncrypted_initialize (MimeObject *obj)
+MimeEncrypted_initialize (Part *obj)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(obj);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(obj);
 }
 
 
 static int
-MimeEncrypted_parse_begin (MimeObject *obj)
+MimeEncrypted_ParseBegin (Part *obj)
 {
   MimeEncrypted *enc = (MimeEncrypted *) obj;
   MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
@@ -88,9 +88,9 @@ MimeEncrypted_parse_begin (MimeObject *obj)
   {
     enc->decoder_data =
     MimeQPDecoderInit (/* The (MimeConverterOutputCallback) cast is to turn the
-                          `void' argument into `MimeObject'. */
+                          `void' argument into `Part'. */
       ((MimeConverterOutputCallback)
-       ((MimeEncryptedClass *)obj->clazz)->parse_decoded_buffer),
+       ((MimeEncryptedClass *)obj->clazz)->ParseDecodedBuffer),
       obj);
 
     if (!enc->decoder_data)
@@ -107,21 +107,21 @@ MimeEncrypted_parse_begin (MimeObject *obj)
   {
     enc->decoder_data =
     fn (/* The (MimeConverterOutputCallback) cast is to turn the `void'
-           argument into `MimeObject'. */
+           argument into `Part'. */
       ((MimeConverterOutputCallback)
-       ((MimeEncryptedClass *)obj->clazz)->parse_decoded_buffer),
+       ((MimeEncryptedClass *)obj->clazz)->ParseDecodedBuffer),
       obj);
 
     if (!enc->decoder_data)
     return MIME_OUT_OF_MEMORY;
   }
 
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
 }
 
 
 static int
-MimeEncrypted_parse_buffer (const char *buffer, int32_t size, MimeObject *obj)
+MimeEncrypted_ParseBuffer (const char *buffer, int32_t size, Part *obj)
 {
   /* (Duplicated from MimeLeaf, see comments in mimecryp.h.)
    */
@@ -137,21 +137,21 @@ MimeEncrypted_parse_buffer (const char *buffer, int32_t size, MimeObject *obj)
   if (enc->decoder_data)
   return MimeDecoderWrite (enc->decoder_data, buffer, size, nullptr);
   else
-  return ((MimeEncryptedClass *)obj->clazz)->parse_decoded_buffer (buffer,
+  return ((MimeEncryptedClass *)obj->clazz)->ParseDecodedBuffer (buffer,
                                    size,
                                    obj);
 }
 
 
 static int
-MimeEncrypted_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeEncrypted_ParseLine (const char *line, int32_t length, Part *obj)
 {
   NS_ERROR("This method shouldn't ever be called.");
   return -1;
 }
 
 static int
-MimeEncrypted_parse_decoded_buffer (const char *buffer, int32_t size, MimeObject *obj)
+MimeEncrypted_ParseDecodedBuffer (const char *buffer, int32_t size, Part *obj)
 {
   MimeEncrypted *enc = (MimeEncrypted *) obj;
   return
@@ -161,7 +161,7 @@ MimeEncrypted_parse_decoded_buffer (const char *buffer, int32_t size, MimeObject
 
 
 static int
-MimeEncrypted_parse_eof (MimeObject *obj, bool abort_p)
+MimeEncrypted_ParseEOF (Part *obj, bool abort_p)
 {
   int status = 0;
   MimeEncrypted *enc = (MimeEncrypted *) obj;
@@ -183,7 +183,7 @@ MimeEncrypted_parse_eof (MimeObject *obj, bool abort_p)
 
   /* If there is still data in the ibuffer, that means that the last
    *decrypted* line of this part didn't end in a newline; so push it out
-   anyway (this means that the parse_line method will be called with a
+   anyway (this means that the ParseLine method will be called with a
    string with no trailing newline, which isn't the usual case.)  */
   if (!abort_p &&
     obj->ibuffer_fp > 0)
@@ -199,16 +199,16 @@ MimeEncrypted_parse_eof (MimeObject *obj, bool abort_p)
   }
 
 
-  /* Now run the superclass's parse_eof, which (because we've already taken
+  /* Now run the superclass's ParseEOF, which (because we've already taken
    care of ibuffer in a way appropriate for this class, immediately above)
    will ony set closed_p to true.
    */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof (obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF (obj, abort_p);
   if (status < 0) return status;
 
 
   /* Now close off the underlying crypto module.  At this point, the crypto
-   module has all of the input.  (DecoderDestroy called parse_decoded_buffer
+   module has all of the input.  (DecoderDestroy called ParseDecodedBuffer
    which called crypto_write, with the last of the data.)
    */
   if (enc->crypto_closure)
@@ -232,14 +232,14 @@ MimeEncrypted_parse_eof (MimeObject *obj, bool abort_p)
 
 
 static int
-MimeEncrypted_parse_end (MimeObject *obj, bool abort_p)
+MimeEncrypted_ParseEnd (Part *obj, bool abort_p)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_end (obj, abort_p);
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseEnd (obj, abort_p);
 }
 
 
 static void
-MimeEncrypted_cleanup (MimeObject *obj, bool finalizing_p)
+MimeEncrypted_cleanup (Part *obj, bool finalizing_p)
 {
   MimeEncrypted *enc = (MimeEncrypted *) obj;
 
@@ -275,10 +275,10 @@ MimeEncrypted_cleanup (MimeObject *obj, bool finalizing_p)
 
 
 static void
-MimeEncrypted_finalize (MimeObject *obj)
+MimeEncrypted_finalize (Part *obj)
 {
   MimeEncrypted_cleanup (obj, true);
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize (obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize (obj);
 }
 
 
@@ -299,22 +299,22 @@ MimeHandleDecryptedOutput (const char *buf, int32_t buf_size,
    blank line, as usual) and will then handle the included data as
    appropriate.
    */
-  MimeObject *obj = (MimeObject *) output_closure;
+  Part *obj = (MimeObject *) output_closure;
 
   /* Is it truly safe to use ibuffer here?  I think so... */
   return mime_LineBuffer (buf, buf_size,
              &obj->ibuffer, &obj->ibuffer_size, &obj->ibuffer_fp,
              true,
              ((int (*) (char *, int32_t, void *))
-              /* This cast is to turn void into MimeObject */
+              /* This cast is to turn void into Part */
               MimeHandleDecryptedOutputLine),
              obj);
 }
 
 static int
-MimeHandleDecryptedOutputLine (char *line, int32_t length, MimeObject *obj)
+MimeHandleDecryptedOutputLine (char *line, int32_t length, Part *obj)
 {
-  /* Largely the same as MimeMessage_parse_line (the other MIME container
+  /* Largely the same as MimeMessage_ParseLine (the other MIME container
    type which contains exactly one child.)
    */
   MimeEncrypted *enc = (MimeEncrypted *) obj;
@@ -328,7 +328,7 @@ MimeHandleDecryptedOutputLine (char *line, int32_t length, MimeObject *obj)
     obj->options &&
     !obj->options->write_html_p &&
     obj->options->output_fn)
-  return MimeObject_write(obj, line, length, true);
+  return Part_write(obj, line, length, true);
 
   /* If we already have a child object in the buffer, then we're done parsing
    headers, and all subsequent lines get passed to the inferior object
@@ -347,7 +347,7 @@ MimeHandleDecryptedOutputLine (char *line, int32_t length, MimeObject *obj)
     if (!enc->hdrs) return MIME_OUT_OF_MEMORY;
   }
 
-  status = MimeHeaders_parse_line(line, length, enc->hdrs);
+  status = MimeHeaders_ParseLine(line, length, enc->hdrs);
   if (status < 0) return status;
 
   /* If this line is blank, we're now done parsing headers, and should
@@ -363,7 +363,7 @@ MimeHandleDecryptedOutputLine (char *line, int32_t length, MimeObject *obj)
 }
 
 static int
-MimeEncrypted_close_headers (MimeObject *obj)
+MimeEncrypted_close_headers (Part *obj)
 {
   MimeEncrypted *enc = (MimeEncrypted *) obj;
 
@@ -382,7 +382,7 @@ MimeEncrypted_close_headers (MimeObject *obj)
 
 
 static int
-MimeEncrypted_add_child (MimeObject *parent, MimeObject *child)
+MimeEncrypted_add_child (Part *parent, MimeObject *child)
 {
   MimeContainer *cont = (MimeContainer *) parent;
   if (!parent || !child) return -1;
@@ -395,12 +395,12 @@ MimeEncrypted_add_child (MimeObject *parent, MimeObject *child)
 
 
 static int
-MimeEncrypted_emit_buffered_child(MimeObject *obj)
+MimeEncrypted_emit_buffered_child(Part *obj)
 {
   MimeEncrypted *enc = (MimeEncrypted *) obj;
   int status = 0;
   char *ct = 0;
-  MimeObject *body;
+  Part *body;
 
   NS_ASSERTION(enc->crypto_closure, "1.2 <mscott@netscape.com> 01 Nov 2001 17:59");
 
@@ -425,7 +425,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
           (enc->crypto_closure));
     if (!html) return -1; /* MK_OUT_OF_MEMORY? */
 
-    status = MimeObject_write(obj, html, strlen(html), false);
+    status = Part_write(obj, html, strlen(html), false);
     PR_FREEIF(html);
     if (status < 0) return status;
 #endif
@@ -440,7 +440,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
       !obj->options->state->post_header_html_run_p)
     {
       MimeHeaders *outer_headers = nullptr;
-      MimeObject *p;
+      Part *p;
       for (p = obj; p->parent; p = p->parent)
         outer_headers = p->headers;
       NS_ASSERTION(obj->options->state->first_data_written_p, "1.2 <mscott@netscape.com> 01 Nov 2001 17:59");
@@ -450,7 +450,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
       obj->options->state->post_header_html_run_p = true;
       if (html)
       {
-        status = MimeObject_write(obj, html, strlen(html), false);
+        status = Part_write(obj, html, strlen(html), false);
         PR_FREEIF(html);
         if (status < 0) return status;
       }
@@ -477,7 +477,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 
 #ifdef MIME_DRAFTS
   if (obj->options->decompose_file_p) {
-  if (mime_typep (body, (MimeObjectClass*) &mimeMultipartClass) )
+  if (mime_typep (body, (PartClass*) &mimeMultipartClass) )
     obj->options->is_multipart_msg = true;
   else if (obj->options->decompose_file_init_fn)
     obj->options->decompose_file_init_fn(obj->options->stream_closure,
@@ -497,7 +497,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 
   /* Now that we've added this new object to our list of children,
    start its parser going. */
-  status = body->clazz->parse_begin(body);
+  status = body->clazz->ParseBegin(body);
   if (status < 0) return status;
 
   /* If this object (or the parent) is being output, then by definition
@@ -513,7 +513,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
    write its headers as well. */
   if (body->output_p && obj->output_p && !obj->options->write_html_p)
   {
-    status = MimeObject_write(body, "", 0, false);  /* initialize */
+    status = Part_write(body, "", 0, false);  /* initialize */
     if (status < 0) return status;
     status = MimeHeaders_write_raw_headers(body->headers, obj->options,
                        false);
@@ -527,7 +527,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
     {
     status = MimePartBufferRead(enc->part_buffer,
                 /* The (MimeConverterOutputCallback) cast is to turn the `void'
-                   argument into `MimeObject'. */
+                   argument into `Part'. */
                  ((MimeConverterOutputCallback)
                 obj->options->decompose_file_output_fn),
                 obj->options->stream_closure);
@@ -538,8 +538,8 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 
   status = MimePartBufferRead(enc->part_buffer,
                 /* The (MimeConverterOutputCallback) cast is to turn the `void'
-                   argument into `MimeObject'. */
-                 ((MimeConverterOutputCallback) body->clazz->parse_buffer),
+                   argument into `Part'. */
+                 ((MimeConverterOutputCallback) body->clazz->ParseBuffer),
                 body);
 #ifdef MIME_DRAFTS
     }
@@ -549,10 +549,10 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 
   /* The child has been fully processed.  Close it off.
    */
-  status = body->clazz->parse_eof(body, false);
+  status = body->clazz->ParseEOF(body, false);
   if (status < 0) return status;
 
-  status = body->clazz->parse_end(body, false);
+  status = body->clazz->ParseEnd(body, false);
   if (status < 0) return status;
 
 #ifdef MIME_DRAFTS
@@ -561,7 +561,7 @@ MimeEncrypted_emit_buffered_child(MimeObject *obj)
 #endif /* MIME_DRAFTS */
 
   /* Put out a separator after every encrypted object. */
-  status = MimeObject_write_separator(obj);
+  status = Part_write_separator(obj);
   if (status < 0) return status;
 
   MimeEncrypted_cleanup (obj, false);

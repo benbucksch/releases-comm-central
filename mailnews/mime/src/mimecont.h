@@ -10,9 +10,9 @@
 
 /* MimeContainer is the class for the objects representing all MIME
    types which can contain other MIME objects within them.  In addition
-   to the methods inherited from MimeObject, it provides one method:
+   to the methods inherited from Part, it provides one method:
 
-   int add_child (MimeObject *parent, MimeObject *child)
+   int add_child (Part *parent, MimeObject *child)
 
      Given a parent (a subclass of MimeContainer) this method adds the
      child (any MIME object) to the parent's list of children.
@@ -24,20 +24,20 @@ typedef struct MimeContainerClass MimeContainerClass;
 typedef struct MimeContainer      MimeContainer;
 
 struct MimeContainerClass {
-  MimeObjectClass object;
-  int (*add_child) (MimeObject *parent, MimeObject *child);
+  PartClass object;
+  int (*add_child) (Part *parent, MimeObject *child);
 };
 
 extern MimeContainerClass mimeContainerClass;
 
 struct MimeContainer {
-  MimeObject object;    /* superclass variables */
+  Part object;    /* superclass variables */
 
-  MimeObject **children;  /* list of contained objects */
+  Part **children;  /* list of contained objects */
   int32_t nchildren;      /* how many */
 };
 
 #define MimeContainerClassInitializer(ITYPE,CSUPER) \
-  { MimeObjectClassInitializer(ITYPE,CSUPER) }
+  { PartClassInitializer(ITYPE,CSUPER) }
 
 #endif /* _MIMECONT_H_ */

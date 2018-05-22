@@ -9,16 +9,16 @@
  * internal information about the object class system of libmime. When
  * libmime progresses to a C++ object class, this would probably change.
  */
-#ifndef nsMimeObjectClassAccess_h_
-#define nsMimeObjectClassAccess_h_
+#ifndef nsPartClassAccess_h_
+#define nsPartClassAccess_h_
 
 #include "mozilla/Attributes.h"
 #include "nsISupports.h"
-#include "nsIMimeObjectClassAccess.h"
+#include "nsIPartClassAccess.h"
 
-class nsMimeObjectClassAccess : public nsIMimeObjectClassAccess {
+class nsPartClassAccess : public nsIMimeObjectClassAccess {
 public:
-  nsMimeObjectClassAccess();
+  nsPartClassAccess();
 
   /* this macro defines QueryInterface, AddRef and Release for this class */
   NS_DECL_ISUPPORTS
@@ -27,7 +27,7 @@ public:
   // content type handler plugins for processing stream data.
 
   // This is the write call for outputting processed stream data.
-  NS_IMETHOD    MimeObjectWrite(void *mimeObject,
+  NS_IMETHOD    PartWrite(void *mimeObject,
                                 char *data,
                                 int32_t length,
                                 bool user_visible_p) override;
@@ -46,7 +46,7 @@ public:
                            void * opts, void**ptr) override;
 
 private:
-  virtual ~nsMimeObjectClassAccess();
+  virtual ~nsPartClassAccess();
 };
 
-#endif /* nsMimeObjectClassAccess_h_ */
+#endif /* nsPartClassAccess_h_ */

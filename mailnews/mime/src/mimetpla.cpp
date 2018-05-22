@@ -20,18 +20,18 @@
 MimeDefClass(MimeInlineTextPlain, MimeInlineTextPlainClass,
        mimeInlineTextPlainClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextPlain_parse_begin (MimeObject *);
-static int MimeInlineTextPlain_parse_line (const char *, int32_t, MimeObject *);
-static int MimeInlineTextPlain_parse_eof (MimeObject *, bool);
+static int MimeInlineTextPlain_ParseBegin (Part *);
+static int MimeInlineTextPlain_ParseLine (const char *, int32_t, Part *);
+static int MimeInlineTextPlain_ParseEOF (Part *, bool);
 
 static int
 MimeInlineTextPlainClassInitialize(MimeInlineTextPlainClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   NS_ASSERTION(!oclass->class_initialized, "class not initialized");
-  oclass->parse_begin = MimeInlineTextPlain_parse_begin;
-  oclass->parse_line  = MimeInlineTextPlain_parse_line;
-  oclass->parse_eof   = MimeInlineTextPlain_parse_eof;
+  oclass->ParseBegin = MimeInlineTextPlain_parse_begin;
+  oclass->ParseLine  = MimeInlineTextPlain_parse_line;
+  oclass->ParseEOF   = MimeInlineTextPlain_parse_eof;
   return 0;
 }
 
@@ -78,7 +78,7 @@ MimeTextBuildPrefixCSS(int32_t    quotedSizeSetting,   // mail.quoted_size
 }
 
 static int
-MimeInlineTextPlain_parse_begin (MimeObject *obj)
+MimeInlineTextPlain_ParseBegin (Part *obj)
 {
   int status = 0;
   bool quoting = ( obj->options
@@ -92,7 +92,7 @@ MimeInlineTextPlain_parse_begin (MimeObject *obj)
        (obj->options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
          || obj->options->format_out == nsMimeOutput::nsMimeMessageAttach);
 
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0) return status;
 
   if (!obj->output_p) return 0;
@@ -198,10 +198,10 @@ MimeInlineTextPlain_parse_begin (MimeObject *obj)
 
       /* text/plain objects always have separators before and after them.
        Note that this is not the case for text/enriched objects. */
-      status = MimeObject_write_separator(obj);
+      status = Part_write_separator(obj);
       if (status < 0) return status;
 
-      status = MimeObject_write(obj, openingDiv.get(), openingDiv.Length(), true);
+      status = Part_write(obj, openingDiv.get(), openingDiv.Length(), true);
       if (status < 0) return status;
     }
   }
@@ -210,7 +210,7 @@ MimeInlineTextPlain_parse_begin (MimeObject *obj)
 }
 
 static int
-MimeInlineTextPlain_parse_eof (MimeObject *obj, bool abort_p)
+MimeInlineTextPlain_ParseEOF (Part *obj, bool abort_p)
 {
   int status;
 
@@ -233,7 +233,7 @@ MimeInlineTextPlain_parse_eof (MimeObject *obj, bool abort_p)
         || obj->options->format_out == nsMimeOutput::nsMimeMessageAttach);
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) return status;
 
   if (!obj->output_p) return 0;
@@ -246,14 +246,14 @@ MimeInlineTextPlain_parse_eof (MimeObject *obj, bool abort_p)
       MimeInlineTextPlain *text = (MimeInlineTextPlain *) obj;
       if (text->mIsSig && !quoting)
       {
-        status = MimeObject_write(obj, "</div>", 6, false);  // .moz-txt-sig
+        status = Part_write(obj, "</div>", 6, false);  // .moz-txt-sig
         if (status < 0) return status;
       }
-      status = MimeObject_write(obj, "</pre>", 6, false);
+      status = Part_write(obj, "</pre>", 6, false);
       if (status < 0) return status;
       if (!quoting)
       {
-        status = MimeObject_write(obj, "</div>", 6, false);
+        status = Part_write(obj, "</div>", 6, false);
                                         // .moz-text-plain
         if (status < 0) return status;
       }
@@ -261,7 +261,7 @@ MimeInlineTextPlain_parse_eof (MimeObject *obj, bool abort_p)
       /* text/plain objects always have separators before and after them.
      Note that this is not the case for text/enriched objects.
      */
-    status = MimeObject_write_separator(obj);
+    status = Part_write_separator(obj);
     if (status < 0) return status;
   }
 
@@ -270,7 +270,7 @@ MimeInlineTextPlain_parse_eof (MimeObject *obj, bool abort_p)
 
 
 static int
-MimeInlineTextPlain_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeInlineTextPlain_ParseLine (const char *line, int32_t length, Part *obj)
 {
   int status;
   bool quoting = ( obj->options
@@ -313,7 +313,7 @@ MimeInlineTextPlain_parse_line (const char *line, int32_t length, MimeObject *ob
     { // Get the mail charset of this message.
       MimeInlineText  *inlinetext = (MimeInlineText *) obj;
       if (!inlinetext->initializeCharset)
-         ((MimeInlineTextClass*)&mimeInlineTextClass)->initialize_charset(obj);
+         ((MimeInlineTextClass*)&mimeInlineTextClass)->InitializeCharset(obj);
       mailCharset = inlinetext->charset;
       if (mailCharset && *mailCharset) {
         rv = nsMsgI18NConvertToUnicode(nsDependentCString(mailCharset),
@@ -421,7 +421,7 @@ MimeInlineTextPlain_parse_line (const char *line, int32_t length, MimeObject *ob
 
     if (!(text->mIsSig && quoting && text->mStripSig))
     {
-      status = MimeObject_write(obj, prefaceResultStr.get(), prefaceResultStr.Length(), true);
+      status = Part_write(obj, prefaceResultStr.get(), prefaceResultStr.Length(), true);
       if (status < 0) return status;
       nsAutoCString outString;
       if (obj->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
@@ -435,7 +435,7 @@ MimeInlineTextPlain_parse_line (const char *line, int32_t length, MimeObject *ob
         NS_ENSURE_SUCCESS(rv, -1);
       }
 
-      status = MimeObject_write(obj, outString.get(), outString.Length(), true);
+      status = Part_write(obj, outString.get(), outString.Length(), true);
     }
     else
     {
@@ -444,7 +444,7 @@ MimeInlineTextPlain_parse_line (const char *line, int32_t length, MimeObject *ob
   }
   else
   {
-    status = MimeObject_write(obj, line, length, true);
+    status = Part_write(obj, line, length, true);
   }
 
   return status;

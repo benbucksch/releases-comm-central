@@ -103,7 +103,7 @@ MimeHeaders_free (MimeHeaders *hdrs)
 }
 
 int
-MimeHeaders_parse_line (const char *buffer, int32_t size, MimeHeaders *hdrs)
+MimeHeaders_ParseLine (const char *buffer, int32_t size, MimeHeaders *hdrs)
 {
   int status = 0;
   int desired_size;

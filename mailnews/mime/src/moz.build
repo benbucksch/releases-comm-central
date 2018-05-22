@@ -65,7 +65,7 @@ SOURCES += [
     'mimeunty.cpp',
     'nsCMS.cpp',
     'nsCMSSecureMessage.cpp',
-    'nsMimeObjectClassAccess.cpp',
+    'nsPartClassAccess.cpp',
     'nsSimpleMimeConverterStub.cpp',
     'nsStreamConverter.cpp',
 ]

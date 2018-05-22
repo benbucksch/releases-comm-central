@@ -162,8 +162,8 @@ public:
   bool no_output_p; /* Will never write output when this is true.
           (When false, output or not may depend on other things.)
           This needs to be in the options, because the method
-          MimeObject_parse_begin is controlling the property "output_p"
-          (on the MimeObject) so we need a way for other functions to
+          Part_ParseBegin is controlling the property "output_p"
+          (on the Part) so we need a way for other functions to
           override it and tell that we do not want output. */
 
   bool write_html_p;    /* Whether the output should be HTML, or raw. */

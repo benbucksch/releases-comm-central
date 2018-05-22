@@ -15,31 +15,31 @@
 MimeDefClass(MimeMultipartAppleDouble, MimeMultipartAppleDoubleClass,
        mimeMultipartAppleDoubleClass, &MIME_SUPERCLASS);
 
-static int MimeMultipartAppleDouble_parse_begin (MimeObject *);
-static bool MimeMultipartAppleDouble_output_child_p(MimeObject *,
-                             MimeObject *);
+static int MimeMultipartAppleDouble_ParseBegin (Part *);
+static bool MimeMultipartAppleDouble_output_child_p(Part *,
+                             Part *);
 
 static int
 MimeMultipartAppleDoubleClassInitialize(MimeMultipartAppleDoubleClass *clazz)
 {
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
 
   NS_ASSERTION(!oclass->class_initialized, "mime class not initialized");
-  oclass->parse_begin    = MimeMultipartAppleDouble_parse_begin;
+  oclass->ParseBegin    = MimeMultipartAppleDouble_parse_begin;
   mclass->output_child_p = MimeMultipartAppleDouble_output_child_p;
   return 0;
 }
 
 static int
-MimeMultipartAppleDouble_parse_begin (MimeObject *obj)
+MimeMultipartAppleDouble_ParseBegin (Part *obj)
 {
-  /* #### This method is identical to MimeExternalObject_parse_begin
+  /* #### This method is identical to MimeExternalObject_ParseBegin
    which kinda s#$%s...
    */
   int status;
 
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0) return status;
 
   /* If we're writing this object, and we're doing it in raw form, then
@@ -50,7 +50,7 @@ MimeMultipartAppleDouble_parse_begin (MimeObject *obj)
     !obj->options->write_html_p &&
     !obj->options->state->first_data_written_p)
   {
-    status = MimeObject_output_init(obj, 0);
+    status = Part_output_init(obj, 0);
     if (status < 0) return status;
     NS_ASSERTION(obj->options->state->first_data_written_p, "first data not written");
   }
@@ -164,7 +164,7 @@ done:
 }
 
 static bool
-MimeMultipartAppleDouble_output_child_p(MimeObject *obj, MimeObject *child)
+MimeMultipartAppleDouble_output_child_p(Part *obj, MimeObject *child)
 {
   MimeContainer *cont = (MimeContainer *) obj;
 

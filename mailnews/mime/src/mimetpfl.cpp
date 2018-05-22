@@ -15,17 +15,13 @@
 #include "prprf.h"
 #include "nsMsgI18N.h"
 
+namespace MIME {
+
+#define SUPERCLASS Text
+
 static const uint32_t kSpacesForATab = 4; // Must be at least 1.
 
-#define MIME_SUPERCLASS mimeInlineTextClass
-MimeDefClass(MimeInlineTextPlainFlowed, MimeInlineTextPlainFlowedClass,
-       mimeInlineTextPlainFlowedClass, &MIME_SUPERCLASS);
-
-static int MimeInlineTextPlainFlowed_parse_begin (MimeObject *);
-static int MimeInlineTextPlainFlowed_parse_line (const char *, int32_t, MimeObject *);
-static int MimeInlineTextPlainFlowed_parse_eof (MimeObject *, bool);
-
-static MimeInlineTextPlainFlowedExData *MimeInlineTextPlainFlowedExDataList = nullptr;
+static TextPlainFlowedExData* gTextPlainFlowedExDataList = nullptr;
 
 // From mimetpla.cpp
 extern "C" void MimeTextBuildPrefixCSS(
@@ -34,57 +30,40 @@ extern "C" void MimeTextBuildPrefixCSS(
                        nsACString &citationColor,      // mail.citation_color
                        nsACString &style);
 // Definition below
-static
-nsresult Line_convert_whitespace(const nsString& a_line,
+static nsresult Line_convert_whitespace(const nsString& a_line,
                                  const bool a_convert_all_whitespace,
                                  nsString& a_out_line);
 
-static int
-MimeInlineTextPlainFlowedClassInitialize(MimeInlineTextPlainFlowedClass *clazz)
+static int TextPlainFlowed::ParseBegin()
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
-  NS_ASSERTION(!oclass->class_initialized, "class not initialized");
-  oclass->parse_begin = MimeInlineTextPlainFlowed_parse_begin;
-  oclass->parse_line  = MimeInlineTextPlainFlowed_parse_line;
-  oclass->parse_eof   = MimeInlineTextPlainFlowed_parse_eof;
-
-  return 0;
-}
-
-static int
-MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
-{
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  int status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
-  status =  MimeObject_write(obj, "", 0, true); /* force out any separators... */
+  status =  this.Write("", 0, true); /* force out any separators... */
   if(status<0) return status;
 
-  bool quoting = ( obj->options
-    && ( obj->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         obj->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this.options
+    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )       );  // The output will be inserted in the composer as quotation
-  bool plainHTML = quoting || (obj->options &&
-       obj->options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
+  bool plainHTML = quoting || (this.options &&
+       this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // Just good(tm) HTML. No reliance on CSS.
 
   // Setup the data structure that is connected to the actual document
   // Saved in a linked list in case this is called with several documents
   // at the same time.
   /* This memory is freed when parse_eof is called. So it better be! */
-  struct MimeInlineTextPlainFlowedExData *exdata =
-    (MimeInlineTextPlainFlowedExData *)PR_MALLOC(sizeof(struct MimeInlineTextPlainFlowedExData));
+  TextPlainFlowedExData *exdata = new TextPlainFlowedExData();
   if(!exdata) return MIME_OUT_OF_MEMORY;
 
-  MimeInlineTextPlainFlowed *text = (MimeInlineTextPlainFlowed *) obj;
-
   // Link it up.
-  exdata->next = MimeInlineTextPlainFlowedExDataList;
-  MimeInlineTextPlainFlowedExDataList = exdata;
+  exdata->next = gTextPlainFlowedExDataList;
+  gTextPlainFlowedExDataList = exdata;
 
   // Initialize data
 
-  exdata->ownerobj = obj;
+  exdata->ownerobj = this;
   exdata->inflow = false;
   exdata->quotelevel = 0;
   exdata->isSig = false;
@@ -92,14 +71,14 @@ MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
   // check for DelSp=yes (RFC 3676)
 
   char *content_type_row =
-    (obj->headers
-     ? MimeHeaders_get(obj->headers, HEADER_CONTENT_TYPE, false, false)
+    (this.headers
+     ? this.headers.get(HEADER_CONTENT_TYPE, false, false)
      : 0);
   char *content_type_delsp =
     (content_type_row
-     ? MimeHeaders_get_parameter(content_type_row, "delsp", NULL,NULL)
+     ? Headers::getParameter(content_type_row, "delsp", NULL,NULL)
      : 0);
-  ((MimeInlineTextPlainFlowed *)obj)->delSp = content_type_delsp && !PL_strcasecmp(content_type_delsp, "yes");
+  this.delSp = content_type_delsp && !PL_strcasecmp(content_type_delsp, "yes");
   PR_Free(content_type_delsp);
   PR_Free(content_type_row);
 
@@ -107,18 +86,18 @@ MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
 
   exdata->fixedwidthfont = false;
   //  Quotes
-  text->mQuotedSizeSetting = 0;   // mail.quoted_size
-  text->mQuotedStyleSetting = 0;  // mail.quoted_style
-  text->mCitationColor.Truncate();  // mail.citation_color
-  text->mStripSig = true; // mail.strip_sig_on_reply
+  this.mQuotedSizeSetting = 0;   // mail.quoted_size
+  this.mQuotedStyleSetting = 0;  // mail.quoted_style
+  this.mCitationColor.Truncate();  // mail.citation_color
+  this.mStripSig = true; // mail.strip_sig_on_reply
 
-  nsIPrefBranch *prefBranch = GetPrefBranch(obj->options);
+  nsIPrefBranch *prefBranch = GetPrefBranch(this.options);
   if (prefBranch)
   {
-    prefBranch->GetIntPref("mail.quoted_size", &(text->mQuotedSizeSetting));
-    prefBranch->GetIntPref("mail.quoted_style", &(text->mQuotedStyleSetting));
-    prefBranch->GetCharPref("mail.citation_color", text->mCitationColor);
-    prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(text->mStripSig));
+    prefBranch->GetIntPref("mail.quoted_size", &(this.mQuotedSizeSetting));
+    prefBranch->GetIntPref("mail.quoted_style", &(this.mQuotedStyleSetting));
+    prefBranch->GetCharPref("mail.citation_color", this.mCitationColor);
+    prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(this.mStripSig));
     mozilla::DebugOnly<nsresult> rv =
       prefBranch->GetBoolPref("mail.fixed_width_messages", &(exdata->fixedwidthfont));
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get pref");
@@ -137,12 +116,12 @@ MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
   if (exdata->fixedwidthfont)
     fontstyle = "font-family: -moz-fixed";
 
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == obj->options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == obj->options->format_out)
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
   {
     int32_t fontSize;       // default font size
     int32_t fontSizePercentage;   // size percentage
-    nsresult rv = GetMailNewsFont(obj, exdata->fixedwidthfont,
+    nsresult rv = GetMailNewsFont(this, exdata->fixedwidthfont,
                                   &fontSize, &fontSizePercentage, fontLang);
     if (NS_SUCCEEDED(rv))
     {
@@ -175,40 +154,38 @@ MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
       openingDiv += '\"';
     }
     openingDiv += ">";
-    status = MimeObject_write(obj, openingDiv.get(), openingDiv.Length(), false);
+    status = this.Write(openingDiv.get(), openingDiv.Length(), false);
     if (status < 0) return status;
   }
 
   return 0;
 }
 
-static int
-MimeInlineTextPlainFlowed_parse_eof (MimeObject *obj, bool abort_p)
+static int TextPlainFlowed::ParseEOF(bool abort_p)
 {
   int status = 0;
-  struct MimeInlineTextPlainFlowedExData *exdata = nullptr;
+  struct TextPlainFlowedExData *exdata = nullptr;
 
-  bool quoting = ( obj->options
-    && ( obj->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         obj->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this.options
+    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
 
   // Has this method already been called for this object?
   // In that case return.
-  if (obj->closed_p) return 0;
+  if (this.closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) goto EarlyOut;
 
   // Look up and unlink "our" extended data structure
   // We do it in the beginning so that if an error occur, we can
   // just free |exdata|.
-  struct MimeInlineTextPlainFlowedExData **prevexdata;
-  prevexdata = &MimeInlineTextPlainFlowedExDataList;
+  TextPlainFlowedExData** prevexdata = &gTextPlainFlowedExDataList;
 
   while ((exdata = *prevexdata) != nullptr) {
-    if (exdata->ownerobj == obj) {
+    if (exdata->ownerobj == this) {
       // Fill hole
       *prevexdata = exdata->next;
       break;
@@ -217,54 +194,51 @@ MimeInlineTextPlainFlowed_parse_eof (MimeObject *obj, bool abort_p)
   }
   NS_ASSERTION (exdata, "The extra data has disappeared!");
 
-  if (!obj->output_p) {
+  if (!this.output_p) {
     status = 0;
     goto EarlyOut;
   }
 
   for(; exdata->quotelevel > 0; exdata->quotelevel--) {
-    status = MimeObject_write(obj, "</blockquote>", 13, false);
+    status = this.Write("</blockquote>", 13, false);
     if(status<0) goto EarlyOut;
   }
 
   if (exdata->isSig && !quoting) {
-    status = MimeObject_write(obj, "</div>", 6, false); // .moz-txt-sig
+    status = this.Write( "</div>", 6, false); // .moz-txt-sig
     if (status<0) goto EarlyOut;
   }
   if (!quoting) // HACK (see above)
   {
-    status = MimeObject_write(obj, "</div>", 6, false); // .moz-text-flowed
+    status = this.Write("</div>", 6, false); // .moz-text-flowed
     if (status<0) goto EarlyOut;
   }
 
   status = 0;
 
 EarlyOut:
-  PR_Free(exdata);
+  delete exdata;
 
   // Clear mCitationColor
-  MimeInlineTextPlainFlowed *text = (MimeInlineTextPlainFlowed *) obj;
-  text->mCitationColor.Truncate();
+  this.mCitationColor.Truncate();
 
   return status;
 }
 
 
-static int
-MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObject *obj)
+static int TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
 {
   int status;
-  bool quoting = ( obj->options
-    && ( obj->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         obj->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this.options
+    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
-  bool plainHTML = quoting || (obj->options &&
-       obj->options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
+  bool plainHTML = quoting || (this.options &&
+       this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // see above
 
-  struct MimeInlineTextPlainFlowedExData *exdata;
-  exdata = MimeInlineTextPlainFlowedExDataList;
-  while(exdata && (exdata->ownerobj != obj)) {
+  TextPlainFlowedExData* exdata = gTextPlainFlowedExDataList;
+  while(exdata && (exdata->ownerobj != this)) {
     exdata = exdata->next;
   }
 
@@ -309,7 +283,7 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
   {
     flowed = true;
     sigSeparator = (index - (linep - line) + 1 == 3) && !strncmp(linep, "-- ", 3);
-    if (((MimeInlineTextPlainFlowed *) obj)->delSp && !sigSeparator)
+    if (this.delSp && !sigSeparator)
        /* If line is flowed and DelSp=yes, logically
           delete trailing space. Line consisting of
           dash dash space ("-- "), commonly used as
@@ -321,19 +295,19 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
     }
   }
 
-  if (obj->options &&
-      obj->options->decompose_file_p &&
-      obj->options->decompose_file_output_fn)
+  if (this.options &&
+      this.options->decompose_file_p &&
+      this.options->decompose_file_output_fn)
   {
-    return obj->options->decompose_file_output_fn(line,
+    return this.options->decompose_file_output_fn(line,
                                                   length,
-                                                  obj->options->stream_closure);
+                                                  this.options->stream_closure);
   }
 
-  mozITXTToHTMLConv *conv = GetTextConverter(obj->options);
+  mozITXTToHTMLConv *conv = GetTextConverter(this.options);
 
   bool skipConversion = !conv ||
-                          (obj->options && obj->options->force_user_charset);
+                          (this.options && this.options->force_user_charset);
 
   nsAutoString lineSource;
   nsString lineResult;
@@ -346,7 +320,7 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
     // Convert only if the source string is not empty
     if (length - (linep - line) > 0)
     {
-      uint32_t whattodo = obj->options->whattodo;
+      uint32_t whattodo = this.options->whattodo;
       if (plainHTML)
       {
         if (quoting)
@@ -362,13 +336,12 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
 
       // For 'SaveAs', |line| is in |mailCharset|.
       // convert |line| to UTF-16 before 'html'izing (calling ScanTXT())
-      if (obj->options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+      if (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
       {
         // Get the mail charset of this message.
-        MimeInlineText  *inlinetext = (MimeInlineText *) obj;
-        if (!inlinetext->initializeCharset)
-          ((MimeInlineTextClass*)&mimeInlineTextClass)->initialize_charset(obj);
-        mailCharset = inlinetext->charset;
+        if (!this.initializedCharset)
+          this.InitializeCharset();
+        mailCharset = this.charset;
         if (mailCharset && *mailCharset) {
           rv = nsMsgI18NConvertToUnicode(nsDependentCString(mailCharset),
                                          PromiseFlatCString(inputStr),
@@ -406,15 +379,13 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
     // We get that behaviour by just going on.
   }
 
-  // Cast so we have access to the prefs we need.
-  MimeInlineTextPlainFlowed *tObj = (MimeInlineTextPlainFlowed *) obj;
   while(quoteleveldiff>0) {
     quoteleveldiff--;
     preface += "<blockquote type=cite";
 
     nsAutoCString style;
-    MimeTextBuildPrefixCSS(tObj->mQuotedSizeSetting, tObj->mQuotedStyleSetting,
-                           tObj->mCitationColor, style);
+    MimeTextBuildPrefixCSS(this.mQuotedSizeSetting, this.mQuotedStyleSetting,
+                           this.mCitationColor, style);
     if (!plainHTML && !style.IsEmpty())
     {
       preface += " style=\"";
@@ -453,7 +424,7 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
   } else {
     // Fixed paragraph.
     Line_convert_whitespace(lineResult,
-                            !plainHTML && !obj->options->wrap_long_lines_p
+                            !plainHTML && !this.options->wrap_long_lines_p
                               /* If wrap, convert all spaces but the last in
                                  a row into nbsp, otherwise all. */,
                             lineResult2);
@@ -461,12 +432,12 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
     exdata->inflow = false;
   } // End Fixed line
 
-  if (!(exdata->isSig && quoting && tObj->mStripSig))
+  if (!(exdata->isSig && quoting && this.mStripSig))
   {
-    status = MimeObject_write(obj, preface.get(), preface.Length(), true);
+    status = this.Write(preface.get(), preface.Length(), true);
     if (status < 0) return status;
     nsAutoCString outString;
-    if (obj->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
+    if (this.options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
         !mailCharset || !*mailCharset)
       CopyUTF16toUTF8(lineResult2, outString);
     else
@@ -476,7 +447,7 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, int32_t length, MimeObj
                                        outString);
       NS_ENSURE_SUCCESS(rv, -1);
     }
-    status = MimeObject_write(obj, outString.get(), outString.Length(), true);
+    status = this.Write(outString.get(), outString.Length(), true);
     return status;
   }
   return 0;
@@ -630,3 +601,6 @@ nsresult Line_convert_whitespace(const nsString& a_line,
   }
   return NS_OK;
 }
+
+
+} // namespace

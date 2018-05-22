@@ -21,32 +21,32 @@ MimeDefClass(MimeExternalBody, MimeExternalBodyClass,
        mimeExternalBodyClass, &MIME_SUPERCLASS);
 
 #ifdef XP_MACOSX
-extern MimeObjectClass mimeMultipartAppleDoubleClass;
+extern PartClass mimeMultipartAppleDoubleClass;
 #endif
 
-static int MimeExternalBody_initialize (MimeObject *);
-static void MimeExternalBody_finalize (MimeObject *);
-static int MimeExternalBody_parse_line (const char *, int32_t, MimeObject *);
-static int MimeExternalBody_parse_eof (MimeObject *, bool);
-static bool MimeExternalBody_displayable_inline_p (MimeObjectClass *clazz,
+static int MimeExternalBody_initialize (Part *);
+static void MimeExternalBody_finalize (Part *);
+static int MimeExternalBody_ParseLine (const char *, int32_t, Part *);
+static int MimeExternalBody_ParseEOF (Part *, bool);
+static bool MimeExternalBody_displayable_inline_p (PartClass *clazz,
                             MimeHeaders *hdrs);
 
 #if 0
 #if defined(DEBUG) && defined(XP_UNIX)
-static int MimeExternalBody_debug_print (MimeObject *, PRFileDesc *, int32_t);
+static int MimeExternalBody_debug_print (Part *, PRFileDesc *, int32_t);
 #endif
 #endif /* 0 */
 
 static int
 MimeExternalBodyClassInitialize(MimeExternalBodyClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
 
   NS_ASSERTION(!oclass->class_initialized, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   oclass->initialize  = MimeExternalBody_initialize;
   oclass->finalize    = MimeExternalBody_finalize;
-  oclass->parse_line  = MimeExternalBody_parse_line;
-  oclass->parse_eof  = MimeExternalBody_parse_eof;
+  oclass->ParseLine  = MimeExternalBody_parse_line;
+  oclass->ParseEOF  = MimeExternalBody_parse_eof;
   oclass->displayable_inline_p = MimeExternalBody_displayable_inline_p;
 
 #if 0
@@ -60,13 +60,13 @@ MimeExternalBodyClassInitialize(MimeExternalBodyClass *clazz)
 
 
 static int
-MimeExternalBody_initialize (MimeObject *object)
+MimeExternalBody_initialize (Part *object)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 static void
-MimeExternalBody_finalize (MimeObject *object)
+MimeExternalBody_finalize (Part *object)
 {
   MimeExternalBody *bod = (MimeExternalBody *) object;
   if (bod->hdrs)
@@ -76,11 +76,11 @@ MimeExternalBody_finalize (MimeObject *object)
   }
   PR_FREEIF(bod->body);
 
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(object);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
 }
 
 static int
-MimeExternalBody_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeExternalBody_ParseLine (const char *line, int32_t length, Part *obj)
 {
   MimeExternalBody *bod = (MimeExternalBody *) obj;
   int status = 0;
@@ -95,7 +95,7 @@ MimeExternalBody_parse_line (const char *line, int32_t length, MimeObject *obj)
   if (obj->options &&
     !obj->options->write_html_p &&
     obj->options->output_fn)
-  return MimeObject_write(obj, line, length, true);
+  return Part_write(obj, line, length, true);
 
 
   /* If we already have a `body' then we're done parsing headers, and all
@@ -120,7 +120,7 @@ MimeExternalBody_parse_line (const char *line, int32_t length, MimeObject *obj)
     if (!bod->hdrs) return MIME_OUT_OF_MEMORY;
   }
 
-  status = MimeHeaders_parse_line(line, length, bod->hdrs);
+  status = MimeHeaders_ParseLine(line, length, bod->hdrs);
   if (status < 0) return status;
 
   /* If this line is blank, we're now done parsing headers, and should
@@ -240,7 +240,7 @@ else if (!PL_strcasecmp(at, "url"))      /* RFC 2017 */
 }
 
 static int
-MimeExternalBody_parse_eof (MimeObject *obj, bool abort_p)
+MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
 {
   int status = 0;
   MimeExternalBody *bod = (MimeExternalBody *) obj;
@@ -248,12 +248,12 @@ MimeExternalBody_parse_eof (MimeObject *obj, bool abort_p)
   if (obj->closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) return status;
 
 #ifdef XP_MACOSX
   if (obj->parent && mime_typep(obj->parent,
-                                (MimeObjectClass*) &mimeMultipartAppleDoubleClass))
+                                (PartClass*) &mimeMultipartAppleDoubleClass))
     goto done;
 #endif /* XP_MACOSX */
 
@@ -339,7 +339,7 @@ MimeExternalBody_parse_eof (MimeObject *obj, bool abort_p)
       PL_strncpyz(h, STR ": ", hlen); \
         PL_strcatn(h, hlen, VAR); \
           PL_strcatn(h, hlen, MSG_LINEBREAK); \
-            status = MimeHeaders_parse_line(h, strlen(h), hdrs); \
+            status = MimeHeaders_ParseLine(h, strlen(h), hdrs); \
               if (status < 0) goto FAIL; \
     }
     FROB("Access-Type",  at);
@@ -356,7 +356,7 @@ MimeExternalBody_parse_eof (MimeObject *obj, bool abort_p)
     FROB("Subject",    subj);
 # undef FROB
     PL_strncpyz(h, MSG_LINEBREAK, hlen);
-    status = MimeHeaders_parse_line(h, strlen(h), hdrs);
+    status = MimeHeaders_ParseLine(h, strlen(h), hdrs);
     if (status < 0) goto FAIL;
 
     lurl = MimeExternalBody_make_url(ct, at, lexp, size, perm, dir, mode,
@@ -432,7 +432,7 @@ done:
 #if 0
 #if defined(DEBUG) && defined(XP_UNIX)
 static int
-MimeExternalBody_debug_print (MimeObject *obj, PRFileDesc *stream, int32_t depth)
+MimeExternalBody_debug_print (Part *obj, PRFileDesc *stream, int32_t depth)
 {
   MimeExternalBody *bod = (MimeExternalBody *) obj;
   int i;
@@ -468,7 +468,7 @@ MimeExternalBody_debug_print (MimeObject *obj, PRFileDesc *stream, int32_t depth
 #endif /* 0 */
 
 static bool
-MimeExternalBody_displayable_inline_p (MimeObjectClass *clazz,
+MimeExternalBody_displayable_inline_p (PartClass *clazz,
                      MimeHeaders *hdrs)
 {
   char *ct = MimeHeaders_get (hdrs, HEADER_CONTENT_TYPE, false, false);

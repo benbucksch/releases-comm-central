@@ -14,27 +14,27 @@
 MimeDefClass(MimeInlineTextRichtext, MimeInlineTextRichtextClass,
        mimeInlineTextRichtextClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextRichtext_parse_line (const char *, int32_t, MimeObject *);
-static int MimeInlineTextRichtext_parse_begin (MimeObject *);
-static int MimeInlineTextRichtext_parse_eof (MimeObject *, bool);
+static int MimeInlineTextRichtext_ParseLine (const char *, int32_t, Part *);
+static int MimeInlineTextRichtext_ParseBegin (Part *);
+static int MimeInlineTextRichtext_ParseEOF (Part *, bool);
 
 static int
 MimeInlineTextRichtextClassInitialize(MimeInlineTextRichtextClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   PR_ASSERT(!oclass->class_initialized);
-  oclass->parse_begin = MimeInlineTextRichtext_parse_begin;
-  oclass->parse_line  = MimeInlineTextRichtext_parse_line;
-  oclass->parse_eof   = MimeInlineTextRichtext_parse_eof;
+  oclass->ParseBegin = MimeInlineTextRichtext_parse_begin;
+  oclass->ParseLine  = MimeInlineTextRichtext_parse_line;
+  oclass->ParseEOF   = MimeInlineTextRichtext_parse_eof;
   return 0;
 }
 
 /* This function has this clunky interface because it needs to be called
-   from outside this module (no MimeObject, etc.)
+   from outside this module (no Part, etc.)
  */
 int
 MimeRichtextConvert (const char *line, int32_t length,
-           MimeObject *obj,
+           Part *obj,
            char **obufferP,
            int32_t *obuffer_sizeP,
            bool enriched_p)
@@ -89,7 +89,7 @@ MimeRichtextConvert (const char *line, int32_t length,
     if (this_start >= line + length) /* blank line */
     {
       PL_strncpyz (*obufferP, "<BR>", *obuffer_sizeP);
-      return MimeObject_write(obj, *obufferP, strlen(*obufferP), true);
+      return Part_write(obj, *obufferP, strlen(*obufferP), true);
     }
   }
 
@@ -309,12 +309,12 @@ MimeRichtextConvert (const char *line, int32_t length,
   }
   *out = 0;
 
-  return MimeObject_write(obj, *obufferP, out - *obufferP, true);
+  return Part_write(obj, *obufferP, out - *obufferP, true);
 }
 
 
 static int
-MimeInlineTextRichtext_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeInlineTextRichtext_ParseLine (const char *line, int32_t length, Part *obj)
 {
   bool enriched_p = (((MimeInlineTextRichtextClass *) obj->clazz)
             ->enriched_p);
@@ -327,23 +327,23 @@ MimeInlineTextRichtext_parse_line (const char *line, int32_t length, MimeObject 
 
 
 static int
-MimeInlineTextRichtext_parse_begin (MimeObject *obj)
+MimeInlineTextRichtext_ParseBegin (Part *obj)
 {
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   char s[] = "";
   if (status < 0) return status;
-  return MimeObject_write(obj, s, 0, true); /* force out any separators... */
+  return Part_write(obj, s, 0, true); /* force out any separators... */
 }
 
 
 static int
-MimeInlineTextRichtext_parse_eof (MimeObject *obj, bool abort_p)
+MimeInlineTextRichtext_ParseEOF (Part *obj, bool abort_p)
 {
   int status;
   if (obj->closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) return status;
 
   return 0;

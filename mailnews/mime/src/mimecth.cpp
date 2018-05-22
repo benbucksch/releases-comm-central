@@ -20,7 +20,7 @@ MIME_GetmimeLeafClass(void)
   return &mimeLeafClass;
 }
 
-MimeObjectClass *
+PartClass *
 MIME_GetmimeObjectClass(void)
 {
   return &mimeObjectClass;

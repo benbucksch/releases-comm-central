@@ -91,7 +91,7 @@ public:
   nsMimeOutputType    format_out;
   void                *pluginObj2;  /* The new XP-COM stream converter object */
   nsMIMESession       *istream;     /* Holdover - new stream we're writing out image data-if any. */
-  MimeObject          *obj;         /* The root parser object */
+  Part          *obj;         /* The root parser object */
   MimeDisplayOptions  *options;     /* Data for communicating with libmime.a */
   MimeHeaders         *headers;     /* Copy of outer most mime header */
 
@@ -109,7 +109,7 @@ public:
   char                *url_name;           // original url name */
   nsMimeOutputType    format_out;          // intended output format; should be FO_OPEN_DRAFT */
   nsMIMESession       *stream;             // not used for now
-  MimeObject          *obj;                // The root
+  Part          *obj;                // The root
   MimeDisplayOptions  *options;            // data for communicating with libmime
   MimeHeaders         *headers;            // Copy of outer most mime header
   nsTArray<nsMsgAttachedFile*> attachments;// attachments
@@ -157,12 +157,12 @@ extern "C" nsresult     mimeEmitterEndAttachment(MimeDisplayOptions *opt);
 extern "C" nsresult     mimeEmitterEndAllAttachments(MimeDisplayOptions *opt);
 extern "C" nsresult     mimeEmitterStartBody(MimeDisplayOptions *opt, bool bodyOnly, const char *msgID, const char *outCharset);
 extern "C" nsresult     mimeEmitterEndBody(MimeDisplayOptions *opt);
-extern "C" nsresult     mimeEmitterEndHeader(MimeDisplayOptions *opt, MimeObject *obj);
+extern "C" nsresult     mimeEmitterEndHeader(MimeDisplayOptions *opt, Part *obj);
 extern "C" nsresult     mimeEmitterStartHeader(MimeDisplayOptions *opt, bool rootMailHeader, bool headerOnly, const char *msgID,
                                                const char *outCharset);
 extern "C" nsresult     mimeEmitterUpdateCharacterSet(MimeDisplayOptions *opt, const char *aCharset);
 
-extern "C" nsresult     MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachmentData **data);
+extern "C" nsresult     MimeGetAttachmentList(Part *tobj, const char *aMessageURL, nsMsgAttachmentData **data);
 
 /* To Get the connection to prefs service manager */
 extern "C" nsIPrefBranch      *GetPrefBranch(MimeDisplayOptions *opt);
@@ -182,9 +182,9 @@ extern "C" char             *MimeGetStringByName(const char16_t *stringName);
 // Utility to create a nsIURI object...
 extern "C" nsresult         nsMimeNewURI(nsIURI** aInstancePtrResult, const char *aSpec, nsIURI *aBase);
 
-extern "C" nsresult SetMailCharacterSetToMsgWindow(MimeObject *obj, const char *aCharacterSet);
+extern "C" nsresult SetMailCharacterSetToMsgWindow(Part *obj, const char *aCharacterSet);
 
-extern "C"  nsresult GetMailNewsFont(MimeObject *obj, bool styleFixed, int32_t *fontPixelSize, int32_t *fontSizePercentage, nsCString& fontLang);
+extern "C"  nsresult GetMailNewsFont(Part *obj, bool styleFixed, int32_t *fontPixelSize, int32_t *fontSizePercentage, nsCString& fontLang);
 
 
 #ifdef __cplusplus

@@ -21,26 +21,26 @@
 MimeDefClass(MimeMultipartSigned, MimeMultipartSignedClass,
        mimeMultipartSignedClass, &MIME_SUPERCLASS);
 
-static int MimeMultipartSigned_initialize (MimeObject *);
-static int MimeMultipartSigned_create_child (MimeObject *);
-static int MimeMultipartSigned_close_child(MimeObject *);
-static int MimeMultipartSigned_parse_line (const char *, int32_t, MimeObject *);
-static int MimeMultipartSigned_parse_child_line (MimeObject *, const char *, int32_t,
+static int MimeMultipartSigned_initialize (Part *);
+static int MimeMultipartSigned_create_child (Part *);
+static int MimeMultipartSigned_close_child(Part *);
+static int MimeMultipartSigned_ParseLine (const char *, int32_t, Part *);
+static int MimeMultipartSigned_parse_child_line (Part *, const char *, int32_t,
                          bool);
-static int MimeMultipartSigned_parse_eof (MimeObject *, bool);
-static void MimeMultipartSigned_finalize (MimeObject *);
+static int MimeMultipartSigned_ParseEOF (Part *, bool);
+static void MimeMultipartSigned_finalize (Part *);
 
-static int MimeMultipartSigned_emit_child (MimeObject *obj);
+static int MimeMultipartSigned_emit_child (Part *obj);
 
 static int
 MimeMultipartSignedClassInitialize(MimeMultipartSignedClass *clazz)
 {
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
 
   oclass->initialize       = MimeMultipartSigned_initialize;
-  oclass->parse_line       = MimeMultipartSigned_parse_line;
-  oclass->parse_eof        = MimeMultipartSigned_parse_eof;
+  oclass->ParseLine       = MimeMultipartSigned_parse_line;
+  oclass->ParseEOF        = MimeMultipartSigned_parse_eof;
   oclass->finalize         = MimeMultipartSigned_finalize;
   mclass->create_child     = MimeMultipartSigned_create_child;
   mclass->parse_child_line = MimeMultipartSigned_parse_child_line;
@@ -51,20 +51,20 @@ MimeMultipartSignedClassInitialize(MimeMultipartSignedClass *clazz)
 }
 
 static int
-MimeMultipartSigned_initialize (MimeObject *object)
+MimeMultipartSigned_initialize (Part *object)
 {
   MimeMultipartSigned *sig = (MimeMultipartSigned *) object;
 
   /* This is an abstract class; it shouldn't be directly instantiated. */
-  PR_ASSERT(object->clazz != (MimeObjectClass *) &mimeMultipartSignedClass);
+  PR_ASSERT(object->clazz != (PartClass *) &mimeMultipartSignedClass);
 
   sig->state = MimeMultipartSignedPreamble;
 
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 static void
-MimeMultipartSigned_cleanup (MimeObject *obj, bool finalizing_p)
+MimeMultipartSigned_cleanup (Part *obj, bool finalizing_p)
 {
   MimeMultipart *mult = (MimeMultipart *) obj; /* #58075.  Fix suggested by jwz */
   MimeMultipartSigned *sig = (MimeMultipartSigned *) obj;
@@ -103,7 +103,7 @@ MimeMultipartSigned_cleanup (MimeObject *obj, bool finalizing_p)
 }
 
 static int
-MimeMultipartSigned_parse_eof (MimeObject *obj, bool abort_p)
+MimeMultipartSigned_ParseEOF (Part *obj, bool abort_p)
 {
   MimeMultipartSigned *sig = (MimeMultipartSigned *) obj;
   int status = 0;
@@ -132,20 +132,20 @@ MimeMultipartSigned_parse_eof (MimeObject *obj, bool abort_p)
   }
 
   MimeMultipartSigned_cleanup(obj, false);
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
 }
 
 
 static void
-MimeMultipartSigned_finalize (MimeObject *obj)
+MimeMultipartSigned_finalize (Part *obj)
 {
   MimeMultipartSigned_cleanup(obj, true);
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(obj);
 }
 
 
 static int
-MimeMultipartSigned_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeMultipartSigned_ParseLine (const char *line, int32_t length, Part *obj)
 {
   MimeMultipart *mult = (MimeMultipart *) obj;
   MimeMultipartSigned *sig = (MimeMultipartSigned *) obj;
@@ -158,8 +158,8 @@ MimeMultipartSigned_parse_line (const char *line, int32_t length, MimeObject *ob
    the superclass method.  This includes calling the create_child and
    close_child methods.
    */
-  status = (((MimeObjectClass *)(&MIME_SUPERCLASS))
-      ->parse_line (line, length, obj));
+  status = (((PartClass *)(&MIME_SUPERCLASS))
+      ->ParseLine (line, length, obj));
   if (status < 0) return status;
 
   /* The instance variable MimeMultipartClass->state tracks motion through
@@ -352,7 +352,7 @@ MimeMultipartSigned_parse_line (const char *line, int32_t length, MimeObject *ob
 
 
     /* If the signature block has an encoding, set up a decoder for it.
-     (Similar logic is in MimeLeafClass->parse_begin.)
+     (Similar logic is in MimeLeafClass->ParseBegin.)
      */
     {
     MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
@@ -433,7 +433,7 @@ MimeMultipartSigned_parse_line (const char *line, int32_t length, MimeObject *ob
 
 
 static int
-MimeMultipartSigned_create_child (MimeObject *parent)
+MimeMultipartSigned_create_child (Part *parent)
 {
   /* Don't actually create a child -- we call the superclass create_child
    method later, after we've fully parsed everything.  (And we only call
@@ -446,7 +446,7 @@ MimeMultipartSigned_create_child (MimeObject *parent)
 
 
 static int
-MimeMultipartSigned_close_child (MimeObject *obj)
+MimeMultipartSigned_close_child (Part *obj)
 {
   /* The close_child method on MimeMultipartSigned doesn't actually do
    anything to the children list, since the create_child method also
@@ -475,7 +475,7 @@ MimeMultipartSigned_close_child (MimeObject *obj)
 
 
 static int
-MimeMultipartSigned_parse_child_line (MimeObject *obj,
+MimeMultipartSigned_parse_child_line (Part *obj,
                     const char *line, int32_t length,
                     bool first_line_p)
 {
@@ -552,7 +552,7 @@ MimeMultipartSigned_parse_child_line (MimeObject *obj,
   case MimeMultipartSignedSignatureFirstLine:
   case MimeMultipartSignedSignatureLine:
     /* Nothing to do here -- hashing of the signature part is handled up
-     in MimeMultipartSigned_parse_line().
+     in MimeMultipartSigned_ParseLine().
      */
     break;
 
@@ -574,13 +574,13 @@ MimeMultipartSigned_parse_child_line (MimeObject *obj,
 
 
 static int
-MimeMultipartSigned_emit_child (MimeObject *obj)
+MimeMultipartSigned_emit_child (Part *obj)
 {
   MimeMultipartSigned *sig = (MimeMultipartSigned *) obj;
   MimeMultipart *mult = (MimeMultipart *) obj;
   MimeContainer *cont = (MimeContainer *) obj;
   int status = 0;
-  MimeObject *body;
+  Part *body;
 
   NS_ASSERTION(sig->crypto_closure, "no crypto closure");
 
@@ -599,7 +599,7 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 #if 0 // XXX For the moment, no HTML output. Fix this XXX //
     if (!html) return -1; /* MIME_OUT_OF_MEMORY? */
 
-    status = MimeObject_write(obj, html, strlen(html), false);
+    status = Part_write(obj, html, strlen(html), false);
     PR_Free(html);
     if (status < 0) return status;
 #endif
@@ -614,7 +614,7 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
       !obj->options->state->post_header_html_run_p)
     {
       MimeHeaders *outer_headers=nullptr;
-      MimeObject *p;
+      Part *p;
       for (p = obj; p->parent; p = p->parent)
       outer_headers = p->headers;
       NS_ASSERTION(obj->options->state->first_data_written_p,
@@ -625,7 +625,7 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
       obj->options->state->post_header_html_run_p = true;
       if (html)
       {
-        status = MimeObject_write(obj, html, strlen(html), false);
+        status = Part_write(obj, html, strlen(html), false);
         PR_Free(html);
         if (status < 0) return status;
       }
@@ -654,7 +654,7 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 
   // Notify the charset of the first part.
   if (obj->options && !(obj->options->override_charset)) {
-    MimeObject *firstChild = ((MimeContainer*) obj)->children[0];
+    Part *firstChild = ((MimeContainer*) obj)->children[0];
     char *disposition = MimeHeaders_get (firstChild->headers,
                                          HEADER_CONTENT_DISPOSITION,
                                          true,
@@ -686,10 +686,10 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 
   // The js emitter wants to know about the newly created child.  Because
   //  MimeMultipartSigned dummies out its create_child operation, the logic
-  //  in MimeMultipart_parse_line that would normally provide this notification
+  //  in MimeMultipart_ParseLine that would normally provide this notification
   //  does not get to fire.
   if (obj->options && obj->options->notify_nested_bodies) {
-    MimeObject *kid = ((MimeContainer*) obj)->children[0];
+    Part *kid = ((MimeContainer*) obj)->children[0];
     // The emitter is expecting the content type with parameters; not the fully
     //  parsed thing, so get it from raw.  (We do not do it in the charset
     //  notification block that just happened because it already has complex
@@ -722,7 +722,7 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 #ifdef MIME_DRAFTS
   if (body->options->decompose_file_p) {
     body->options->signed_p = true;
-    if (!mime_typep(body, (MimeObjectClass*)&mimeMultipartClass) &&
+    if (!mime_typep(body, (PartClass*)&mimeMultipartClass) &&
     body->options->decompose_file_init_fn)
     body->options->decompose_file_init_fn ( body->options->stream_closure, body->headers );
   }
@@ -733,11 +733,11 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
   {
 #ifdef MIME_DRAFTS
     if (body->options->decompose_file_p &&
-      !mime_typep(body, (MimeObjectClass*)&mimeMultipartClass)  &&
+      !mime_typep(body, (PartClass*)&mimeMultipartClass)  &&
       body->options->decompose_file_output_fn)
       status = MimePartBufferRead (sig->part_buffer,
                  /* The (MimeConverterOutputCallback) cast is to turn the
-                  `void' argument into `MimeObject'. */
+                  `void' argument into `Part'. */
                  ((MimeConverterOutputCallback)
                  body->options->decompose_file_output_fn),
                  body->options->stream_closure);
@@ -746,8 +746,8 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 
     status = MimePartBufferRead (sig->part_buffer,
                  /* The (MimeConverterOutputCallback) cast is to turn the
-                  `void' argument into `MimeObject'. */
-                 ((MimeConverterOutputCallback) body->clazz->parse_buffer),
+                  `void' argument into `Part'. */
+                 ((MimeConverterOutputCallback) body->clazz->ParseBuffer),
                 body);
     if (status < 0) return status;
   }
@@ -755,20 +755,20 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
   MimeMultipartSigned_cleanup(obj, false);
 
   /* Done parsing. */
-  status = body->clazz->parse_eof(body, false);
+  status = body->clazz->ParseEOF(body, false);
   if (status < 0) return status;
-  status = body->clazz->parse_end(body, false);
+  status = body->clazz->ParseEnd(body, false);
   if (status < 0) return status;
 
 #ifdef MIME_DRAFTS
   if (body->options->decompose_file_p &&
-    !mime_typep(body, (MimeObjectClass*)&mimeMultipartClass)  &&
+    !mime_typep(body, (PartClass*)&mimeMultipartClass)  &&
     body->options->decompose_file_close_fn)
     body->options->decompose_file_close_fn(body->options->stream_closure);
 #endif /* MIME_DRAFTS */
 
   /* Put out a separator after every multipart/signed object. */
-  status = MimeObject_write_separator(obj);
+  status = Part_write_separator(obj);
   if (status < 0) return status;
 
   return 0;

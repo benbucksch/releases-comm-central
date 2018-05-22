@@ -30,7 +30,7 @@ struct MimeDecoderData {
   char *line_buffer;
   int line_buffer_size;
 
-  MimeObject *objectToDecode; // might be null, only used for QP currently
+  Part *objectToDecode; // might be null, only used for QP currently
   /* Where to write the decoded data */
   MimeConverterOutputCallback write_buffer;
   void *closure;
@@ -790,7 +790,7 @@ MimeB64DecoderInit (MimeConverterOutputCallback output_fn, void *closure)
 
 MimeDecoderData *
 MimeQPDecoderInit (MimeConverterOutputCallback output_fn,
-           void *closure, MimeObject *object)
+           void *closure, Part *object)
 {
   MimeDecoderData *retData = mime_decoder_init (mime_QuotedPrintable, output_fn, closure);
   if (retData)

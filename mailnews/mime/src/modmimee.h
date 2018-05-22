@@ -26,7 +26,7 @@ typedef int (*MimeConverterOutputCallback)
 /* Opaque objects used by the encoder/decoder to store state. */
 typedef struct MimeDecoderData MimeDecoderData;
 
-struct MimeObject;
+struct Part;
 
 
 /* functions for creating that opaque data.
@@ -35,7 +35,7 @@ MimeDecoderData *MimeB64DecoderInit(MimeConverterOutputCallback output_fn,
                   void *closure);
 
 MimeDecoderData *MimeQPDecoderInit (MimeConverterOutputCallback output_fn,
-                  void *closure, MimeObject *object = nullptr);
+                  void *closure, Part *object = nullptr);
 
 MimeDecoderData *MimeUUDecoderInit (MimeConverterOutputCallback output_fn,
                   void *closure);

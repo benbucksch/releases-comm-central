@@ -454,7 +454,7 @@ mime_parse_stream_write(nsMIMESession *stream, const char *buf, int32_t size)
   if (!mdd || !mdd->obj)
     return -1;
 
-  return mdd->obj->clazz->parse_buffer((char *)buf, size, mdd->obj);
+  return mdd->obj->clazz->ParseBuffer((char *)buf, size, mdd->obj);
 }
 
 static void
@@ -1283,8 +1283,8 @@ mime_parse_stream_complete(nsMIMESession *stream)
   {
     int status;
 
-    status = mdd->obj->clazz->parse_eof(mdd->obj, false);
-    mdd->obj->clazz->parse_end(mdd->obj, status < 0 ? true : false);
+    status = mdd->obj->clazz->ParseEOF(mdd->obj, false);
+    mdd->obj->clazz->ParseEnd(mdd->obj, status < 0 ? true : false);
 
     // RICHIE
     // We need to figure out how to pass the forwarded flag along with this
@@ -1831,9 +1831,9 @@ mime_parse_stream_abort(nsMIMESession *stream, int status)
     int status=0;
 
     if (!mdd->obj->closed_p)
-      status = mdd->obj->clazz->parse_eof(mdd->obj, true);
+      status = mdd->obj->clazz->ParseEOF(mdd->obj, true);
     if (!mdd->obj->parsed_p)
-      mdd->obj->clazz->parse_end(mdd->obj, true);
+      mdd->obj->clazz->ParseEnd(mdd->obj, true);
 
     NS_ASSERTION(mdd->options == mdd->obj->options, "draft display options not same as mime obj");
     mime_free (mdd->obj);
@@ -2084,7 +2084,7 @@ mime_decompose_file_init_fn(void *stream_closure, MimeHeaders *headers)
       fn = &MimeB64DecoderInit;
     else if (newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_QUOTED_PRINTABLE))
     {
-      mdd->decoder_data = MimeQPDecoderInit (/* The (MimeConverterOutputCallback) cast is to turn the `void' argument into `MimeObject'. */
+      mdd->decoder_data = MimeQPDecoderInit (/* The (MimeConverterOutputCallback) cast is to turn the `void' argument into `Part'. */
                               ((MimeConverterOutputCallback) dummy_file_write),
                               mdd->tmpFileStream);
       if (!mdd->decoder_data)
@@ -2101,7 +2101,7 @@ mime_decompose_file_init_fn(void *stream_closure, MimeHeaders *headers)
     if (fn)
     {
       mdd->decoder_data = fn (/* The (MimeConverterOutputCallback) cast is to
-                                 turn the `void' argument into `MimeObject'. */
+                                 turn the `void' argument into `Part'. */
                               ((MimeConverterOutputCallback)dummy_file_write),
                               mdd->tmpFileStream);
       if (!mdd->decoder_data)
@@ -2186,7 +2186,7 @@ mime_bridge_create_draft_stream(
   int                     status = 0;
   nsMIMESession           *stream = nullptr;
   mime_draft_data  *mdd = nullptr;
-  MimeObject              *obj = nullptr;
+  Part              *obj = nullptr;
 
   if (!uri)
     return nullptr;
@@ -2259,7 +2259,7 @@ mime_bridge_create_draft_stream(
   mdd->options->decrypt_p = true;
 #endif /* ENABLE_SMIME */
 
-  obj = mime_new((MimeObjectClass *)&mimeMessageClass, (MimeHeaders *)NULL, MESSAGE_RFC822);
+  obj = mime_new((PartClass *)&mimeMessageClass, (MimeHeaders *)NULL, MESSAGE_RFC822);
   if (!obj)
     goto FAIL;
 
@@ -2278,7 +2278,7 @@ mime_bridge_create_draft_stream(
 
   status = obj->clazz->initialize(obj);
   if (status >= 0)
-    status = obj->clazz->parse_begin(obj);
+    status = obj->clazz->ParseBegin(obj);
   if (status < 0)
     goto FAIL;
 

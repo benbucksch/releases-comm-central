@@ -32,31 +32,31 @@
 MimeDefClass(MimeInlineTextHTMLParsed, MimeInlineTextHTMLParsedClass,
              mimeInlineTextHTMLParsedClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTMLParsed_parse_line(const char *, int32_t,
-                                               MimeObject *);
-static int MimeInlineTextHTMLParsed_parse_begin(MimeObject *obj);
-static int MimeInlineTextHTMLParsed_parse_eof(MimeObject *, bool);
-static void MimeInlineTextHTMLParsed_finalize(MimeObject *obj);
+static int MimeInlineTextHTMLParsed_ParseLine(const char *, int32_t,
+                                               Part *);
+static int MimeInlineTextHTMLParsed_ParseBegin(Part *obj);
+static int MimeInlineTextHTMLParsed_ParseEOF(Part *, bool);
+static void MimeInlineTextHTMLParsed_finalize(Part *obj);
 
 static int
 MimeInlineTextHTMLParsedClassInitialize(MimeInlineTextHTMLParsedClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *)clazz;
+  PartClass *oclass = (MimeObjectClass *)clazz;
   NS_ASSERTION(!oclass->class_initialized, "problem with superclass");
-  oclass->parse_line  = MimeInlineTextHTMLParsed_parse_line;
-  oclass->parse_begin = MimeInlineTextHTMLParsed_parse_begin;
-  oclass->parse_eof   = MimeInlineTextHTMLParsed_parse_eof;
+  oclass->ParseLine  = MimeInlineTextHTMLParsed_parse_line;
+  oclass->ParseBegin = MimeInlineTextHTMLParsed_parse_begin;
+  oclass->ParseEOF   = MimeInlineTextHTMLParsed_parse_eof;
   oclass->finalize    = MimeInlineTextHTMLParsed_finalize;
 
   return 0;
 }
 
 static int
-MimeInlineTextHTMLParsed_parse_begin(MimeObject *obj)
+MimeInlineTextHTMLParsed_ParseBegin(Part *obj)
 {
   MimeInlineTextHTMLParsed *me = (MimeInlineTextHTMLParsed *)obj;
   me->complete_buffer = new nsString();
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0)
     return status;
 
@@ -75,7 +75,7 @@ MimeInlineTextHTMLParsed_parse_begin(MimeObject *obj)
         "\n<meta http-equiv=\"content-type\" content=\"text/html; charset=");
       charsetline += charset;
       charsetline += "\">\n";
-      int status = MimeObject_write(obj,
+      int status = Part_write(obj,
                                     charsetline.get(),
                                     charsetline.Length(),
                                     true);
@@ -88,12 +88,12 @@ MimeInlineTextHTMLParsed_parse_begin(MimeObject *obj)
 }
 
 static int
-MimeInlineTextHTMLParsed_parse_eof(MimeObject *obj, bool abort_p)
+MimeInlineTextHTMLParsed_ParseEOF(Part *obj, bool abort_p)
 {
 
   if (obj->closed_p)
     return 0;
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0)
     return status;
   MimeInlineTextHTMLParsed *me = (MimeInlineTextHTMLParsed *)obj;
@@ -129,30 +129,30 @@ MimeInlineTextHTMLParsed_parse_eof(MimeObject *obj, bool abort_p)
 
   // Write it out.
   NS_ConvertUTF16toUTF8 resultCStr(parsed);
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_line(
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseLine(
     resultCStr.BeginWriting(), resultCStr.Length(), obj);
   rawHTML.Truncate();
   return status;
 }
 
 void
-MimeInlineTextHTMLParsed_finalize(MimeObject *obj)
+MimeInlineTextHTMLParsed_finalize(Part *obj)
 {
   MimeInlineTextHTMLParsed *me = (MimeInlineTextHTMLParsed *)obj;
 
   if (me && me->complete_buffer)
   {
-    obj->clazz->parse_eof(obj, false);
+    obj->clazz->ParseEOF(obj, false);
     delete me->complete_buffer;
     me->complete_buffer = NULL;
   }
 
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(obj);
 }
 
 static int
-MimeInlineTextHTMLParsed_parse_line(const char *line, int32_t length,
-                                    MimeObject *obj)
+MimeInlineTextHTMLParsed_ParseLine(const char *line, int32_t length,
+                                    Part *obj)
 {
   MimeInlineTextHTMLParsed *me = (MimeInlineTextHTMLParsed *)obj;
 

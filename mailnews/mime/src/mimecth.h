@@ -14,7 +14,7 @@
 #define _MIMECTH_H_
 
 #include "mimei.h"
-#include "mimeobj.h"  /*  MimeObject (abstract)              */
+#include "mimeobj.h"  /*  Part (abstract)              */
 #include "mimecont.h"  /*   |--- MimeContainer (abstract)          */
 #include "mimemult.h"  /*   |     |--- MimeMultipart (abstract)      */
 #include "mimemsig.h"  /*   |     |     |--- MimeMultipartSigned (abstract)*/
@@ -25,7 +25,7 @@
   This header exposes functions that are necessary to access the
   object hierarchy for the mime chart. The class hierarchy is:
 
-     MimeObject (abstract)
+     Part (abstract)
       |
       |--- MimeContainer (abstract)
       |     |
@@ -87,7 +87,7 @@
 /*
  * This is the write call for outputting processed stream data.
  */
-extern int                        MIME_MimeObject_write(MimeObject *,
+extern int                        MIME_Part_write(MimeObject *,
                                                         const char *data,
                                                         int32_t length,
                                                         bool user_visible_p);
@@ -97,7 +97,7 @@ extern int                        MIME_MimeObject_write(MimeObject *,
  */
 extern MimeInlineTextClass       *MIME_GetmimeInlineTextClass(void);
 extern MimeLeafClass             *MIME_GetmimeLeafClass(void);
-extern MimeObjectClass           *MIME_GetmimeObjectClass(void);
+extern PartClass           *MIME_GetmimeObjectClass(void);
 extern MimeContainerClass        *MIME_GetmimeContainerClass(void);
 extern MimeMultipartClass        *MIME_GetmimeMultipartClass(void);
 extern MimeMultipartSignedClass  *MIME_GetmimeMultipartSignedClass(void);
@@ -117,11 +117,11 @@ extern "C"
 char            *MIME_GetContentType(void);
 
 /*
- * This will create the MimeObjectClass object to be used by the libmime
+ * This will create the PartClass object to be used by the libmime
  * object system.
  */
 extern "C"
-MimeObjectClass *MIME_CreateContentTypeHandlerClass(const char *content_type,
+PartClass *MIME_CreateContentTypeHandlerClass(const char *content_type,
                                    contentTypeHandlerInitStruct *initStruct);
 
 /*
@@ -129,7 +129,7 @@ MimeObjectClass *MIME_CreateContentTypeHandlerClass(const char *content_type,
  * defined functions.
  */
 typedef char * (*mime_get_ct_fn_type)(void);
-typedef MimeObjectClass * (*mime_create_class_fn_type)
+typedef PartClass * (*mime_create_class_fn_type)
                               (const char *, contentTypeHandlerInitStruct *);
 
 #endif /* _MIMECTH_H_ */

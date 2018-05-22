@@ -18,7 +18,7 @@
 /*
  * This is the write call for outputting processed stream data.
  */
-extern "C" int  XPCOM_MimeObject_write(void *mimeObject, const char *data,
+extern "C" int  XPCOM_Part_write(void *mimeObject, const char *data,
                                   int32_t length,
                                   bool user_visible_p);
 /*

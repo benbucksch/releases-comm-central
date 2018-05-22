@@ -39,31 +39,31 @@
 MimeDefClass(MimeInlineTextHTMLSanitized, MimeInlineTextHTMLSanitizedClass,
        mimeInlineTextHTMLSanitizedClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTMLSanitized_parse_line(const char *, int32_t,
-                                                  MimeObject *);
-static int MimeInlineTextHTMLSanitized_parse_begin(MimeObject *obj);
-static int MimeInlineTextHTMLSanitized_parse_eof(MimeObject *, bool);
-static void MimeInlineTextHTMLSanitized_finalize(MimeObject *obj);
+static int MimeInlineTextHTMLSanitized_ParseLine(const char *, int32_t,
+                                                  Part *);
+static int MimeInlineTextHTMLSanitized_ParseBegin(Part *obj);
+static int MimeInlineTextHTMLSanitized_ParseEOF(Part *, bool);
+static void MimeInlineTextHTMLSanitized_finalize(Part *obj);
 
 static int
 MimeInlineTextHTMLSanitizedClassInitialize(MimeInlineTextHTMLSanitizedClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *)clazz;
+  PartClass *oclass = (MimeObjectClass *)clazz;
   NS_ASSERTION(!oclass->class_initialized, "problem with superclass");
-  oclass->parse_line  = MimeInlineTextHTMLSanitized_parse_line;
-  oclass->parse_begin = MimeInlineTextHTMLSanitized_parse_begin;
-  oclass->parse_eof   = MimeInlineTextHTMLSanitized_parse_eof;
+  oclass->ParseLine  = MimeInlineTextHTMLSanitized_parse_line;
+  oclass->ParseBegin = MimeInlineTextHTMLSanitized_parse_begin;
+  oclass->ParseEOF   = MimeInlineTextHTMLSanitized_parse_eof;
   oclass->finalize    = MimeInlineTextHTMLSanitized_finalize;
 
   return 0;
 }
 
 static int
-MimeInlineTextHTMLSanitized_parse_begin(MimeObject *obj)
+MimeInlineTextHTMLSanitized_ParseBegin(Part *obj)
 {
   MimeInlineTextHTMLSanitized *me = (MimeInlineTextHTMLSanitized *)obj;
   me->complete_buffer = new nsString();
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0)
     return status;
 
@@ -82,7 +82,7 @@ MimeInlineTextHTMLSanitized_parse_begin(MimeObject *obj)
         "\n<meta http-equiv=\"content-type\" content=\"text/html; charset=");
       charsetline += charset;
       charsetline += "\">\n";
-      int status = MimeObject_write(obj,
+      int status = Part_write(obj,
                                     charsetline.get(),
                                     charsetline.Length(),
                                     true);
@@ -95,11 +95,11 @@ MimeInlineTextHTMLSanitized_parse_begin(MimeObject *obj)
 }
 
 static int
-MimeInlineTextHTMLSanitized_parse_eof(MimeObject *obj, bool abort_p)
+MimeInlineTextHTMLSanitized_ParseEOF(Part *obj, bool abort_p)
 {
   if (obj->closed_p)
     return 0;
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0)
     return status;
   MimeInlineTextHTMLSanitized *me = (MimeInlineTextHTMLSanitized *)obj;
@@ -119,7 +119,7 @@ MimeInlineTextHTMLSanitized_parse_eof(MimeObject *obj, bool abort_p)
 
   // Write it out.
   NS_ConvertUTF16toUTF8 resultCStr(sanitized);
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_line(
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseLine(
                              resultCStr.BeginWriting(),
                              resultCStr.Length(),
                              obj);
@@ -128,23 +128,23 @@ MimeInlineTextHTMLSanitized_parse_eof(MimeObject *obj, bool abort_p)
 }
 
 void
-MimeInlineTextHTMLSanitized_finalize(MimeObject *obj)
+MimeInlineTextHTMLSanitized_finalize(Part *obj)
 {
   MimeInlineTextHTMLSanitized *me = (MimeInlineTextHTMLSanitized *)obj;
 
   if (me && me->complete_buffer)
   {
-    obj->clazz->parse_eof(obj, false);
+    obj->clazz->ParseEOF(obj, false);
     delete me->complete_buffer;
     me->complete_buffer = NULL;
   }
 
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(obj);
 }
 
 static int
-MimeInlineTextHTMLSanitized_parse_line(const char *line, int32_t length,
-                                       MimeObject *obj)
+MimeInlineTextHTMLSanitized_ParseLine(const char *line, int32_t length,
+                                       Part *obj)
 {
   MimeInlineTextHTMLSanitized *me = (MimeInlineTextHTMLSanitized *)obj;
 

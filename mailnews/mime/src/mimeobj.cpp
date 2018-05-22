@@ -21,61 +21,22 @@
 #include "nsMimeStringResources.h"
 #include "nsMsgUtils.h"
 #include "mimemsg.h"
-#include "mimemapl.h"
 
 /* Way to destroy any notions of modularity or class hierarchy, Terry! */
 # include "mimetpla.h"
 # include "mimethtm.h"
 # include "mimecont.h"
+#include "mimemapl.h"
 
-MimeDefClass (MimeObject, MimeObjectClass, mimeObjectClass, NULL);
+MimeDefClass (Part, PartClass, mimeObjectClass, NULL);
 
-static int MimeObject_initialize (MimeObject *);
-static void MimeObject_finalize (MimeObject *);
-static int MimeObject_parse_begin (MimeObject *);
-static int MimeObject_parse_buffer (const char *, int32_t, MimeObject *);
-static int MimeObject_parse_line (const char *, int32_t, MimeObject *);
-static int MimeObject_parse_eof (MimeObject *, bool);
-static int MimeObject_parse_end (MimeObject *, bool);
-static bool MimeObject_displayable_inline_p (MimeObjectClass *clazz,
-                        MimeHeaders *hdrs);
-
-#if defined(DEBUG) && defined(XP_UNIX)
-static int MimeObject_debug_print (MimeObject *, PRFileDesc *, int32_t depth);
-#endif
-
-static int
-MimeObjectClassInitialize(MimeObjectClass *clazz)
+Part::Part()
 {
-  NS_ASSERTION(!clazz->class_initialized, "class shouldn't already be initialized");
-  clazz->initialize   = MimeObject_initialize;
-  clazz->finalize     = MimeObject_finalize;
-  clazz->parse_begin  = MimeObject_parse_begin;
-  clazz->parse_buffer = MimeObject_parse_buffer;
-  clazz->parse_line   = MimeObject_parse_line;
-  clazz->parse_eof    = MimeObject_parse_eof;
-  clazz->parse_end    = MimeObject_parse_end;
-  clazz->displayable_inline_p = MimeObject_displayable_inline_p;
-
-#if defined(DEBUG) && defined(XP_UNIX)
-  clazz->debug_print  = MimeObject_debug_print;
-#endif
-  return 0;
-}
-
-static int
-MimeObject_initialize (MimeObject *obj)
-{
-  /* This is an abstract class; it shouldn't be directly instantiated. */
-  NS_ASSERTION(obj->clazz != &mimeObjectClass, "should directly instantiate abstract class");
-
   /* Set up the content-type and encoding. */
-  if (!obj->content_type && obj->headers)
-  obj->content_type = MimeHeaders_get (obj->headers, HEADER_CONTENT_TYPE,
-                     true, false);
-  if (!obj->encoding && obj->headers)
-  obj->encoding = MimeHeaders_get (obj->headers,
-                   HEADER_CONTENT_TRANSFER_ENCODING,
+  if (!this.content_type && this.headers)
+    this.content_type = this.headers->Get(HEADER_CONTENT_TYPE, true, false);
+  if (!this.encoding && this.headers)
+    this.encoding = this.headers->Get(HEADER_CONTENT_TRANSFER_ENCODING,
                    true, false);
 
   /* Special case to normalize some types and encodings to a canonical form.
@@ -84,125 +45,123 @@ MimeObject_initialize (MimeObject *obj)
    and extensions has consistent behavior for the receiver, regardless of
    the "alias" type that the sender used.)
    */
-  if (!obj->content_type || !*(obj->content_type))
+  if (!this.content_type || !*(this.content_type))
   ;
-  else if (!PL_strcasecmp(obj->content_type, APPLICATION_UUENCODE2) ||
-       !PL_strcasecmp(obj->content_type, APPLICATION_UUENCODE3) ||
-       !PL_strcasecmp(obj->content_type, APPLICATION_UUENCODE4))
+  else if (!PL_strcasecmp(this.content_type, APPLICATION_UUENCODE2) ||
+       !PL_strcasecmp(this.content_type, APPLICATION_UUENCODE3) ||
+       !PL_strcasecmp(this.content_type, APPLICATION_UUENCODE4))
   {
-    PR_Free(obj->content_type);
-    obj->content_type = strdup(APPLICATION_UUENCODE);
+    PR_Free(this.content_type);
+    this.content_type = strdup(APPLICATION_UUENCODE);
   }
-  else if (!PL_strcasecmp(obj->content_type, IMAGE_XBM2) ||
-       !PL_strcasecmp(obj->content_type, IMAGE_XBM3))
+  else if (!PL_strcasecmp(this.content_type, IMAGE_XBM2) ||
+       !PL_strcasecmp(this.content_type, IMAGE_XBM3))
   {
-    PR_Free(obj->content_type);
-    obj->content_type = strdup(IMAGE_XBM);
+    PR_Free(this.content_type);
+    this.content_type = strdup(IMAGE_XBM);
   }
   else {
     // MIME-types are case-insenitive, but let's make it lower case internally
     // to avoid some hassle later down the road.
     nsAutoCString lowerCaseContentType;
-    ToLowerCase(nsDependentCString(obj->content_type), lowerCaseContentType);
-    PR_Free(obj->content_type);
-    obj->content_type = ToNewCString(lowerCaseContentType);
+    ToLowerCase(nsDependentCString(this.content_type), lowerCaseContentType);
+    PR_Free(this.content_type);
+    this.content_type = ToNewCString(lowerCaseContentType);
   }
 
-  if (!obj->encoding)
-  ;
-  else if (!PL_strcasecmp(obj->encoding, ENCODING_UUENCODE2) ||
-       !PL_strcasecmp(obj->encoding, ENCODING_UUENCODE3) ||
-       !PL_strcasecmp(obj->encoding, ENCODING_UUENCODE4))
+  if (!this.encoding)
+    ;
+  else if (!PL_strcasecmp(this.encoding, ENCODING_UUENCODE2) ||
+       !PL_strcasecmp(this.encoding, ENCODING_UUENCODE3) ||
+       !PL_strcasecmp(this.encoding, ENCODING_UUENCODE4))
   {
-    PR_Free(obj->encoding);
-    obj->encoding = strdup(ENCODING_UUENCODE);
+    PR_Free(this.encoding);
+    this.encoding = strdup(ENCODING_UUENCODE);
   }
-  else if (!PL_strcasecmp(obj->encoding, ENCODING_COMPRESS2))
+  else if (!PL_strcasecmp(this.encoding, ENCODING_COMPRESS2))
   {
-    PR_Free(obj->encoding);
-    obj->encoding = strdup(ENCODING_COMPRESS);
+    PR_Free(this.encoding);
+    this.encoding = strdup(ENCODING_COMPRESS);
   }
-  else if (!PL_strcasecmp(obj->encoding, ENCODING_GZIP2))
+  else if (!PL_strcasecmp(this.encoding, ENCODING_GZIP2))
   {
-    PR_Free(obj->encoding);
-    obj->encoding = strdup(ENCODING_GZIP);
+    PR_Free(this.encoding);
+    this.encoding = strdup(ENCODING_GZIP);
   }
 
   return 0;
 }
 
-static void
-MimeObject_finalize (MimeObject *obj)
+Part::~Part()
 {
-  obj->clazz->parse_eof (obj, false);
-  obj->clazz->parse_end (obj, false);
+  this.ParseEOF( false);
+  this.ParseEnd(false);
 
-  if (obj->headers)
+  if (this.headers)
   {
-    MimeHeaders_free(obj->headers);
-    obj->headers = 0;
+    delete this.headers;
+    this.headers = nullptr;
   }
 
-  /* Should have been freed by parse_eof, but just in case... */
-  NS_ASSERTION(!obj->ibuffer, "buffer not freed");
-  NS_ASSERTION(!obj->obuffer, "buffer not freed");
-  PR_FREEIF (obj->ibuffer);
-  PR_FREEIF (obj->obuffer);
+  /* Should have been freed by ParseEOF, but just in case... */
+  NS_ASSERTION(!this.ibuffer, "buffer not freed");
+  NS_ASSERTION(!this.obuffer, "buffer not freed");
+  PR_FREEIF (this.ibuffer);
+  PR_FREEIF (this.obuffer);
 
-  PR_FREEIF(obj->content_type);
-  PR_FREEIF(obj->encoding);
+  PR_FREEIF(this.content_type);
+  PR_FREEIF(this.encoding);
 
-  if (obj->options && obj->options->state)
+  if (this.options && this.options->state)
   {
-    delete obj->options->state;
-    obj->options->state = nullptr;
+    delete this.options->state;
+    this.options->state = nullptr;
   }
 }
 
-static int
-MimeObject_parse_begin (MimeObject *obj)
+int Part::ParseBegin()
 {
-  NS_ASSERTION (!obj->closed_p, "object shouldn't be already closed");
+  NS_ASSERTION (!this.closed_p, "object shouldn't be already closed");
 
   /* If we haven't set up the state object yet, then this should be
    the outermost object... */
-  if (obj->options && !obj->options->state)
+  if (this.options && !this.options->state)
   {
-    NS_ASSERTION(!obj->headers, "headers should be null");  /* should be the outermost object. */
+    NS_ASSERTION(!this.headers, "headers should be null");  /* should be the outermost object. */
 
-    obj->options->state = new MimeParseStateObject;
-    if (!obj->options->state) return MIME_OUT_OF_MEMORY;
-    obj->options->state->root = obj;
-    obj->options->state->separator_suppressed_p = true; /* no first sep */
-    const char *delParts = PL_strcasestr(obj->options->url, "&del=");
-    const char *detachLocations = PL_strcasestr(obj->options->url, "&detachTo=");
+    this.options->state = new ParseStateObject;
+    if (!this.options->state) return MIME_OUT_OF_MEMORY;
+    this.options->state->root = obj;
+    this.options->state->separator_suppressed_p = true; /* no first sep */
+    const char *delParts = PL_strcasestr(this.options->url, "&del=");
+    const char *detachLocations = PL_strcasestr(this.options->url, "&detachTo=");
     if (delParts)
     {
       const char *delEnd = PL_strcasestr(delParts + 1, "&");
       if (!delEnd)
         delEnd = delParts + strlen(delParts);
-      ParseString(Substring(delParts + 5, delEnd), ',', obj->options->state->partsToStrip);
+      ParseString(Substring(delParts + 5, delEnd), ',', this.options->state->partsToStrip);
     }
     if (detachLocations)
     {
       detachLocations += 10; // advance past "&detachTo="
-      ParseString(nsDependentCString(detachLocations), ',', obj->options->state->detachToFiles);
+      ParseString(nsDependentCString(detachLocations), ',', this.options->state->detachToFiles);
     }
   }
 
   /* Decide whether this object should be output or not... */
-  if (!obj->options || obj->options->no_output_p || !obj->options->output_fn
+  if (!this.options || this.options->no_output_p || !this.options->output_fn
     /* if we are decomposing the message in files and processing a multipart object,
        we must not output it without parsing it first */
-     || (obj->options->decompose_file_p && obj->options->decompose_file_output_fn &&
-      mime_typep(obj, (MimeObjectClass*) &mimeMultipartClass))
+     || (this.options->decompose_file_p && this.options->decompose_file_output_fn &&
+       this.IsType(MultipartClass))
     )
-    obj->output_p = false;
-  else if (!obj->options->part_to_load)
-    obj->output_p = true;
+    this.output_p = false;
+  else if (!this.options->part_to_load)
+    this.output_p = true;
   else
   {
-    char *id = mime_part_address(obj);
+    char* id = this.PartAddress();
     if (!id) return MIME_OUT_OF_MEMORY;
 
     // We need to check if a part is the subpart of the part to load.
@@ -210,15 +169,15 @@ MimeObject_parse_begin (MimeObject *obj)
     // we should mark the part for subsequent output.
 
     // First, check for an exact match
-    obj->output_p = !strcmp(id, obj->options->part_to_load);
-    if (!obj->output_p && (obj->options->format_out == nsMimeOutput::nsMimeMessageRaw ||
-                           obj->options->format_out == nsMimeOutput::nsMimeMessageBodyDisplay ||
-                           obj->options->format_out == nsMimeOutput::nsMimeMessageAttach))
+    this.output_p = !strcmp(id, this.options->part_to_load);
+    if (!this.output_p && (this.options->format_out == nsMimeOutput::nsMimeMessageRaw ||
+                           this.options->format_out == nsMimeOutput::nsMimeMessageBodyDisplay ||
+                           this.options->format_out == nsMimeOutput::nsMimeMessageAttach))
     {
       // Then, check for subpart
-      unsigned int partlen = strlen(obj->options->part_to_load);
-      obj->output_p = (strlen(id) >= partlen + 2) && (id[partlen] == '.') &&
-        !strncmp(id, obj->options->part_to_load, partlen);
+      unsigned int partlen = strlen(this.options->part_to_load);
+      this.output_p = (strlen(id) >= partlen + 2) && (id[partlen] == '.') &&
+        !strncmp(id, this.options->part_to_load, partlen);
     }
 
     PR_Free(id);
@@ -226,101 +185,88 @@ MimeObject_parse_begin (MimeObject *obj)
 
   // If we've decided not to output this part, we also shouldn't be showing it
   // as an attachment.
-  obj->dontShowAsAttachment = !obj->output_p;
+  this.dontShowAsAttachment = !this.output_p;
 
   return 0;
 }
 
-static int
-MimeObject_parse_buffer (const char *buffer, int32_t size, MimeObject *obj)
+int Part::ParseBuffer(const char *buffer, int32_t size)
 {
-  NS_ASSERTION(!obj->closed_p, "object shouldn't be closed");
-  if (obj->closed_p) return -1;
+  NS_ASSERTION(!this.closed_p, "object shouldn't be closed");
+  if (this.closed_p) return -1;
 
   return mime_LineBuffer (buffer, size,
-             &obj->ibuffer, &obj->ibuffer_size, &obj->ibuffer_fp,
+             &this.ibuffer, &this.ibuffer_size, &this.ibuffer_fp,
              true,
-             ((int (*) (char *, int32_t, void *))
-              /* This cast is to turn void into MimeObject */
-              obj->clazz->parse_line),
+             &this.ParseLine, // TODO virtual function pointer
              obj);
 }
 
-static int
-MimeObject_parse_line (const char *line, int32_t length, MimeObject *obj)
+int Part::ParseLine(const char *line, int32_t length)
 {
-  NS_ERROR("shouldn't call this method");
+  NS_ERROR("abstract function");
   return -1;
 }
 
-static int
-MimeObject_parse_eof (MimeObject *obj, bool abort_p)
+int Part::ParseEOF(bool abort_p)
 {
-  if (obj->closed_p) return 0;
-  NS_ASSERTION(!obj->parsed_p, "obj already parsed");
+  if (this.closed_p) return 0;
+  NS_ASSERTION(!this.parsed_p, "obj already parsed");
 
   /* If there is still data in the ibuffer, that means that the last line of
    this part didn't end in a newline; so push it out anyway (this means that
-   the parse_line method will be called with a string with no trailing
+   the ParseLine method will be called with a string with no trailing
    newline, which isn't the usual case.)
    */
   if (!abort_p &&
-    obj->ibuffer_fp > 0)
+    this.ibuffer_fp > 0)
   {
-    int status = obj->clazz->parse_line (obj->ibuffer, obj->ibuffer_fp, obj);
-    obj->ibuffer_fp = 0;
+    int status = this.ParseLine(this.ibuffer, this.ibuffer_fp);
+    this.ibuffer_fp = 0;
     if (status < 0)
     {
-      obj->closed_p = true;
+      this.closed_p = true;
       return status;
     }
   }
 
-  obj->closed_p = true;
+  this.closed_p = true;
   return 0;
 }
 
-static int
-MimeObject_parse_end (MimeObject *obj, bool abort_p)
+int Part::ParseEnd(bool abort_p)
 {
-  if (obj->parsed_p)
+  if (this.parsed_p)
   {
-    NS_ASSERTION(obj->closed_p, "object should be closed");
+    NS_ASSERTION(this.closed_p, "object should be closed");
     return 0;
   }
 
   /* We won't be needing these buffers any more; nuke 'em. */
-  PR_FREEIF(obj->ibuffer);
-  obj->ibuffer_fp = 0;
-  obj->ibuffer_size = 0;
-  PR_FREEIF(obj->obuffer);
-  obj->obuffer_fp = 0;
-  obj->obuffer_size = 0;
+  PR_FREEIF(this.ibuffer);
+  this.ibuffer_fp = 0;
+  this.ibuffer_size = 0;
+  PR_FREEIF(this.obuffer);
+  this.obuffer_fp = 0;
+  this.obuffer_size = 0;
 
-  obj->parsed_p = true;
+  this.parsed_p = true;
   return 0;
 }
 
-static bool
-MimeObject_displayable_inline_p (MimeObjectClass *clazz, MimeHeaders *hdrs)
+bool Part::IsDisplayableInline(PartClass* clazz, Headers* hdrs)
 {
-  NS_ERROR("shouldn't call this method");
+  NS_ERROR("abstract function");
   return false;
 }
 
 #if defined(DEBUG) && defined(XP_UNIX)
-static int
-MimeObject_debug_print (MimeObject *obj, PRFileDesc *stream, int32_t depth)
+int Part::DebugPrint(PRFileDesc* stream, int32_t depth)
 {
   int i;
-  char *addr = mime_part_address(obj);
+  char *addr = this.PartAddress();
   for (i=0; i < depth; i++)
   PR_Write(stream, "  ", 2);
-/*
-  fprintf(stream, "<%s %s 0x%08X>\n", obj->clazz->class_name,
-      addr ? addr : "???",
-      (uint32_t) obj);
-*/
   PR_FREEIF(addr);
   return 0;
 }

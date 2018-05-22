@@ -16,18 +16,18 @@
 MimeDefClass(MimeUntypedText, MimeUntypedTextClass,
        mimeUntypedTextClass, &MIME_SUPERCLASS);
 
-static int MimeUntypedText_initialize (MimeObject *);
-static void MimeUntypedText_finalize (MimeObject *);
-static int MimeUntypedText_parse_begin (MimeObject *);
-static int MimeUntypedText_parse_line (const char *, int32_t, MimeObject *);
+static int MimeUntypedText_initialize (Part *);
+static void MimeUntypedText_finalize (Part *);
+static int MimeUntypedText_ParseBegin (Part *);
+static int MimeUntypedText_ParseLine (const char *, int32_t, Part *);
 
-static int MimeUntypedText_open_subpart (MimeObject *obj,
+static int MimeUntypedText_open_subpart (Part *obj,
                      MimeUntypedTextSubpartType ttype,
                      const char *type,
                      const char *enc,
                      const char *name,
                      const char *desc);
-static int MimeUntypedText_close_subpart (MimeObject *obj);
+static int MimeUntypedText_close_subpart (Part *obj);
 
 static bool MimeUntypedText_uu_begin_line_p(const char *line, int32_t length,
                          MimeDisplayOptions *opt,
@@ -50,24 +50,24 @@ static bool MimeUntypedText_binhex_end_line_p(const char *line,
 static int
 MimeUntypedTextClassInitialize(MimeUntypedTextClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   PR_ASSERT(!oclass->class_initialized);
   oclass->initialize  = MimeUntypedText_initialize;
   oclass->finalize    = MimeUntypedText_finalize;
-  oclass->parse_begin = MimeUntypedText_parse_begin;
-  oclass->parse_line  = MimeUntypedText_parse_line;
+  oclass->ParseBegin = MimeUntypedText_parse_begin;
+  oclass->ParseLine  = MimeUntypedText_parse_line;
   return 0;
 }
 
 
 static int
-MimeUntypedText_initialize (MimeObject *object)
+MimeUntypedText_initialize (Part *object)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 static void
-MimeUntypedText_finalize (MimeObject *object)
+MimeUntypedText_finalize (Part *object)
 {
   MimeUntypedText *uty = (MimeUntypedText *) object;
 
@@ -82,24 +82,24 @@ MimeUntypedText_finalize (MimeObject *object)
    is also on the MimeContainer->children list, and will get cleaned
    up by that class. */
 
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(object);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
 }
 
 static int
-MimeUntypedText_parse_begin (MimeObject *obj)
+MimeUntypedText_ParseBegin (Part *obj)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
 }
 
 static int
-MimeUntypedText_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
 {
   MimeUntypedText *uty = (MimeUntypedText *) obj;
   int status = 0;
   char *name = 0, *type = 0;
   bool begin_line_p = false;
 
-  NS_ASSERTION(line && *line, "empty line in mime untyped parse_line");
+  NS_ASSERTION(line && *line, "empty line in mime untyped ParseLine");
   if (!line || !*line) return -1;
 
   /* If we're supposed to write this object, but aren't supposed to convert
@@ -108,7 +108,7 @@ MimeUntypedText_parse_line (const char *line, int32_t length, MimeObject *obj)
     obj->options &&
     !obj->options->write_html_p &&
     obj->options->output_fn)
-  return MimeObject_write(obj, line, length, true);
+  return Part_write(obj, line, length, true);
 
 
   /* Open a new sub-part if this line demands it.
@@ -177,7 +177,7 @@ MimeUntypedText_parse_line (const char *line, int32_t length, MimeObject *obj)
 
   /* Hand this line to the currently-open sub-part.
    */
-  status = uty->open_subpart->clazz->parse_buffer(line, length,
+  status = uty->open_subpart->clazz->ParseBuffer(line, length,
                           uty->open_subpart);
   if (status < 0) return status;
 
@@ -214,14 +214,14 @@ MimeUntypedText_parse_line (const char *line, int32_t length, MimeObject *obj)
 
 
 static int
-MimeUntypedText_close_subpart (MimeObject *obj)
+MimeUntypedText_close_subpart (Part *obj)
 {
   MimeUntypedText *uty = (MimeUntypedText *) obj;
   int status;
 
   if (uty->open_subpart)
   {
-    status = uty->open_subpart->clazz->parse_eof(uty->open_subpart, false);
+    status = uty->open_subpart->clazz->ParseEOF(uty->open_subpart, false);
     uty->open_subpart = 0;
 
     PR_ASSERT(uty->open_hdrs);
@@ -246,7 +246,7 @@ MimeUntypedText_close_subpart (MimeObject *obj)
 }
 
 static int
-MimeUntypedText_open_subpart (MimeObject *obj,
+MimeUntypedText_open_subpart (Part *obj,
                 MimeUntypedTextSubpartType ttype,
                 const char *type,
                 const char *enc,
@@ -281,7 +281,7 @@ MimeUntypedText_open_subpart (MimeObject *obj,
    a fake header block is better for two reasons: first, it means that
    something will actually be displayed when in `Show All Headers' mode;
    and second, it's the only way to communicate the filename parameter,
-   aside from adding a new slot to MimeObject (which is something to be
+   aside from adding a new slot to Part (which is something to be
    avoided when possible.)
    */
 
@@ -299,7 +299,7 @@ MimeUntypedText_open_subpart (MimeObject *obj,
   PL_strncpyz(h, HEADER_CONTENT_TYPE ": ", hlen);
   PL_strcatn(h, hlen, type);
   PL_strcatn(h, hlen, MSG_LINEBREAK);
-  status = MimeHeaders_parse_line(h, strlen(h), uty->open_hdrs);
+  status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
   if (status < 0) goto FAIL;
 
   if (enc)
@@ -307,7 +307,7 @@ MimeUntypedText_open_subpart (MimeObject *obj,
     PL_strncpyz(h, HEADER_CONTENT_TRANSFER_ENCODING ": ", hlen);
     PL_strcatn(h, hlen, enc);
     PL_strcatn(h, hlen, MSG_LINEBREAK);
-    status = MimeHeaders_parse_line(h, strlen(h), uty->open_hdrs);
+    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
     if (status < 0) goto FAIL;
   }
 
@@ -316,7 +316,7 @@ MimeUntypedText_open_subpart (MimeObject *obj,
     PL_strncpyz(h, HEADER_CONTENT_DESCRIPTION ": ", hlen);
     PL_strcatn(h, hlen, desc);
     PL_strcatn(h, hlen, MSG_LINEBREAK);
-    status = MimeHeaders_parse_line(h, strlen(h), uty->open_hdrs);
+    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
     if (status < 0) goto FAIL;
   }
   if (name)
@@ -324,13 +324,13 @@ MimeUntypedText_open_subpart (MimeObject *obj,
     PL_strncpyz(h, HEADER_CONTENT_DISPOSITION ": inline; filename=\"", hlen);
     PL_strcatn(h, hlen, name);
     PL_strcatn(h, hlen, "\"" MSG_LINEBREAK);
-    status = MimeHeaders_parse_line(h, strlen(h), uty->open_hdrs);
+    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
     if (status < 0) goto FAIL;
   }
 
   /* push out a blank line. */
   PL_strncpyz(h, MSG_LINEBREAK, hlen);
-  status = MimeHeaders_parse_line(h, strlen(h), uty->open_hdrs);
+  status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
   if (status < 0) goto FAIL;
 
 
@@ -364,7 +364,7 @@ MimeUntypedText_open_subpart (MimeObject *obj,
   }
 
   /* And start its parser going. */
-  status = uty->open_subpart->clazz->parse_begin(uty->open_subpart);
+  status = uty->open_subpart->clazz->ParseBegin(uty->open_subpart);
   if (status < 0)
   {
     /* MimeContainer->finalize will take care of shutting it down now. */

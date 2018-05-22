@@ -3,7 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #include "mimei.h"
-#include "mimeobj.h"  /*  MimeObject (abstract)              */
+#include "mimeobj.h"  /*  Part (abstract)              */
 #include "mimecont.h"  /*   |--- MimeContainer (abstract)          */
 #include "mimemult.h"  /*   |     |--- MimeMultipart (abstract)      */
 #include "mimemsig.h"  /*   |     |     |--- MimeMultipartSigned (abstract)*/
@@ -58,12 +58,12 @@ XPCOM_GetmimeEncryptedClass(void)
 }
 
 extern "C" int
-XPCOM_MimeObject_write(void *mimeObject,
+XPCOM_Part_write(void *mimeObject,
                        char *data,
                        int32_t length,
                        bool user_visible_p)
 {
-  return MIME_MimeObject_write((MimeObject *)mimeObject, data,
+  return MIME_Part_write((MimeObject *)mimeObject, data,
                                 length, user_visible_p);
 }
 

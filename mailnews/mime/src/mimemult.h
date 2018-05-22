@@ -12,7 +12,7 @@
    the "multipart/" MIME types.  In addition to the methods inherited from
    MimeContainer, it provides the following methods and class variables:
 
-   int create_child (MimeObject *obj)
+   int create_child (Part *obj)
 
      When it has been determined that a new sub-part should be created,
      this method is called to do that.  The default value for this method
@@ -20,11 +20,11 @@
      to-be-created may be found in the `hdrs' slot of the `MimeMultipart'
      object.
 
-   bool output_child_p (MimeObject *parent, MimeObject *child)
+   bool output_child_p (Part *parent, MimeObject *child)
 
      Whether this child should be output.  Default method always says `yes'.
 
-   int parse_child_line (MimeObject *obj, const char *line, int32_t length,
+   int parse_child_line (Part *obj, const char *line, int32_t length,
              bool first_line_p)
 
      When we have a line which should be handed off to the currently-active
@@ -33,13 +33,13 @@
      sub-part.  The default method simply passes the line to the most-
    recently-added child object.
 
-   int close_child (MimeObject *self)
+   int close_child (Part *self)
 
      When we reach the end of a sub-part (a separator line) this method is
    called to shut down the currently-active child.  The default method
-   simply calls `parse_eof' on the most-recently-added child object.
+   simply calls `ParseEOF' on the most-recently-added child object.
 
-   MimeMultipartBoundaryType check_boundary (MimeObject *obj,
+   MimeMultipartBoundaryType check_boundary (Part *obj,
                       const char *line, int32_t length)
 
      This method is used to examine a line and determine whether it is a
@@ -75,12 +75,12 @@ struct MimeMultipartClass {
   MimeContainerClass container;
   const char *default_part_type;
 
-  int (*create_child) (MimeObject *);
-  bool (*output_child_p) (MimeObject *self, MimeObject *child);
-  int (*close_child) (MimeObject *);
-  int (*parse_child_line) (MimeObject *, const char *line, int32_t length,
+  int (*create_child) (Part *);
+  bool (*output_child_p) (Part *self, MimeObject *child);
+  int (*close_child) (Part *);
+  int (*parse_child_line) (Part *, const char *line, int32_t length,
                bool first_line_p);
-  MimeMultipartBoundaryType (*check_boundary) (MimeObject *, const char *line,
+  MimeMultipartBoundaryType (*check_boundary) (Part *, const char *line,
                          int32_t length);
 };
 
@@ -94,7 +94,7 @@ struct MimeMultipart {
   MimeMultipartParseState state;  /* State of parser */
 };
 
-extern void MimeMultipart_notify_emitter(MimeObject *);
+extern void MimeMultipart_notify_emitter(Part *);
 
 #define MimeMultipartClassInitializer(ITYPE,CSUPER) \
   { MimeContainerClassInitializer(ITYPE,CSUPER) }

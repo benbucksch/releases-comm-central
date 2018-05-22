@@ -126,7 +126,7 @@ MimeDefClass(MimeMultipartRelated, MimeMultipartRelatedClass,
 class MimeHashValue
 {
 public:
-  MimeHashValue(MimeObject *obj, char *url) {
+  MimeHashValue(Part *obj, char *url) {
     m_obj = obj;
     m_url = strdup(url);
   }
@@ -135,12 +135,12 @@ public:
       PR_Free((void *)m_url);
   }
 
-  MimeObject  *m_obj;
+  Part  *m_obj;
   char        *m_url;
 };
 
 static int
-MimeMultipartRelated_initialize(MimeObject* obj)
+MimeMultipartRelated_initialize(Part* obj)
 {
   MimeMultipartRelated* relobj = (MimeMultipartRelated*) obj;
   relobj->base_url = MimeHeaders_get(obj->headers, HEADER_CONTENT_BASE,
@@ -169,7 +169,7 @@ MimeMultipartRelated_initialize(MimeObject* obj)
   relobj->input_file_stream = nullptr;
   relobj->output_file_stream = nullptr;
 
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(obj);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(obj);
 }
 
 static int
@@ -186,7 +186,7 @@ mime_multipart_related_nukehash(PLHashEntry *table,
 }
 
 static void
-MimeMultipartRelated_finalize (MimeObject *obj)
+MimeMultipartRelated_finalize (Part *obj)
 {
   MimeMultipartRelated* relobj = (MimeMultipartRelated*) obj;
   PR_FREEIF(relobj->base_url);
@@ -224,7 +224,7 @@ MimeMultipartRelated_finalize (MimeObject *obj)
   }
 
   if (relobj->headobj) {
-    // In some error conditions when MimeMultipartRelated_parse_eof() isn't run
+    // In some error conditions when MimeMultipartRelated_ParseEOF() isn't run
     // (for example, no temp disk space available to extract message parts),
     // the head object is also referenced as a child.
     // If we free it, we remove the child reference first ... or crash later :-(
@@ -244,7 +244,7 @@ MimeMultipartRelated_finalize (MimeObject *obj)
     relobj->headobj = nullptr;
   }
 
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(obj);
 }
 
 #define ISHEX(c) ( ((c) >= '0' && (c) <= '9') || ((c) >= 'a' && (c) <= 'f') || ((c) >= 'A' && (c) <= 'F') )
@@ -334,7 +334,7 @@ escape_for_mrel_subst(char *inURL)
 }
 
 static bool
-MimeStartParamExists(MimeObject *obj, MimeObject* child)
+MimeStartParamExists(Part *obj, MimeObject* child)
 {
   char *ct = MimeHeaders_get (obj->headers, HEADER_CONTENT_TYPE, false, false);
   char *st = (ct
@@ -350,7 +350,7 @@ MimeStartParamExists(MimeObject *obj, MimeObject* child)
 }
 
 static bool
-MimeThisIsStartPart(MimeObject *obj, MimeObject* child)
+MimeThisIsStartPart(Part *obj, MimeObject* child)
 {
   bool rval = false;
   char *ct, *st, *cst;
@@ -432,7 +432,7 @@ done:
 }
 
 static bool
-MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
+MimeMultipartRelated_output_child_p(Part *obj, MimeObject* child)
 {
   MimeMultipartRelated *relobj = (MimeMultipartRelated *) obj;
 
@@ -492,7 +492,7 @@ MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
             The problem at this point is that we haven't yet decoded the children of the AppleDouble
             part therefore we will have to hope the datafork is the second one!
           */
-          if (mime_typep(child, (MimeObjectClass *) &mimeMultipartAppleDoubleClass))
+          if (mime_typep(child, (PartClass *) &mimeMultipartAppleDoubleClass))
             partnum.AppendLiteral(".2");
 
           char* part;
@@ -615,13 +615,13 @@ MimeMultipartRelated_output_child_p(MimeObject *obj, MimeObject* child)
 }
 
 static int
-MimeMultipartRelated_parse_child_line (MimeObject *obj,
+MimeMultipartRelated_parse_child_line (Part *obj,
                      const char *line, int32_t length,
                      bool first_line_p)
 {
   MimeContainer *cont = (MimeContainer *) obj;
   MimeMultipartRelated *relobj = (MimeMultipartRelated *) obj;
-  MimeObject *kid;
+  Part *kid;
 
   if (obj->options && !obj->options->write_html_p
 #ifdef MIME_DRAFTS
@@ -734,7 +734,7 @@ MimeMultipartRelated_parse_child_line (MimeObject *obj,
 static int
 real_write(MimeMultipartRelated* relobj, const char* buf, int32_t size)
 {
-  MimeObject* obj = (MimeObject*) relobj;
+  Part* obj = (MimeObject*) relobj;
   void* closure = relobj->real_output_closure;
 
 #ifdef MIME_DRAFTS
@@ -761,7 +761,7 @@ real_write(MimeMultipartRelated* relobj, const char* buf, int32_t size)
 #endif /* MIME_DRAFTS */
   {
     if (!closure) {
-      MimeObject* lobj = (MimeObject*) relobj;
+      Part* lobj = (MimeObject*) relobj;
       closure = lobj->options->stream_closure;
     }
     return relobj->real_output_fn(buf, size, closure);
@@ -786,7 +786,7 @@ push_tag(MimeMultipartRelated* relobj, const char* buf, int32_t size)
   return 0;
 }
 
-static bool accept_related_part(MimeMultipartRelated* relobj, MimeObject* part_obj)
+static bool accept_related_part(MimeMultipartRelated* relobj, Part* part_obj)
 {
   if (!relobj || !part_obj)
     return false;
@@ -794,7 +794,7 @@ static bool accept_related_part(MimeMultipartRelated* relobj, MimeObject* part_o
   /* before accepting it as a valid related part, make sure we
      are able to display it inline as an embedded object. Else just ignore
      it, that will prevent any bad surprise... */
-  MimeObjectClass *clazz = mime_find_class (part_obj->content_type, part_obj->headers, part_obj->options, false);
+  PartClass *clazz = mime_find_class (part_obj->content_type, part_obj->headers, part_obj->options, false);
   if (clazz ? clazz->displayable_inline_p(clazz, part_obj->headers) : false)
     return true;
 
@@ -1003,7 +1003,7 @@ mime_multipart_related_output_fn(const char* buf, int32_t size, void *stream_clo
 
 
 static int
-MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
+MimeMultipartRelated_ParseEOF (Part *obj, bool abort_p)
 {
   /* OK, all the necessary data has been collected.  We now have to spew out
      the HTML.  We let it go through all the normal mechanisms (which
@@ -1012,11 +1012,11 @@ MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
   MimeMultipartRelated *relobj = (MimeMultipartRelated *) obj;
   MimeContainer *cont = (MimeContainer *)obj;
   int status = 0;
-  MimeObject *body;
+  Part *body;
   char* ct;
   const char* dct;
 
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) goto FAIL;
 
   if (!relobj->headobj) return 0;
@@ -1087,7 +1087,7 @@ MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
 
   /* Now that we've added this new object to our list of children,
      start its parser going. */
-  status = body->clazz->parse_begin(body);
+  status = body->clazz->ParseBegin(body);
   if (status < 0) goto FAIL;
 
   if (relobj->head_buffer)
@@ -1095,7 +1095,7 @@ MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
     /* Read it out of memory. */
     PR_ASSERT(!relobj->file_buffer && !relobj->input_file_stream);
 
-    status = body->clazz->parse_buffer(relobj->head_buffer,
+    status = body->clazz->ParseBuffer(relobj->head_buffer,
                          relobj->head_buffer_fp,
                          body);
   }
@@ -1147,7 +1147,7 @@ MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
            some user events and other input sources get processed.
            Oh well. */
 
-        status = body->clazz->parse_buffer(buf, bytesRead, body);
+        status = body->clazz->ParseBuffer(buf, bytesRead, body);
         if (status < 0) break;
       }
     }
@@ -1157,9 +1157,9 @@ MimeMultipartRelated_parse_eof (MimeObject *obj, bool abort_p)
   if (status < 0) goto FAIL;
 
   /* Done parsing. */
-  status = body->clazz->parse_eof(body, false);
+  status = body->clazz->ParseEOF(body, false);
   if (status < 0) goto FAIL;
-  status = body->clazz->parse_end(body, false);
+  status = body->clazz->ParseEnd(body, false);
   if (status < 0) goto FAIL;
 
 FAIL:
@@ -1186,12 +1186,12 @@ FAIL:
 static int
 MimeMultipartRelatedClassInitialize(MimeMultipartRelatedClass *clazz)
 {
-  MimeObjectClass    *oclass = (MimeObjectClass *) clazz;
+  PartClass    *oclass = (MimeObjectClass *) clazz;
   MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
   PR_ASSERT(!oclass->class_initialized);
   oclass->initialize       = MimeMultipartRelated_initialize;
   oclass->finalize         = MimeMultipartRelated_finalize;
-  oclass->parse_eof        = MimeMultipartRelated_parse_eof;
+  oclass->ParseEOF        = MimeMultipartRelated_parse_eof;
   mclass->output_child_p   = MimeMultipartRelated_output_child_p;
   mclass->parse_child_line = MimeMultipartRelated_parse_child_line;
   return 0;

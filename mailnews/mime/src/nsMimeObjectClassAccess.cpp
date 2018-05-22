@@ -5,92 +5,92 @@
 #include <stdio.h>
 #include "mimecom.h"
 #include "nscore.h"
-#include "nsMimeObjectClassAccess.h"
+#include "nsPartClassAccess.h"
 
 /*
  * The following macros actually implement addref, release and
  * query interface for our component.
  */
-NS_IMPL_ISUPPORTS(nsMimeObjectClassAccess, nsIMimeObjectClassAccess)
+NS_IMPL_ISUPPORTS(nsPartClassAccess, nsIMimeObjectClassAccess)
 
 /*
- * nsMimeObjectClassAccess definitions....
+ * nsPartClassAccess definitions....
  */
 
 /*
- * Inherited methods for nsMimeObjectClassAccess
+ * Inherited methods for nsPartClassAccess
  */
-nsMimeObjectClassAccess::nsMimeObjectClassAccess()
+nsPartClassAccess::nsMimeObjectClassAccess()
 {
 }
 
-nsMimeObjectClassAccess::~nsMimeObjectClassAccess()
+nsPartClassAccess::~nsMimeObjectClassAccess()
 {
 }
 
 nsresult
-nsMimeObjectClassAccess::MimeObjectWrite(void *mimeObject,
+nsPartClassAccess::MimeObjectWrite(void *mimeObject,
                                          char *data,
                                          int32_t length,
                                          bool user_visible_p)
 {
-  int rc = XPCOM_MimeObject_write(mimeObject, data, length, user_visible_p);
+  int rc = XPCOM_Part_write(mimeObject, data, length, user_visible_p);
   NS_ENSURE_FALSE(rc < 0, NS_ERROR_FAILURE);
 
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeInlineTextClass(void **ptr)
+nsPartClassAccess::GetmimeInlineTextClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeInlineTextClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeLeafClass(void **ptr)
+nsPartClassAccess::GetmimeLeafClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeLeafClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeObjectClass(void **ptr)
+nsPartClassAccess::GetmimeObjectClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeObjectClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeContainerClass(void **ptr)
+nsPartClassAccess::GetmimeContainerClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeContainerClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeMultipartClass(void **ptr)
+nsPartClassAccess::GetmimeMultipartClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeMultipartClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeMultipartSignedClass(void **ptr)
+nsPartClassAccess::GetmimeMultipartSignedClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeMultipartSignedClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::GetmimeEncryptedClass(void **ptr)
+nsPartClassAccess::GetmimeEncryptedClass(void **ptr)
 {
   *ptr = XPCOM_GetmimeEncryptedClass();
   return NS_OK;
 }
 
 nsresult
-nsMimeObjectClassAccess::MimeCreate(char * content_type, void * hdrs, void * opts, void **ptr)
+nsPartClassAccess::MimeCreate(char * content_type, void * hdrs, void * opts, void **ptr)
 {
   *ptr = XPCOM_Mime_create(content_type, hdrs, opts);
   return NS_OK;

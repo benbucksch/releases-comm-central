@@ -14,7 +14,7 @@ static int
 MimeMultipartMixedClassInitialize(MimeMultipartMixedClass *clazz)
 {
 #ifdef DEBUG
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   PR_ASSERT(!oclass->class_initialized);
 #endif
   return 0;

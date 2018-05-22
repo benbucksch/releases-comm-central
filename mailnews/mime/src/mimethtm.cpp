@@ -16,31 +16,31 @@
 MimeDefClass(MimeInlineTextHTML, MimeInlineTextHTMLClass,
        mimeInlineTextHTMLClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTML_parse_line (const char *, int32_t, MimeObject *);
-static int MimeInlineTextHTML_parse_eof (MimeObject *, bool);
-static int MimeInlineTextHTML_parse_begin (MimeObject *obj);
+static int MimeInlineTextHTML_ParseLine (const char *, int32_t, Part *);
+static int MimeInlineTextHTML_ParseEOF (Part *, bool);
+static int MimeInlineTextHTML_ParseBegin (Part *obj);
 
 static int
 MimeInlineTextHTMLClassInitialize(MimeInlineTextHTMLClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   PR_ASSERT(!oclass->class_initialized);
-  oclass->parse_begin = MimeInlineTextHTML_parse_begin;
-  oclass->parse_line  = MimeInlineTextHTML_parse_line;
-  oclass->parse_eof   = MimeInlineTextHTML_parse_eof;
+  oclass->ParseBegin = MimeInlineTextHTML_parse_begin;
+  oclass->ParseLine  = MimeInlineTextHTML_parse_line;
+  oclass->ParseEOF   = MimeInlineTextHTML_parse_eof;
 
   return 0;
 }
 
 static int
-MimeInlineTextHTML_parse_begin (MimeObject *obj)
+MimeInlineTextHTML_ParseBegin (Part *obj)
 {
-  int status = ((MimeObjectClass*)&mimeLeafClass)->parse_begin(obj);
+  int status = ((PartClass*)&mimeLeafClass)->ParseBegin(obj);
   if (status < 0) return status;
 
   if (!obj->output_p) return 0;
 
-  status = MimeObject_write_separator(obj);
+  status = Part_write_separator(obj);
   if (status < 0) return status;
 
   // Set a default font (otherwise unicode font will be used since the data is UTF-8).
@@ -55,11 +55,11 @@ MimeInlineTextHTML_parse_begin (MimeObject *obj)
     {
       PR_snprintf(buf, 256, "<div class=\"moz-text-html\"  lang=\"%s\">",
                   fontLang.get());
-      status = MimeObject_write(obj, buf, strlen(buf), true);
+      status = Part_write(obj, buf, strlen(buf), true);
     }
     else
     {
-      status = MimeObject_write(obj, "<div class=\"moz-text-html\">", 27, true);
+      status = Part_write(obj, "<div class=\"moz-text-html\">", 27, true);
     }
     if(status<0) return status;
   }
@@ -117,7 +117,7 @@ MimeInlineTextHTML_parse_begin (MimeObject *obj)
 
       PR_Free(base_hdr);
 
-      status = MimeObject_write(obj, buf, strlen(buf), false);
+      status = Part_write(obj, buf, strlen(buf), false);
       PR_Free(buf);
       if (status < 0) return status;
     }
@@ -128,7 +128,7 @@ MimeInlineTextHTML_parse_begin (MimeObject *obj)
 
 
 static int
-MimeInlineTextHTML_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeInlineTextHTML_ParseLine (const char *line, int32_t length, Part *obj)
 {
   MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
 
@@ -169,9 +169,9 @@ MimeInlineTextHTML_parse_line (const char *line, int32_t length, MimeObject *obj
           // write out the data without the charset part...
           if (textHTML->charset)
           {
-            int err = MimeObject_write(obj, line, cp - line, true);
+            int err = Part_write(obj, line, cp - line, true);
             if (err == 0)
-              err = MimeObject_write(obj, cp2, length - (int)(cp2 - line), true);
+              err = Part_write(obj, cp2, length - (int)(cp2 - line), true);
 
             return err;
           }
@@ -182,11 +182,11 @@ MimeInlineTextHTML_parse_line (const char *line, int32_t length, MimeObject *obj
   }
 
   // Now, just write out the data...
-  return MimeObject_write(obj, line, length, true);
+  return Part_write(obj, line, length, true);
 }
 
 static int
-MimeInlineTextHTML_parse_eof (MimeObject *obj, bool abort_p)
+MimeInlineTextHTML_ParseEOF (Part *obj, bool abort_p)
 {
   int status;
   MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
@@ -195,12 +195,12 @@ MimeInlineTextHTML_parse_eof (MimeObject *obj, bool abort_p)
   PR_FREEIF(textHTML->charset);
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) return status;
 
   if (nsMimeOutput::nsMimeMessageBodyDisplay == obj->options->format_out ||
       nsMimeOutput::nsMimeMessagePrintOutput == obj->options->format_out)
-    status = MimeObject_write(obj, "</div>", 6, false);
+    status = Part_write(obj, "</div>", 6, false);
 
   return 0;
 }

@@ -15,7 +15,7 @@ static int
 MimeMultipartDigestClassInitialize(MimeMultipartDigestClass *clazz)
 {
 #ifdef DEBUG
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   PR_ASSERT(!oclass->class_initialized);
 #endif
   MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;

@@ -68,12 +68,12 @@ mime_stream_data::mime_stream_data() : url_name(nullptr), orig_url_name(nullptr)
 // Attachment handling routines
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-MimeObject    *mime_get_main_object(MimeObject* obj);
+Part    *mime_get_main_object(MimeObject* obj);
 
-nsresult MimeGetSize(MimeObject *child, int32_t *size) {
-  bool isLeaf = mime_subclass_p(child->clazz, (MimeObjectClass *) &mimeLeafClass);
-  bool isContainer = mime_subclass_p(child->clazz, (MimeObjectClass *) &mimeContainerClass);
-  bool isMsg = mime_subclass_p(child->clazz, (MimeObjectClass *) &mimeMessageClass);
+nsresult MimeGetSize(Part *child, int32_t *size) {
+  bool isLeaf = mime_subclass_p(child->clazz, (PartClass *) &mimeLeafClass);
+  bool isContainer = mime_subclass_p(child->clazz, (PartClass *) &mimeContainerClass);
+  bool isMsg = mime_subclass_p(child->clazz, (PartClass *) &mimeMessageClass);
 
   if (isLeaf) {
     *size += ((MimeLeaf *)child)->sizeSoFar;
@@ -90,7 +90,7 @@ nsresult MimeGetSize(MimeObject *child, int32_t *size) {
 }
 
 nsresult
-ProcessBodyAsAttachment(MimeObject *obj, nsMsgAttachmentData **data)
+ProcessBodyAsAttachment(Part *obj, nsMsgAttachmentData **data)
 {
   nsMsgAttachmentData   *tmp;
   char                  *disp = nullptr;
@@ -101,7 +101,7 @@ ProcessBodyAsAttachment(MimeObject *obj, nsMsgAttachmentData **data)
   // should be done.  I believe this should really be a multipart/mixed message
   // with an empty body part, but what can ya do...our friends to the North seem
   // to do this.
-  MimeObject    *child = obj;
+  Part    *child = obj;
 
   *data = new nsMsgAttachmentData[2];
   if (!*data)
@@ -207,7 +207,7 @@ CountTotalMimeAttachments(MimeContainer *aObj)
   if ( (!aObj) || (!aObj->children) || (aObj->nchildren <= 0) )
     return 0;
 
-  if (!mime_typep(((MimeObject *) aObj), (MimeObjectClass*) &mimeContainerClass))
+  if (!mime_typep(((Part *) aObj), (MimeObjectClass*) &mimeContainerClass))
     return 0;
 
   for (i=0; i<aObj->nchildren; i++)
@@ -263,7 +263,7 @@ ValidateRealName(nsMsgAttachmentData *aAttach, MimeHeaders *aHdrs)
 static  int32_t     attIndex = 0;
 
 nsresult
-GenerateAttachmentData(MimeObject *object, const char *aMessageURL, MimeDisplayOptions *options,
+GenerateAttachmentData(Part *object, const char *aMessageURL, MimeDisplayOptions *options,
                        bool isAnAppleDoublePart, int32_t attSize, nsMsgAttachmentData *aAttachData)
 {
   nsCString imappart;
@@ -487,7 +487,7 @@ GenerateAttachmentData(MimeObject *object, const char *aMessageURL, MimeDisplayO
 }
 
 nsresult
-BuildAttachmentList(MimeObject *anObject, nsMsgAttachmentData *aAttachData, const char *aMessageURL)
+BuildAttachmentList(Part *anObject, nsMsgAttachmentData *aAttachData, const char *aMessageURL)
 {
   nsresult              rv;
   int32_t               i;
@@ -495,12 +495,12 @@ BuildAttachmentList(MimeObject *anObject, nsMsgAttachmentData *aAttachData, cons
   bool                  found_output = false;
 
   if ( (!anObject) || (!cobj->children) || (!cobj->nchildren) ||
-       (mime_typep(anObject, (MimeObjectClass *)&mimeExternalBodyClass)))
+       (mime_typep(anObject, (PartClass *)&mimeExternalBodyClass)))
     return NS_OK;
 
   for (i = 0; i < cobj->nchildren ; i++)
   {
-    MimeObject    *child = cobj->children[i];
+    Part    *child = cobj->children[i];
     char          *ct = child->content_type;
 
     // We're going to ignore the output_p attribute because we want to output
@@ -539,15 +539,15 @@ BuildAttachmentList(MimeObject *anObject, nsMsgAttachmentData *aAttachData, cons
       continue;
 
     // We should generate an attachment for leaf object only but...
-    bool isALeafObject = mime_subclass_p(child->clazz, (MimeObjectClass *) &mimeLeafClass);
+    bool isALeafObject = mime_subclass_p(child->clazz, (PartClass *) &mimeLeafClass);
 
     // ...we will generate an attachment for inline message too.
-    bool isAnInlineMessage = mime_typep(child, (MimeObjectClass *) &mimeMessageClass);
+    bool isAnInlineMessage = mime_typep(child, (PartClass *) &mimeMessageClass);
 
     // AppleDouble part need special care: we need to fetch the part as well its two
     // children for the needed info as they could be anywhere, eventually, they won't contain
     // a name or file name. In any case we need to build only one attachment data
-    bool isAnAppleDoublePart = mime_typep(child, (MimeObjectClass *) &mimeMultipartAppleDoubleClass) &&
+    bool isAnAppleDoublePart = mime_typep(child, (PartClass *) &mimeMultipartAppleDoubleClass) &&
                                  ((MimeContainer *)child)->nchildren == 2;
 
     // The function below does not necessarily set the size to something (I
@@ -565,7 +565,7 @@ BuildAttachmentList(MimeObject *anObject, nsMsgAttachmentData *aAttachData, cons
     // Now build the attachment list for the children of our object...
     if (!isALeafObject && !isAnAppleDoublePart)
     {
-      rv = BuildAttachmentList((MimeObject *)child, aAttachData, aMessageURL);
+      rv = BuildAttachmentList((Part *)child, aAttachData, aMessageURL);
       NS_ENSURE_SUCCESS(rv, rv);
     }
   }
@@ -575,9 +575,9 @@ BuildAttachmentList(MimeObject *anObject, nsMsgAttachmentData *aAttachData, cons
 }
 
 extern "C" nsresult
-MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachmentData **data)
+MimeGetAttachmentList(Part *tobj, const char *aMessageURL, nsMsgAttachmentData **data)
 {
-  MimeObject            *obj;
+  Part            *obj;
   MimeContainer         *cobj;
   int32_t               n;
   bool                  isAnInlineMessage;
@@ -590,10 +590,10 @@ MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachment
   if (!obj)
     return NS_OK;
 
-  if (!mime_subclass_p(obj->clazz, (MimeObjectClass*) &mimeContainerClass))
+  if (!mime_subclass_p(obj->clazz, (PartClass*) &mimeContainerClass))
     return ProcessBodyAsAttachment(obj, data);
 
-  isAnInlineMessage = mime_typep(obj, (MimeObjectClass *) &mimeMessageClass);
+  isAnInlineMessage = mime_typep(obj, (PartClass *) &mimeMessageClass);
 
   cobj = (MimeContainer*) obj;
   n = CountTotalMimeAttachments(cobj);
@@ -629,7 +629,7 @@ MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachment
     }
 
   }
-  rv = BuildAttachmentList((MimeObject *) cobj, *data, aMessageURL);
+  rv = BuildAttachmentList((Part *) cobj, *data, aMessageURL);
   if (NS_FAILED(rv))
   {
     delete [] *data;             // release data in case of error return.
@@ -729,7 +729,7 @@ nsMimeNewURI(nsIURI** aInstancePtrResult, const char *aSpec, nsIURI *aBase)
 }
 
 extern "C" nsresult
-SetMailCharacterSetToMsgWindow(MimeObject *obj, const char *aCharacterSet)
+SetMailCharacterSetToMsgWindow(Part *obj, const char *aCharacterSet)
 {
   nsresult rv = NS_OK;
 
@@ -877,7 +877,7 @@ mime_display_stream_write (nsMIMESession *stream,
 {
   mime_stream_data *msd = (mime_stream_data *) ((nsMIMESession *)stream)->data_object;
 
-  MimeObject *obj = (msd ? msd->obj : 0);
+  Part *obj = (msd ? msd->obj : 0);
   if (!obj) return -1;
 
   //
@@ -907,14 +907,14 @@ mime_display_stream_write (nsMIMESession *stream,
     msd->firstCheck = false;
   }
 
-  return obj->clazz->parse_buffer((char *) buf, size, obj);
+  return obj->clazz->ParseBuffer((char *) buf, size, obj);
 }
 
 extern "C" void
 mime_display_stream_complete (nsMIMESession *stream)
 {
   mime_stream_data *msd = (mime_stream_data *) ((nsMIMESession *)stream)->data_object;
-  MimeObject *obj = (msd ? msd->obj : 0);
+  Part *obj = (msd ? msd->obj : 0);
   if (obj)
   {
     int       status;
@@ -923,8 +923,8 @@ mime_display_stream_complete (nsMIMESession *stream)
     if ((obj->options) && (obj->options->headers == MimeHeadersOnly))
       abortNow = true;
 
-    status = obj->clazz->parse_eof(obj, abortNow);
-    obj->clazz->parse_end(obj, (status < 0 ? true : false));
+    status = obj->clazz->ParseEOF(obj, abortNow);
+    obj->clazz->ParseEnd(obj, (status < 0 ? true : false));
 
     //
     // Ok, now we are going to process the attachment data by getting all
@@ -976,13 +976,13 @@ mime_display_stream_abort (nsMIMESession *stream, int status)
 {
   mime_stream_data *msd = (mime_stream_data *) ((nsMIMESession *)stream)->data_object;
 
-  MimeObject *obj = (msd ? msd->obj : 0);
+  Part *obj = (msd ? msd->obj : 0);
   if (obj)
   {
     if (!obj->closed_p)
-      obj->clazz->parse_eof(obj, true);
+      obj->clazz->ParseEOF(obj, true);
     if (!obj->parsed_p)
-      obj->clazz->parse_end(obj, true);
+      obj->clazz->ParseEnd(obj, true);
 
     // Destroy code....
     PR_ASSERT(msd->options == obj->options);
@@ -1154,11 +1154,11 @@ mime_image_write_buffer(const char *buf, int32_t size, void *image_closure)
   return size;
 }
 
-MimeObject*
-mime_get_main_object(MimeObject* obj)
+Part*
+mime_get_main_object(Part* obj)
 {
   MimeContainer *cobj;
-  if (!(mime_subclass_p(obj->clazz, (MimeObjectClass*) &mimeMessageClass)))
+  if (!(mime_subclass_p(obj->clazz, (PartClass*) &mimeMessageClass)))
   {
     return obj;
   }
@@ -1168,7 +1168,7 @@ mime_get_main_object(MimeObject* obj)
   while (obj)
   {
     if ( (!mime_subclass_p(obj->clazz,
-         (MimeObjectClass*) &mimeMultipartSignedClass)) &&
+         (PartClass*) &mimeMultipartSignedClass)) &&
          (PL_strcasecmp(obj->content_type, MULTIPART_SIGNED) != 0)
        )
     {
@@ -1176,7 +1176,7 @@ mime_get_main_object(MimeObject* obj)
     }
     else
     {
-      if (mime_subclass_p(obj->clazz, (MimeObjectClass*)&mimeContainerClass))
+      if (mime_subclass_p(obj->clazz, (PartClass*)&mimeContainerClass))
       {
         // We don't care about a signed/smime object; Go inside to the
         // thing that we signed or smime'ed
@@ -1200,18 +1200,18 @@ mime_get_main_object(MimeObject* obj)
 }
 
 static
-bool MimeObjectIsMessageBodyNoClimb(MimeObject *parent,
-                                      MimeObject *looking_for,
+bool PartIsMessageBodyNoClimb(MimeObject *parent,
+                                      Part *looking_for,
                                       bool *stop)
 {
   MimeContainer *container = (MimeContainer *)parent;
   int32_t i;
   char *disp;
 
-  NS_ASSERTION(stop, "NULL stop to MimeObjectIsMessageBodyNoClimb");
+  NS_ASSERTION(stop, "NULL stop to PartIsMessageBodyNoClimb");
 
   for (i = 0; i < container->nchildren; i++) {
-    MimeObject *child = container->children[i];
+    Part *child = container->children[i];
     bool is_body = true;
 
     // The body can't be something we're not displaying.
@@ -1235,8 +1235,8 @@ bool MimeObjectIsMessageBodyNoClimb(MimeObject *parent,
     }
 
     // The body could be down inside a multipart child, so search recursively.
-    if (mime_subclass_p(child->clazz, (MimeObjectClass*) &mimeContainerClass)) {
-      is_body = MimeObjectIsMessageBodyNoClimb(child, looking_for, stop);
+    if (mime_subclass_p(child->clazz, (PartClass*) &mimeContainerClass)) {
+      is_body = PartIsMessageBodyNoClimb(child, looking_for, stop);
       if (is_body || *stop)
         return is_body;
     }
@@ -1245,13 +1245,13 @@ bool MimeObjectIsMessageBodyNoClimb(MimeObject *parent,
 }
 
 /* Should this be static in mimemult.cpp? */
-bool MimeObjectIsMessageBody(MimeObject *looking_for)
+bool PartIsMessageBody(MimeObject *looking_for)
 {
   bool stop = false;
-  MimeObject *root = looking_for;
+  Part *root = looking_for;
   while (root->parent)
     root = root->parent;
-  return MimeObjectIsMessageBodyNoClimb(root, looking_for, &stop);
+  return PartIsMessageBodyNoClimb(root, looking_for, &stop);
 }
 
 //
@@ -1376,7 +1376,7 @@ mime_bridge_create_display_stream(
                           nsIChannel          *aChannel)
 {
   int                       status = 0;
-  MimeObject                *obj;
+  Part                *obj;
   mime_stream_data   *msd;
   nsMIMESession             *stream = 0;
 
@@ -1553,7 +1553,7 @@ mime_bridge_create_display_stream(
   if (msd->options->part_to_load && msd->options->format_out != nsMimeOutput::nsMimeMessageBodyDisplay)
     msd->options->write_html_p = false;
 
-  obj = mime_new ((MimeObjectClass *)&mimeMessageClass, (MimeHeaders *) NULL, MESSAGE_RFC822);
+  obj = mime_new ((PartClass *)&mimeMessageClass, (MimeHeaders *) NULL, MESSAGE_RFC822);
   if (!obj)
   {
     delete msd->options;
@@ -1587,7 +1587,7 @@ mime_bridge_create_display_stream(
 
   status = obj->clazz->initialize(obj);
   if (status >= 0)
-    status = obj->clazz->parse_begin(obj);
+    status = obj->clazz->ParseBegin(obj);
   if (status < 0)
   {
     PR_Free(stream);
@@ -1803,7 +1803,7 @@ mimeEmitterEndBody(MimeDisplayOptions *opt)
 }
 
 extern "C" nsresult
-mimeEmitterEndHeader(MimeDisplayOptions *opt, MimeObject *obj)
+mimeEmitterEndHeader(MimeDisplayOptions *opt, Part *obj)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1943,7 +1943,7 @@ MimeGetStringByName(const char16_t *stringName)
 }
 
 void
-ResetChannelCharset(MimeObject *obj)
+ResetChannelCharset(Part *obj)
 {
   if (obj->options && obj->options->stream_closure &&
       obj->options->default_charset && obj->headers )
@@ -1996,7 +1996,7 @@ ResetChannelCharset(MimeObject *obj)
   ////////////////////////////////////////////////////////////
 
 
-nsresult GetMailNewsFont(MimeObject *obj, bool styleFixed,  int32_t *fontPixelSize,
+nsresult GetMailNewsFont(Part *obj, bool styleFixed,  int32_t *fontPixelSize,
                          int32_t *fontSizePercentage, nsCString& fontLang)
 {
   nsresult rv = NS_OK;
@@ -2008,7 +2008,7 @@ nsresult GetMailNewsFont(MimeObject *obj, bool styleFixed,  int32_t *fontPixelSi
 
     // get a charset
     if (!text->initializeCharset)
-      ((MimeInlineTextClass*)&mimeInlineTextClass)->initialize_charset(obj);
+      ((MimeInlineTextClass*)&mimeInlineTextClass)->InitializeCharset(obj);
 
     if (!text->charset || !(*text->charset))
       charset.AssignLiteral("us-ascii");

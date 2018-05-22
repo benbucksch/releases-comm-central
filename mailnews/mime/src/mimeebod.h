@@ -18,13 +18,13 @@ typedef struct MimeExternalBodyClass MimeExternalBodyClass;
 typedef struct MimeExternalBody      MimeExternalBody;
 
 struct MimeExternalBodyClass {
-  MimeObjectClass object;
+  PartClass object;
 };
 
 extern MimeExternalBodyClass mimeExternalBodyClass;
 
 struct MimeExternalBody {
-  MimeObject object;      /* superclass variables */
+  Part object;      /* superclass variables */
   MimeHeaders *hdrs;      /* headers within this external-body, which
                    describe the network data which this body
                    is a pointer to. */
@@ -32,6 +32,6 @@ struct MimeExternalBody {
 };
 
 #define MimeExternalBodyClassInitializer(ITYPE,CSUPER) \
-  { MimeObjectClassInitializer(ITYPE,CSUPER) }
+  { PartClassInitializer(ITYPE,CSUPER) }
 
 #endif /* _MIMEEBOD_H_ */

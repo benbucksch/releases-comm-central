@@ -194,7 +194,7 @@ test(FILE *in, FILE *out,
    bool variable_width_plaintext_p)
 {
   int status = 0;
-  MimeObject *obj = 0;
+  Part *obj = 0;
   MimeDisplayOptions *opt = new MimeDisplayOptions;
 //  memset(opt, 0, sizeof(*opt));
 
@@ -228,7 +228,7 @@ test(FILE *in, FILE *out,
 
   opt->variable_width_plaintext_p = variable_width_plaintext_p;
 
-  obj = mime_new ((MimeObjectClass *)&mimeMessageClass,
+  obj = mime_new ((PartClass *)&mimeMessageClass,
           (MimeHeaders *) NULL,
           MESSAGE_RFC822);
   if (!obj)
@@ -240,7 +240,7 @@ test(FILE *in, FILE *out,
 
   status = obj->class->initialize(obj);
   if (status >= 0)
-  status = obj->class->parse_begin(obj);
+  status = obj->class->ParseBegin(obj);
   if (status < 0)
   {
     PR_Free(opt);
@@ -253,7 +253,7 @@ test(FILE *in, FILE *out,
     char buf[255];
     int size = fread(buf, sizeof(*buf), sizeof(buf), stdin);
     if (size <= 0) break;
-    status = obj->class->parse_buffer(buf, size, obj);
+    status = obj->class->ParseBuffer(buf, size, obj);
     if (status < 0)
     {
       mime_free(obj);
@@ -262,9 +262,9 @@ test(FILE *in, FILE *out,
     }
   }
 
-  status = obj->class->parse_eof(obj, false);
+  status = obj->class->ParseEOF(obj, false);
   if (status >= 0)
-  status = obj->class->parse_end(obj, false);
+  status = obj->class->ParseEnd(obj, false);
   if (status < 0)
   {
     mime_free(obj);

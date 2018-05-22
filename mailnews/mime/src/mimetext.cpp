@@ -7,8 +7,9 @@
  * described herein are Copyright (c) International Business Machines Corporation, 2000.
  * Modifications to Mozilla code or documentation identified per MPL Section 3.3
  *
- * Date             Modified by     Description of modification
- * 04/20/2000       IBM Corp.      OS/2 VisualAge build.
+ * Date         Modified by      Description of modification
+ * 2000-04-20   IBM Corp.        OS/2 VisualAge build
+ * 2018-05-22   Ben Bucksch      Convert to C++ classes
  */
 #include "mimetext.h"
 #include "mimebuf.h"
@@ -26,82 +27,43 @@
 #include "nsMimeTypes.h"
 #include "nsServiceManagerUtils.h"
 
-#define MIME_SUPERCLASS mimeLeafClass
-MimeDefClass(MimeInlineText, MimeInlineTextClass, mimeInlineTextClass,
-       &MIME_SUPERCLASS);
+namespace MIME {
 
-static int MimeInlineText_initialize (MimeObject *);
-static void MimeInlineText_finalize (MimeObject *);
-static int MimeInlineText_rot13_line (MimeObject *, char *line, int32_t length);
-static int MimeInlineText_parse_eof (MimeObject *obj, bool abort_p);
-static int MimeInlineText_parse_end  (MimeObject *, bool);
-static int MimeInlineText_parse_decoded_buffer (const char *, int32_t, MimeObject *);
-static int MimeInlineText_rotate_convert_and_parse_line(char *, int32_t,
-                 MimeObject *);
-static int MimeInlineText_open_dam(char *line, int32_t length, MimeObject *obj);
-static int MimeInlineText_initializeCharset(MimeObject *obj);
-
-static int
-MimeInlineTextClassInitialize(MimeInlineTextClass *clazz)
+int Text::Text()
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
-  MimeLeafClass   *lclass = (MimeLeafClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->initialize           = MimeInlineText_initialize;
-  oclass->finalize             = MimeInlineText_finalize;
-  oclass->parse_eof            = MimeInlineText_parse_eof;
-  oclass->parse_end            = MimeInlineText_parse_end;
-  clazz->rot13_line            = MimeInlineText_rot13_line;
-  clazz->initialize_charset    =  MimeInlineText_initializeCharset;
-  lclass->parse_decoded_buffer = MimeInlineText_parse_decoded_buffer;
-  return 0;
+  this.initializedCharset = false;
+  this.needUpdateMsgWinCharset = false;
 }
 
-static int
-MimeInlineText_initialize (MimeObject *obj)
+int Text::InitializeCharset()
 {
-  /* This is an abstract class; it shouldn't be directly instantiated. */
-  PR_ASSERT(obj->clazz != (MimeObjectClass *) &mimeInlineTextClass);
-
-  ((MimeInlineText *) obj)->initializeCharset = false;
-  ((MimeInlineText *) obj)->needUpdateMsgWinCharset = false;
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(obj);
-}
-
-static int MimeInlineText_initializeCharset(MimeObject *obj)
-{
-  MimeInlineText  *text = (MimeInlineText *) obj;
-
-  text->inputAutodetect = false;
-  text->charsetOverridable = false;
+  this.inputAutodetect = false;
+  this.charsetOverridable = false;
 
   /* Figure out an appropriate charset for this object.
   */
-  if (!text->charset && obj->headers)
+  if (!this.charset && this.headers)
   {
-    if (obj->options && obj->options->override_charset)
+    if (this.options && this.options->override_charset)
     {
-      text->charset = strdup(obj->options->default_charset);
+      this.charset = strdup(this.options->default_charset);
     }
     else
     {
-      char *ct = MimeHeaders_get (obj->headers, HEADER_CONTENT_TYPE,
-                                  false, false);
+      char *ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
       if (ct)
       {
-        text->charset = MimeHeaders_get_parameter (ct, "charset", NULL, NULL);
+        this.charset = Headers::GetParameter(ct, "charset", NULL, NULL);
         PR_Free(ct);
       }
 
-      if (!text->charset)
+      if (!this.charset)
       {
         /* If we didn't find "Content-Type: ...; charset=XX" then look
            for "X-Sun-Charset: XX" instead.  (Maybe this should be done
-           in MimeSunAttachmentClass, but it's harder there than here.)
+           in SunAttachmentClass, but it's harder there than here.)
          */
-        text->charset = MimeHeaders_get (obj->headers,
-                                          HEADER_X_SUN_CHARSET,
-                                          false, false);
+        this.charset = this.headers->Get(HEADER_X_SUN_CHARSET, false, false);
       }
 
       /* iMIP entities without an explicit charset parameter default to
@@ -110,16 +72,16 @@ static int MimeInlineText_initializeCharset(MimeObject *obj)
        When no charset is defined by the container (e.g. iMIP), iCalendar
        files default to UTF-8 (RFC 2445, section 4.1.4).
        */
-      if (!text->charset &&
-          obj->content_type &&
-          !PL_strcasecmp(obj->content_type, TEXT_CALENDAR))
-        text->charset = strdup("UTF-8");
+      if (!this.charset &&
+          this.content_type &&
+          !PL_strcasecmp(this.content_type, TEXT_CALENDAR))
+        this.charset = strdup("UTF-8");
 
-      if (!text->charset)
+      if (!this.charset)
       {
         nsresult res;
 
-        text->charsetOverridable = true;
+        this.charsetOverridable = true;
 
         nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &res));
         if (NS_SUCCEEDED(res))
@@ -127,140 +89,129 @@ static int MimeInlineText_initializeCharset(MimeObject *obj)
           nsCOMPtr<nsIPrefLocalizedString> str;
           if (NS_SUCCEEDED(prefBranch->GetComplexValue("intl.charset.detector", NS_GET_IID(nsIPrefLocalizedString), getter_AddRefs(str)))) {
             //only if we can get autodetector name correctly, do we set this to true
-            text->inputAutodetect = true;
+            this.inputAutodetect = true;
           }
         }
 
-        if (obj->options && obj->options->default_charset)
-          text->charset = strdup(obj->options->default_charset);
+        if (this.options && this.options->default_charset)
+          this.charset = strdup(this.options->default_charset);
         else
         {
           if (NS_SUCCEEDED(res))
           {
             nsString value;
             NS_GetLocalizedUnicharPreferenceWithDefault(prefBranch, "mailnews.view_default_charset", EmptyString(), value);
-            text->charset = ToNewUTF8String(value);
+            this.charset = ToNewUTF8String(value);
           }
           else
-            text->charset = strdup("");
+            this.charset = strdup("");
         }
       }
     }
   }
 
-  if (text->inputAutodetect)
+  if (this.inputAutodetect)
   {
     //we need to prepare lineDam for charset detection
-    text->lineDamBuffer = (char*)PR_Malloc(DAM_MAX_BUFFER_SIZE);
-    text->lineDamPtrs = (char**)PR_Malloc(DAM_MAX_LINES*sizeof(char*));
-    text->curDamOffset = 0;
-    text->lastLineInDam = 0;
-    if (!text->lineDamBuffer || !text->lineDamPtrs)
+    this.lineDamBuffer = (char*)PR_Malloc(DAM_MAX_BUFFER_SIZE);
+    this.lineDamPtrs = (char**)PR_Malloc(DAM_MAX_LINES*sizeof(char*));
+    this.curDamOffset = 0;
+    this.lastLineInDam = 0;
+    if (!this.lineDamBuffer || !this.lineDamPtrs)
     {
-      text->inputAutodetect = false;
-      PR_FREEIF(text->lineDamBuffer);
-      PR_FREEIF(text->lineDamPtrs);
+      this.inputAutodetect = false;
+      PR_FREEIF(this.lineDamBuffer);
+      PR_FREEIF(this.lineDamPtrs);
     }
   }
 
-  text->initializeCharset = true;
+  this.initializedCharset = true;
 
   return 0;
 }
 
-static void
-MimeInlineText_finalize (MimeObject *obj)
+Text::~Text()
 {
-  MimeInlineText *text = (MimeInlineText *) obj;
+  this.ParseEOF(false);
+  this.ParseEnd(false);
 
-  obj->clazz->parse_eof (obj, false);
-  obj->clazz->parse_end (obj, false);
+  PR_FREEIF(this.charset);
 
-  PR_FREEIF(text->charset);
+  /* Should have been freed by ParseEOF, but just in case... */
+  PR_ASSERT(!this.cbuffer);
+  PR_FREEIF (this.cbuffer);
 
-  /* Should have been freed by parse_eof, but just in case... */
-  PR_ASSERT(!text->cbuffer);
-  PR_FREEIF (text->cbuffer);
-
-  if (text->inputAutodetect) {
-    PR_FREEIF(text->lineDamBuffer);
-    PR_FREEIF(text->lineDamPtrs);
-    text->inputAutodetect = false;
+  if (this.inputAutodetect) {
+    PR_FREEIF(this.lineDamBuffer);
+    PR_FREEIF(this.lineDamPtrs);
+    this.inputAutodetect = false;
   }
-
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize (obj);
 }
 
 
-static int
-MimeInlineText_parse_eof (MimeObject *obj, bool abort_p)
+int Text::ParseEOF(bool abort_p)
 {
   int status;
 
-  if (obj->closed_p) return 0;
-  NS_ASSERTION(!obj->parsed_p, "obj already parsed");
+  if (this.closed_p) return 0;
+  NS_ASSERTION(!this.parsed_p, "obj already parsed");
 
-  MimeInlineText *text = (MimeInlineText *) obj;
-
-  /* Flush any buffered data from the MimeLeaf's decoder */
-  status = ((MimeLeafClass*)&MIME_SUPERCLASS)->close_decoder(obj);
+  /* Flush any buffered data from Leaf's decoder */
+  status = SUPERCLASS::CloseDecoder();
   if (status < 0) return status;
 
   /* If there is still data in the ibuffer, that means that the last
    line of this part didn't end in a newline; so push it out anyway
-   (this means that the parse_line method will be called with a string
+   (this means that the ParseLine() method will be called with a string
    with no trailing newline, which isn't the usual case).  We do this
-   here, rather than in MimeObject_parse_eof, because MimeObject isn't
+   here, rather than in Part.ParseEOF(), because |Part| isn't
    aware of the rotating-and-converting / charset detection we need to
    do first.
   */
-  if (!abort_p && obj->ibuffer_fp > 0)
+  if (!abort_p && this.ibuffer_fp > 0)
   {
-    status = MimeInlineText_rotate_convert_and_parse_line (obj->ibuffer,
-                                                           obj->ibuffer_fp,
-                                                           obj);
-    obj->ibuffer_fp = 0;
+    status = this.RotateConvertAndParseLine(this.ibuffer, this.ibuffer_fp);
+    this.ibuffer_fp = 0;
     if (status < 0)
     {
       //we haven't find charset yet? Do it before return
-      if (text->inputAutodetect)
-        status = MimeInlineText_open_dam(nullptr, 0, obj);
+      if (this.inputAutodetect)
+        status = this.OpenDAM(nullptr, 0);
 
-      obj->closed_p = true;
+      this.closed_p = true;
       return status;
     }
   }
 
   //we haven't find charset yet? now its the time
-  if (text->inputAutodetect)
-     status = MimeInlineText_open_dam(nullptr, 0, obj);
+  if (this.inputAutodetect) {
+     status = this.OpenDAM(nullptr, 0);
+     // TODO check status
+  }
 
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof (obj, abort_p);
+  return SUPERCLASS::ParseOEF(abort_p);
 }
 
-static int
-MimeInlineText_parse_end (MimeObject *obj, bool abort_p)
+int Text:ParseEnd(bool abort_p)
 {
-  MimeInlineText *text = (MimeInlineText *) obj;
-
-  if (obj->parsed_p)
+  if (this.parsed_p)
   {
-    PR_ASSERT(obj->closed_p);
+    PR_ASSERT(this.closed_p);
     return 0;
   }
 
   /* We won't be needing this buffer any more; nuke it. */
-  PR_FREEIF(text->cbuffer);
-  text->cbuffer_size = 0;
+  PR_FREEIF(this.cbuffer);
+  this.cbuffer_size = 0;
 
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_end (obj, abort_p);
+  return SUPERCLASS::ParseEnd(abort_p);
 }
 
 
 /* This maps A-M to N-Z and N-Z to A-M.  All other characters are left alone.
    (Comments in GNUS imply that for Japanese, one should rotate by 47?)
  */
-static const unsigned char MimeInlineText_rot13_table[256] = {
+const unsigned char rot13_table[256] = {
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
   21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
   40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
@@ -278,8 +229,7 @@ static const unsigned char MimeInlineText_rot13_table[256] = {
   232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246,
   247, 248, 249, 250, 251, 252, 253, 254, 255 };
 
-static int
-MimeInlineText_rot13_line (MimeObject *obj, char *line, int32_t length)
+int Text:ROT13Line(char *line, int32_t length)
 {
   unsigned char *s, *end;
   PR_ASSERT(line);
@@ -288,81 +238,61 @@ MimeInlineText_rot13_line (MimeObject *obj, char *line, int32_t length)
   end = s + length;
   while (s < end)
   {
-    *s = MimeInlineText_rot13_table[*s];
+    *s = rot13_table[*s];
     s++;
   }
   return 0;
 }
 
 
-static int
-MimeInlineText_parse_decoded_buffer (const char *buf, int32_t size, MimeObject *obj)
+int Text::ParseDecodedBuffer(const char *buf, int32_t size)
 {
-  PR_ASSERT(!obj->closed_p);
-  if (obj->closed_p) return -1;
+  PR_ASSERT(!this.closed_p);
+  if (this.closed_p) return -1;
 
-  /* MimeLeaf takes care of this. */
-  PR_ASSERT(obj->output_p && obj->options && obj->options->output_fn);
-  if (!obj->options) return -1;
+  /* |Leaf| takes care of this. */
+  PR_ASSERT(this.output_p && this.options && this.options->output_fn);
+  if (!this.options) return -1;
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (!obj->options->write_html_p && obj->options->format_out != nsMimeOutput::nsMimeMessageAttach)
-  return MimeObject_write(obj, buf, size, true);
+  if (!this.options->write_html_p && this.options->format_out != nsMimeOutput::nsMimeMessageAttach)
+  return this.Write(buf, size, true);
 
-  /* This is just like the parse_decoded_buffer method we inherit from the
-   MimeLeaf class, except that we line-buffer to our own wrapper on the
-   `parse_line' method instead of calling the `parse_line' method directly.
+  /* This is just like the ParseDecodedBuffer() method we inherit from the
+   Leaf class, except that we line-buffer to our own wrapper on the
+   `ParseLine' method instead of calling the `parse_line' method directly.
    */
   return mime_LineBuffer (buf, size,
-             &obj->ibuffer, &obj->ibuffer_size, &obj->ibuffer_fp,
+             &this.ibuffer, &this.ibuffer_size, &this.ibuffer_fp,
              true,
-             ((int (*) (char *, int32_t, void *))
-              /* This cast is to turn void into MimeObject */
-              MimeInlineText_rotate_convert_and_parse_line),
-             obj);
+             &Text::RotateConvertAndParseLine, // TODO virtual function pointer
+             this);
 }
 
-
-#define MimeInlineText_grow_cbuffer(text, desired_size) \
-  (((desired_size) >= (text)->cbuffer_size) ? \
-   mime_GrowBuffer ((desired_size), sizeof(char), 100, \
-           &(text)->cbuffer, &(text)->cbuffer_size) \
-   : 0)
-
-static int
-MimeInlineText_convert_and_parse_line(char *line, int32_t length, MimeObject *obj)
+int Text::ConvertAndParseLine(char* line, int32_t length)
 {
   int status;
   nsAutoCString converted;
 
-  MimeInlineText *text = (MimeInlineText *) obj;
-
   //in case of charset autodetection, charset can be override by meta charset
-  if (text->charsetOverridable) {
-    if (mime_typep(obj, (MimeObjectClass *) &mimeInlineTextHTMLClass))
+  if (this.charsetOverridable) {
+    if (this.IsType(TextHTMLClass))
     {
-      MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
-      if (textHTML->charset &&
-          *textHTML->charset &&
-          strcmp(textHTML->charset, text->charset))
+      if (this.needUpdateMsgWinCharset &&
+          this.charset && *this.charset)
       {
         //if meta tag specified charset is different from our detected result, use meta charset.
-        //but we don't want to redo previous lines
-        PR_FREEIF(text->charset);
-        text->charset = strdup(textHTML->charset);
-
         //update MsgWindow charset if we are instructed to do so
-        if (text->needUpdateMsgWinCharset && *text->charset)
-          SetMailCharacterSetToMsgWindow(obj, text->charset);
+        SetMailCharacterSetToMsgWindow(this, this.charset);
       }
     }
   }
 
-  status = obj->options->charset_conversion_fn(line, length,
-                       text->charset,
+  status = this.options->charset_conversion_fn(line, length,
+                       this.charset,
                        converted,
-                       obj->options->stream_closure);
+                       this.options->stream_closure);
 
   if (status == 0)
   {
@@ -370,139 +300,133 @@ MimeInlineText_convert_and_parse_line(char *line, int32_t length, MimeObject *ob
     length = converted.Length();
   }
 
-  /* Now that the line has been converted, call the subclass's parse_line
+  /* Now that the line has been converted, call the subclass's ParseLine
    method with the decoded data. */
-  status = obj->clazz->parse_line(line, length, obj);
+  //status = this.clazz->ParseLine(line, length);
+  status = this.ParseLine(line, length);
 
   return status;
 }
 
-//In this function call, all buffered lines in lineDam will be sent to charset detector
+// In this function, all buffered lines in lineDam will be sent to charset detector
 // and a charset will be used to parse all those line and following lines in this mime obj.
-static int
-MimeInlineText_open_dam(char *line, int32_t length, MimeObject *obj)
+int Text::OpenDAM(char* line, int32_t length)
 {
-  MimeInlineText *text = (MimeInlineText *) obj;
   const char* detectedCharset = nullptr;
   nsresult res = NS_OK;
   int status = 0;
   int32_t i;
 
-  if (text->curDamOffset <= 0) {
+  if (this.curDamOffset <= 0) {
     //there is nothing in dam, use current line for detection
     if (length > 0) {
       res = MIME_detect_charset(line, length, &detectedCharset);
     }
   } else {
     //we have stuff in dam, use the one
-    res = MIME_detect_charset(text->lineDamBuffer, text->curDamOffset, &detectedCharset);
+    res = MIME_detect_charset(this.lineDamBuffer, this.curDamOffset, &detectedCharset);
   }
 
-  //set the charset for this obj
+  //set the charset
   if (NS_SUCCEEDED(res) && detectedCharset && *detectedCharset)  {
-    PR_FREEIF(text->charset);
-    text->charset = strdup(detectedCharset);
+    PR_FREEIF(this.charset);
+    this.charset = strdup(detectedCharset);
 
     //update MsgWindow charset if we are instructed to do so
-    if (text->needUpdateMsgWinCharset && *text->charset)
-      SetMailCharacterSetToMsgWindow(obj, text->charset);
+    if (this.needUpdateMsgWinCharset && *this.charset)
+      SetMailCharacterSetToMsgWindow(this, this.charset);
   }
 
   //process dam and line using the charset
-  if (text->curDamOffset) {
-    for (i = 0; i < text->lastLineInDam-1; i++)
+  if (this.curDamOffset) {
+    for (i = 0; i < this.lastLineInDam-1; i++)
     {
-      status = MimeInlineText_convert_and_parse_line(
-                text->lineDamPtrs[i],
-                text->lineDamPtrs[i+1] - text->lineDamPtrs[i],
-                obj  );
+      status = this.ConvertAndParseLine(
+                this.lineDamPtrs[i],
+                this.lineDamPtrs[i+1] - this.lineDamPtrs[i]);
     }
-    status = MimeInlineText_convert_and_parse_line(
-                text->lineDamPtrs[i],
-                text->lineDamBuffer + text->curDamOffset - text->lineDamPtrs[i],
-                obj );
+    status = this.ConvertAndParseLine(
+                this.lineDamPtrs[i],
+                this.lineDamBuffer + this.curDamOffset - this.lineDamPtrs[i]);
   }
 
   if (length)
-    status = MimeInlineText_convert_and_parse_line(line, length, obj);
+    status = this.ConvertAndParseLine(line, length);
 
-  PR_Free(text->lineDamPtrs);
-  PR_Free(text->lineDamBuffer);
-  text->lineDamPtrs = nullptr;
-  text->lineDamBuffer = nullptr;
-  text->inputAutodetect = false;
+  PR_Free(this.lineDamPtrs);
+  PR_Free(this.lineDamBuffer);
+  this.lineDamPtrs = nullptr;
+  this.lineDamBuffer = nullptr;
+  this.inputAutodetect = false;
 
   return status;
 }
 
 
-static int
-MimeInlineText_rotate_convert_and_parse_line(char *line, int32_t length,
-                       MimeObject *obj)
+int Text::RotateConvertAndParseLine(char* line, int32_t length)
 {
   int status = 0;
-  MimeInlineTextClass *textc = (MimeInlineTextClass *) obj->clazz;
 
-  PR_ASSERT(!obj->closed_p);
-  if (obj->closed_p) return -1;
+  PR_ASSERT(!this.closed_p);
+  if (this.closed_p) return -1;
 
   /* Rotate the line, if desired (this happens on the raw data, before any
    charset conversion.) */
-  if (obj->options && obj->options->rot13_p)
+  if (this.options && this.options->rot13_p)
   {
-    status = textc->rot13_line(obj, line, length);
+    status = this.ROT13Line(line, length);
     if (status < 0) return status;
   }
 
   // Now convert to the canonical charset, if desired.
-  //
   bool    doConvert = true;
   // Don't convert vCard data
-  if ( ( (obj->content_type) && (!PL_strcasecmp(obj->content_type, TEXT_VCARD)) ) ||
-       (obj->options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
-       || obj->options->format_out == nsMimeOutput::nsMimeMessageAttach)
+  if ( ( (this.content_type) && (!PL_strcasecmp(this.content_type, TEXT_VCARD)) ) ||
+       (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+       || this.options->format_out == nsMimeOutput::nsMimeMessageAttach)
     doConvert = false;
 
   // Only convert if the user prefs is false
-  if ( (obj->options && obj->options->charset_conversion_fn) &&
-       (!obj->options->force_user_charset) &&
+  if ( (this.options && this.options->charset_conversion_fn) &&
+       (!this.options->force_user_charset) &&
        (doConvert)
      )
   {
-    MimeInlineText  *text = (MimeInlineText *) obj;
-
-    if (!text->initializeCharset)
+    if (!this.initializedCharset)
     {
-      MimeInlineText_initializeCharset(obj);
+      this.initializeCharset();
       //update MsgWindow charset if we are instructed to do so
-      if (text->needUpdateMsgWinCharset && *text->charset)
-        SetMailCharacterSetToMsgWindow(obj, text->charset);
+      if (this.needUpdateMsgWinCharset && *this.charset)
+        SetMailCharacterSetToMsgWindow(this, this.charset);
     }
 
     //if autodetect is on, push line to dam
-    if (text->inputAutodetect)
+    if (this.inputAutodetect)
     {
       //see if we reach the lineDam buffer limit, if so, there is no need to keep buffering
-      if (text->lastLineInDam >= DAM_MAX_LINES ||
-          DAM_MAX_BUFFER_SIZE - text->curDamOffset <= length) {
+      if (this.lastLineInDam >= DAM_MAX_LINES ||
+          DAM_MAX_BUFFER_SIZE - this.curDamOffset <= length) {
         //we let open dam process this line as well as thing that already in Dam
         //In case there is nothing in dam because this line is too big, we need to
         //perform autodetect on this line
-        status = MimeInlineText_open_dam(line, length, obj);
+        status = this.OpenDAM(line, length);
       }
       else {
         //buffering current line
-        text->lineDamPtrs[text->lastLineInDam] = text->lineDamBuffer + text->curDamOffset;
-        memcpy(text->lineDamPtrs[text->lastLineInDam], line, length);
-        text->lastLineInDam++;
-        text->curDamOffset += length;
+        this.lineDamPtrs[this.lastLineInDam] = this.lineDamBuffer + this.curDamOffset;
+        memcpy(this.lineDamPtrs[this.lastLineInDam], line, length);
+        this.lastLineInDam++;
+        this.curDamOffset += length;
       }
     }
     else
-      status = MimeInlineText_convert_and_parse_line(line, length, obj);
+      status = this.ConvertAndParseLine(line, length);
   }
   else
-    status = obj->clazz->parse_line(line, length, obj);
+    status = this.ParseLine(line, length);
 
   return status;
 }
+
+
+} // namespace

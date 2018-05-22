@@ -36,10 +36,10 @@ struct MimeSimpleStub {
 MimeDefClass(MimeSimpleStub, MimeSimpleStubClass, mimeSimpleStubClass, NULL);
 
 static int
-BeginGather(MimeObject *obj)
+BeginGather(Part *obj)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
-    int status = ((MimeObjectClass *)XPCOM_GetmimeLeafClass())->parse_begin(obj);
+    int status = ((PartClass *)XPCOM_GetmimeLeafClass())->ParseBegin(obj);
 
     if (status < 0)
         return status;
@@ -55,7 +55,7 @@ BeginGather(MimeObject *obj)
 }
 
 static int
-GatherLine(const char *line, int32_t length, MimeObject *obj)
+GatherLine(const char *line, int32_t length, Part *obj)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
 
@@ -66,21 +66,21 @@ GatherLine(const char *line, int32_t length, MimeObject *obj)
     }
 
     if (!obj->options->write_html_p)
-        return MimeObject_write(obj, line, length, true);
+        return Part_write(obj, line, length, true);
 
     ssobj->buffer->Append(line);
     return 0;
 }
 
 static int
-EndGather(MimeObject *obj, bool abort_p)
+EndGather(Part *obj, bool abort_p)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
 
     if (obj->closed_p)
         return 0;
 
-    int status = ((MimeObjectClass *)MIME_GetmimeInlineTextClass())->parse_eof(obj, abort_p);
+    int status = ((PartClass *)MIME_GetmimeInlineTextClass())->ParseEOF(obj, abort_p);
     if (status < 0)
         return status;
 
@@ -104,8 +104,8 @@ EndGather(MimeObject *obj, bool abort_p)
         return -1;
     }
 
-    // MimeObject_write wants a non-const string for some reason, but it doesn't mutate it
-    status = MimeObject_write(obj, asHTML.get(),
+    // Part_write wants a non-const string for some reason, but it doesn't mutate it
+    status = Part_write(obj, asHTML.get(),
                               asHTML.Length(), true);
     if (status < 0)
         return status;
@@ -113,7 +113,7 @@ EndGather(MimeObject *obj, bool abort_p)
 }
 
 static int
-Initialize(MimeObject *obj)
+Initialize(Part *obj)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
 
@@ -136,13 +136,13 @@ Initialize(MimeObject *obj)
     if (NS_FAILED(rv) || !ssobj->innerScriptable)
         return -1;
     ssobj->buffer = new nsCString();
-    ((MimeObjectClass *)XPCOM_GetmimeLeafClass())->initialize(obj);
+    ((PartClass *)XPCOM_GetmimeLeafClass())->initialize(obj);
 
     return 0;
 }
 
 static void
-Finalize(MimeObject *obj)
+Finalize(Part *obj)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
     ssobj->innerScriptable = nullptr;
@@ -152,10 +152,10 @@ Finalize(MimeObject *obj)
 static int
 MimeSimpleStubClassInitialize(MimeSimpleStubClass *clazz)
 {
-    MimeObjectClass *oclass = (MimeObjectClass *)clazz;
-    oclass->parse_begin = BeginGather;
-    oclass->parse_line = GatherLine;
-    oclass->parse_eof = EndGather;
+    PartClass *oclass = (MimeObjectClass *)clazz;
+    oclass->ParseBegin = BeginGather;
+    oclass->ParseLine = GatherLine;
+    oclass->ParseEOF = EndGather;
     oclass->initialize = Initialize;
     oclass->finalize = Finalize;
     return 0;
@@ -175,7 +175,7 @@ public:
     }
     NS_IMETHOD CreateContentTypeHandlerClass(const char *contentType,
                                              contentTypeHandlerInitStruct *initString,
-                                             MimeObjectClass **objClass) override;
+                                             PartClass **objClass) override;
 private:
     virtual ~nsSimpleMimeConverterStub() { }
     nsCString mContentType;
@@ -186,12 +186,12 @@ NS_IMPL_ISUPPORTS(nsSimpleMimeConverterStub, nsIMimeContentTypeHandler)
 NS_IMETHODIMP
 nsSimpleMimeConverterStub::CreateContentTypeHandlerClass(const char *contentType,
                                                      contentTypeHandlerInitStruct *initStruct,
-                                                         MimeObjectClass **objClass)
+                                                         PartClass **objClass)
 {
     NS_ENSURE_ARG_POINTER(objClass);
 
-    *objClass = (MimeObjectClass *)&mimeSimpleStubClass;
-    (*objClass)->superclass = (MimeObjectClass *)XPCOM_GetmimeInlineTextClass();
+    *objClass = (PartClass *)&mimeSimpleStubClass;
+    (*objClass)->superclass = (PartClass *)XPCOM_GetmimeInlineTextClass();
     NS_ENSURE_TRUE((*objClass)->superclass, NS_ERROR_UNEXPECTED);
 
     initStruct->force_inline_display = true;

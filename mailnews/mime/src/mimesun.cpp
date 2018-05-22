@@ -16,24 +16,24 @@
 MimeDefClass(MimeSunAttachment, MimeSunAttachmentClass,
        mimeSunAttachmentClass, &MIME_SUPERCLASS);
 
-static MimeMultipartBoundaryType MimeSunAttachment_check_boundary(MimeObject *,
+static MimeMultipartBoundaryType MimeSunAttachment_check_boundary(Part *,
                                   const char *,
                                   int32_t);
-static int MimeSunAttachment_create_child(MimeObject *);
-static int MimeSunAttachment_parse_child_line (MimeObject *, const char *, int32_t,
+static int MimeSunAttachment_create_child(Part *);
+static int MimeSunAttachment_parse_child_line (Part *, const char *, int32_t,
                          bool);
-static int MimeSunAttachment_parse_begin (MimeObject *);
-static int MimeSunAttachment_parse_eof (MimeObject *, bool);
+static int MimeSunAttachment_ParseBegin (Part *);
+static int MimeSunAttachment_ParseEOF (Part *, bool);
 
 static int
 MimeSunAttachmentClassInitialize(MimeSunAttachmentClass *clazz)
 {
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
 
   PR_ASSERT(!oclass->class_initialized);
-  oclass->parse_begin      = MimeSunAttachment_parse_begin;
-  oclass->parse_eof        = MimeSunAttachment_parse_eof;
+  oclass->ParseBegin      = MimeSunAttachment_parse_begin;
+  oclass->ParseEOF        = MimeSunAttachment_parse_eof;
   mclass->check_boundary   = MimeSunAttachment_check_boundary;
   mclass->create_child     = MimeSunAttachment_create_child;
   mclass->parse_child_line = MimeSunAttachment_parse_child_line;
@@ -42,27 +42,27 @@ MimeSunAttachmentClassInitialize(MimeSunAttachmentClass *clazz)
 
 
 static int
-MimeSunAttachment_parse_begin (MimeObject *obj)
+MimeSunAttachment_ParseBegin (Part *obj)
 {
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0) return status;
 
   /* Sun messages always have separators at the beginning. */
-  return MimeObject_write_separator(obj);
+  return Part_write_separator(obj);
 }
 
 static int
-MimeSunAttachment_parse_eof (MimeObject *obj, bool abort_p)
+MimeSunAttachment_ParseEOF (Part *obj, bool abort_p)
 {
   int status = 0;
 
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   if (status < 0) return status;
 
   /* Sun messages always have separators at the end. */
   if (!abort_p)
   {
-    status = MimeObject_write_separator(obj);
+    status = Part_write_separator(obj);
     if (status < 0) return status;
   }
 
@@ -71,7 +71,7 @@ MimeSunAttachment_parse_eof (MimeObject *obj, bool abort_p)
 
 
 static MimeMultipartBoundaryType
-MimeSunAttachment_check_boundary(MimeObject *obj, const char *line,
+MimeSunAttachment_check_boundary(Part *obj, const char *line,
                  int32_t length)
 {
   /* ten dashes */
@@ -88,7 +88,7 @@ MimeSunAttachment_check_boundary(MimeObject *obj, const char *line,
 
 
 static int
-MimeSunAttachment_create_child(MimeObject *obj)
+MimeSunAttachment_create_child(Part *obj)
 {
   MimeMultipart *mult = (MimeMultipart *) obj;
   int status = 0;
@@ -96,7 +96,7 @@ MimeSunAttachment_create_child(MimeObject *obj)
   char *sun_data_type = 0;
   const char *mime_ct = 0, *sun_enc_info = 0, *mime_cte = 0;
   char *mime_ct2 = 0;    /* sometimes we need to copy; this is for freeing. */
-  MimeObject *child = 0;
+  Part *child = 0;
 
   mult->state = MimeMultipartPartLine;
 
@@ -275,7 +275,7 @@ MimeSunAttachment_create_child(MimeObject *obj)
   PR_FREEIF(sun_data_type);
 
 
-  /* Now that we know its type and encoding, create a MimeObject to represent
+  /* Now that we know its type and encoding, create a Part to represent
    this part.
    */
   child = mime_create(mime_ct, mult->hdrs, obj->options);
@@ -304,12 +304,12 @@ MimeSunAttachment_create_child(MimeObject *obj)
   }
 
   /* Sun attachments always have separators between parts. */
-  status = MimeObject_write_separator(obj);
+  status = Part_write_separator(obj);
   if (status < 0) goto FAIL;
 
   /* And now that we've added this new object to our list of
    children, start its parser going. */
-  status = child->clazz->parse_begin(child);
+  status = child->clazz->ParseBegin(child);
   if (status < 0) goto FAIL;
 
  FAIL:
@@ -320,11 +320,11 @@ MimeSunAttachment_create_child(MimeObject *obj)
 
 
 static int
-MimeSunAttachment_parse_child_line (MimeObject *obj, const char *line, int32_t length,
+MimeSunAttachment_parse_child_line (Part *obj, const char *line, int32_t length,
                   bool first_line_p)
 {
   MimeContainer *cont = (MimeContainer *) obj;
-  MimeObject *kid;
+  Part *kid;
 
   /* This is simpler than MimeMultipart->parse_child_line in that it doesn't
    play games about body parts without trailing newlines.
@@ -338,5 +338,5 @@ MimeSunAttachment_parse_child_line (MimeObject *obj, const char *line, int32_t l
   PR_ASSERT(kid);
   if (!kid) return -1;
 
-  return kid->clazz->parse_buffer (line, length, kid);
+  return kid->clazz->ParseBuffer (line, length, kid);
 }

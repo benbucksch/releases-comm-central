@@ -31,12 +31,12 @@
 
    The MimeEncrypted class provides the following methods:
 
-   void *crypto_init(MimeObject *obj,
+   void *crypto_init(Part *obj,
            int (*output_fn) (const char *data, int32 data_size,
                      void *output_closure),
            void *output_closure)
 
-     This is called with the MimeObject representing the encrypted data.
+     This is called with the Part representing the encrypted data.
    The obj->headers should be used to initialize the decryption engine.
    NULL indicates failure; otherwise, an opaque closure object should
    be returned.
@@ -88,7 +88,7 @@
    by the crypto_closure.  output_fn may not be called.
 
 
-   int (*parse_decoded_buffer) (const char *buf, int32 size, MimeObject *obj)
+   int (*ParseDecodedBuffer) (const char *buf, int32 size, Part *obj)
 
      This method, of the same name as one in MimeLeaf, is a part of the
    afforementioned leaf/container hybridization.  This method is invoked
@@ -106,11 +106,11 @@ struct MimeEncryptedClass {
 
   /* Duplicated from MimeLeaf, see comments above.
      This is the callback that is handed to the decoder. */
-  int (*parse_decoded_buffer) (const char *buf, int32_t size, MimeObject *obj);
+  int (*ParseDecodedBuffer) (const char *buf, int32_t size, Part *obj);
 
 
   /* Callbacks used by decryption module. */
-  void * (*crypto_init) (MimeObject *obj,
+  void * (*crypto_init) (Part *obj,
              int (*output_fn) (const char *data, int32_t data_size,
                        void *output_closure),
              void *output_closure);

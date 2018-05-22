@@ -28,14 +28,14 @@
 MimeDefClass(MimeMultipartSignedCMS, MimeMultipartSignedCMSClass,
        mimeMultipartSignedCMSClass, &MIME_SUPERCLASS);
 
-static int MimeMultipartSignedCMS_initialize (MimeObject *);
+static int MimeMultipartSignedCMS_initialize (Part *);
 
-static void *MimeMultCMS_init (MimeObject *);
+static void *MimeMultCMS_init (Part *);
 static int MimeMultCMS_data_hash (const char *, int32_t, void *);
 static int MimeMultCMS_sig_hash  (const char *, int32_t, void *);
 static int MimeMultCMS_data_eof (void *, bool);
 static int MimeMultCMS_sig_eof  (void *, bool);
-static int MimeMultCMS_sig_init (void *, MimeObject *, MimeHeaders *);
+static int MimeMultCMS_sig_init (void *, Part *, MimeHeaders *);
 static char * MimeMultCMS_generate (void *);
 static void MimeMultCMS_free (void *);
 
@@ -44,7 +44,7 @@ extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 static int
 MimeMultipartSignedCMSClassInitialize(MimeMultipartSignedCMSClass *clazz)
 {
-  MimeObjectClass          *oclass = (MimeObjectClass *)    clazz;
+  PartClass          *oclass = (MimeObjectClass *)    clazz;
   MimeMultipartSignedClass *sclass = (MimeMultipartSignedClass *) clazz;
 
   oclass->initialize  = MimeMultipartSignedCMS_initialize;
@@ -63,9 +63,9 @@ MimeMultipartSignedCMSClassInitialize(MimeMultipartSignedCMSClass *clazz)
 }
 
 static int
-MimeMultipartSignedCMS_initialize (MimeObject *object)
+MimeMultipartSignedCMS_initialize (Part *object)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 
@@ -79,7 +79,7 @@ typedef struct MimeMultCMSdata
   bool decoding_failed;
   unsigned char* item_data;
   uint32_t item_len;
-  MimeObject *self;
+  Part *self;
   bool parent_is_encrypted_p;
   bool parent_holds_stamp_p;
   nsCOMPtr<nsIMsgSMIMEHeaderSink> smimeHeaderSink;
@@ -112,13 +112,13 @@ typedef struct MimeMultCMSdata
 
 /* #### MimeEncryptedCMS and MimeMultipartSignedCMS have a sleazy,
         incestuous, dysfunctional relationship. */
-extern bool MimeEncryptedCMS_encrypted_p (MimeObject *obj);
-extern void MimeCMSGetFromSender(MimeObject *obj,
+extern bool MimeEncryptedCMS_encrypted_p (Part *obj);
+extern void MimeCMSGetFromSender(Part *obj,
                                  nsCString &from_addr,
                                  nsCString &from_name,
                                  nsCString &sender_addr,
                                  nsCString &sender_name);
-extern bool MimeCMSHeadersAndCertsMatch(MimeObject *obj,
+extern bool MimeCMSHeadersAndCertsMatch(Part *obj,
                                           nsICMSMessage *,
                                           bool *signing_cert_without_email_address);
 extern void MimeCMSRequestAsyncSignatureVerification(nsICMSMessage *aCMSMsg,
@@ -126,12 +126,12 @@ extern void MimeCMSRequestAsyncSignatureVerification(nsICMSMessage *aCMSMsg,
                                                      const char *aSenderAddr, const char *aSenderName,
                                                      nsIMsgSMIMEHeaderSink *aHeaderSink, int32_t aMimeNestingLevel,
                                                      unsigned char* item_data, uint32_t item_len);
-extern char *MimeCMS_MakeSAURL(MimeObject *obj);
+extern char *MimeCMS_MakeSAURL(Part *obj);
 extern char *IMAP_CreateReloadAllPartsUrl(const char *url);
-extern int MIMEGetRelativeCryptoNestLevel(MimeObject *obj);
+extern int MIMEGetRelativeCryptoNestLevel(Part *obj);
 
 static void *
-MimeMultCMS_init (MimeObject *obj)
+MimeMultCMS_init (Part *obj)
 {
   MimeHeaders *hdrs = obj->headers;
   MimeMultCMSdata *data = 0;
@@ -313,7 +313,7 @@ MimeMultCMS_data_eof (void *crypto_closure, bool abort_p)
 
 static int
 MimeMultCMS_sig_init (void *crypto_closure,
-            MimeObject *multipart_object,
+            Part *multipart_object,
             MimeHeaders *signature_hdrs)
 {
   MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;

@@ -8,24 +8,21 @@
 
 #include "mimetext.h"
 
-/* The MimeInlineTextPlainFlowed class implements the
-   text/plain MIME content type for the special case of a supplied
-   format=flowed. See
-   ftp://ftp.ietf.org/internet-drafts/draft-gellens-format-06.txt for
-   more information.
+namespace MIME {
+
+/**
+ * The TextPlainFlowed class implements the text/plain MIME content type
+ * for the special case of the subtype format=flowed.
+ * @see RFC 2646
+ * @see <https://joeclark.org/ffaq.html>
+ * This implementation was based on the earlier draft
+ * <ftp://ftp.ietf.org/internet-drafts/draft-gellens-format-06.txt>
  */
+class TextPlainFlowed : Text {
+public:
+  TextPlainFlowed();
+  virtual ~TextPlainFlowed();
 
-typedef struct MimeInlineTextPlainFlowedClass MimeInlineTextPlainFlowedClass;
-typedef struct MimeInlineTextPlainFlowed      MimeInlineTextPlainFlowed;
-
-struct MimeInlineTextPlainFlowedClass {
-  MimeInlineTextClass text;
-};
-
-extern MimeInlineTextPlainFlowedClass mimeInlineTextPlainFlowedClass;
-
-struct MimeInlineTextPlainFlowed {
-  MimeInlineText  text;
   bool            delSp;                // DelSp=yes (RFC 3676)
   int32_t         mQuotedSizeSetting;   // mail.quoted_size
   int32_t         mQuotedStyleSetting;  // mail.quoted_style
@@ -33,20 +30,20 @@ struct MimeInlineTextPlainFlowed {
   bool            mStripSig;            // mail.strip_sig_on_reply
 };
 
+class TextPlainFlowedClass : TextClass {
+}
 
 /*
  * Made to contain information to be kept during the whole message parsing.
  */
-struct MimeInlineTextPlainFlowedExData {
-  struct MimeObject *ownerobj; /* The owner of this struct */
+class TextPlainFlowedExData {
+  struct Part* ownerobj; /* The owner of this struct */
   bool inflow; /* If we currently are in flow */
   bool fixedwidthfont; /* If we output text for fixed width font */
   uint32_t quotelevel; /* How deep is your love, uhr, quotelevel I meen. */
   bool isSig;  // we're currently in a signature
-  struct MimeInlineTextPlainFlowedExData *next;
+  TextPlainFlowedExData* next;
 };
 
-#define MimeInlineTextPlainFlowedClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMETPFL_H_ */
+} // namespace
+#endif // _MIMETPFL_H_

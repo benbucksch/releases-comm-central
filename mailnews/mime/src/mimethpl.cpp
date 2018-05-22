@@ -23,49 +23,49 @@
    rendering. However, that class is more picky about line endings
    and I currently don't feel like splitting up the generated plaintext
    into separate lines again. So, I just throw the whole message at once
-   at the TextPlain_parse_line function - it happens to work *g*. */
+   at the TextPlain_ParseLine function - it happens to work *g*. */
 MimeDefClass(MimeInlineTextHTMLAsPlaintext, MimeInlineTextHTMLAsPlaintextClass,
        mimeInlineTextHTMLAsPlaintextClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTMLAsPlaintext_parse_line (const char *, int32_t,
-                                                     MimeObject *);
-static int MimeInlineTextHTMLAsPlaintext_parse_begin (MimeObject *obj);
-static int MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *, bool);
-static void MimeInlineTextHTMLAsPlaintext_finalize (MimeObject *obj);
+static int MimeInlineTextHTMLAsPlaintext_ParseLine (const char *, int32_t,
+                                                     Part *);
+static int MimeInlineTextHTMLAsPlaintext_ParseBegin (Part *obj);
+static int MimeInlineTextHTMLAsPlaintext_ParseEOF (Part *, bool);
+static void MimeInlineTextHTMLAsPlaintext_finalize (Part *obj);
 
 static int
 MimeInlineTextHTMLAsPlaintextClassInitialize(MimeInlineTextHTMLAsPlaintextClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   NS_ASSERTION(!oclass->class_initialized, "problem with superclass");
-  oclass->parse_line  = MimeInlineTextHTMLAsPlaintext_parse_line;
-  oclass->parse_begin = MimeInlineTextHTMLAsPlaintext_parse_begin;
-  oclass->parse_eof   = MimeInlineTextHTMLAsPlaintext_parse_eof;
+  oclass->ParseLine  = MimeInlineTextHTMLAsPlaintext_parse_line;
+  oclass->ParseBegin = MimeInlineTextHTMLAsPlaintext_parse_begin;
+  oclass->ParseEOF   = MimeInlineTextHTMLAsPlaintext_parse_eof;
   oclass->finalize    = MimeInlineTextHTMLAsPlaintext_finalize;
 
   return 0;
 }
 
 static int
-MimeInlineTextHTMLAsPlaintext_parse_begin (MimeObject *obj)
+MimeInlineTextHTMLAsPlaintext_ParseBegin (Part *obj)
 {
   MimeInlineTextHTMLAsPlaintext *textHTMLPlain =
                                        (MimeInlineTextHTMLAsPlaintext *) obj;
   textHTMLPlain->complete_buffer = new nsString();
      // Let's just hope that libmime won't have the idea to call begin twice...
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
 }
 
 static int
-MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *obj, bool abort_p)
+MimeInlineTextHTMLAsPlaintext_ParseEOF (Part *obj, bool abort_p)
 {
   if (obj->closed_p)
     return 0;
 
-  // This is a hack. We need to call parse_eof() of the super class to flush out any buffered data.
+  // This is a hack. We need to call ParseEOF() of the super class to flush out any buffered data.
   // We can't call it yet for our direct super class, because it would "close" the output
   // (write tags such as </pre> and </div>). We'll do that after parsing the buffer.
-  int status = ((MimeObjectClass*)&MIME_SUPERCLASS)->superclass->parse_eof(obj, abort_p);
+  int status = ((PartClass*)&MIME_SUPERCLASS)->superclass->ParseEOF(obj, abort_p);
   if (status < 0)
     return status;
 
@@ -92,7 +92,7 @@ MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *obj, bool abort_p)
 
     NS_ConvertUTF16toUTF8 resultCStr(asPlaintext);
     // TODO parse each line independently
-    status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_line(
+    status = ((PartClass*)&MIME_SUPERCLASS)->ParseLine(
                                resultCStr.BeginWriting(),
                                resultCStr.Length(),
                                obj);
@@ -106,14 +106,14 @@ MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *obj, bool abort_p)
   // gets a chance to write the closing.
   bool save_closed_p = obj->closed_p;
   obj->closed_p = false;
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_eof(obj, abort_p);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
   // Restore closed_p.
   obj->closed_p = save_closed_p;
   return status;
 }
 
 void
-MimeInlineTextHTMLAsPlaintext_finalize (MimeObject *obj)
+MimeInlineTextHTMLAsPlaintext_finalize (Part *obj)
 {
   MimeInlineTextHTMLAsPlaintext *textHTMLPlain =
                                         (MimeInlineTextHTMLAsPlaintext *) obj;
@@ -121,19 +121,19 @@ MimeInlineTextHTMLAsPlaintext_finalize (MimeObject *obj)
   {
     // If there's content in the buffer, make sure that we output it.
     // don't care about return codes
-    obj->clazz->parse_eof(obj, false);
+    obj->clazz->ParseEOF(obj, false);
 
     delete textHTMLPlain->complete_buffer;
     textHTMLPlain->complete_buffer = NULL;
       /* It is important to zero the pointer, so we can reliably check for
          the validity of it in the other functions. See above. */
   }
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize (obj);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize (obj);
 }
 
 static int
-MimeInlineTextHTMLAsPlaintext_parse_line (const char *line, int32_t length,
-                                          MimeObject *obj)
+MimeInlineTextHTMLAsPlaintext_ParseLine (const char *line, int32_t length,
+                                          Part *obj)
 {
   MimeInlineTextHTMLAsPlaintext *textHTMLPlain =
                                        (MimeInlineTextHTMLAsPlaintext *) obj;
@@ -149,7 +149,7 @@ printf("Can't output: %s\n", line);
   /*
     To convert HTML->TXT synchronously, I need the full source at once,
     not line by line (how do you convert "<li>foo\n" to plaintext?).
-    parse_decoded_buffer claims to give me that, but in fact also gives
+    ParseDecodedBuffer claims to give me that, but in fact also gives
     me single lines.
     It might be theoretically possible to drive this asynchronously, but
     I don't know, which odd circumstances might arise and how libmime

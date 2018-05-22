@@ -33,7 +33,7 @@ using namespace mozilla::mailnews;
 MimeDefClass(MimeEncryptedCMS, MimeEncryptedCMSClass,
        mimeEncryptedCMSClass, &MIME_SUPERCLASS);
 
-static void *MimeCMS_init(MimeObject *, int (*output_fn) (const char *, int32_t, void *), void *);
+static void *MimeCMS_init(Part *, int (*output_fn) (const char *, int32_t, void *), void *);
 static int MimeCMS_write (const char *, int32_t, void *);
 static int MimeCMS_eof (void *, bool);
 static char * MimeCMS_generate (void *);
@@ -44,7 +44,7 @@ extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 static int MimeEncryptedCMSClassInitialize(MimeEncryptedCMSClass *clazz)
 {
 #ifdef DEBUG
-  MimeObjectClass    *oclass = (MimeObjectClass *)    clazz;
+  PartClass    *oclass = (MimeObjectClass *)    clazz;
   NS_ASSERTION(!oclass->class_initialized, "1.2 <mscott@netscape.com> 01 Nov 2001 17:59");
 #endif
 
@@ -69,7 +69,7 @@ typedef struct MimeCMSdata
   char *sender_addr;
   bool decoding_failed;
   uint32_t decoded_bytes;
-  MimeObject *self;
+  Part *self;
   bool parent_is_encrypted_p;
   bool parent_holds_stamp_p;
   nsCOMPtr<nsIMsgSMIMEHeaderSink> smimeHeaderSink;
@@ -123,12 +123,12 @@ static void MimeCMS_content_callback (void *arg, const char *buf, unsigned long 
   data->decoded_bytes += length;
 }
 
-bool MimeEncryptedCMS_encrypted_p (MimeObject *obj)
+bool MimeEncryptedCMS_encrypted_p (Part *obj)
 {
   bool encrypted;
 
   if (!obj) return false;
-  if (mime_typep(obj, (MimeObjectClass *) &mimeEncryptedCMSClass))
+  if (mime_typep(obj, (PartClass *) &mimeEncryptedCMSClass))
   {
     MimeEncrypted *enc = (MimeEncrypted *) obj;
     MimeCMSdata *data = (MimeCMSdata *) enc->crypto_closure;
@@ -348,7 +348,7 @@ NS_IMETHODIMP nsSMimeVerificationListener::Notify(nsICMSMessage2 *aVerifiedMessa
   return NS_OK;
 }
 
-int MIMEGetRelativeCryptoNestLevel(MimeObject *obj)
+int MIMEGetRelativeCryptoNestLevel(Part *obj)
 {
   /*
     the part id of any mimeobj is mime_part_address(obj)
@@ -364,13 +364,13 @@ int MIMEGetRelativeCryptoNestLevel(MimeObject *obj)
 
   // if we are showing the toplevel message, aTopMessageNestLevel == 0
   int aTopMessageNestLevel = 0;
-  MimeObject *aTopShownObject = nullptr;
+  Part *aTopShownObject = nullptr;
   if (obj && obj->options->part_to_load) {
     bool aAlreadyFoundTop = false;
-    for (MimeObject *walker = obj; walker; walker = walker->parent) {
+    for (Part *walker = obj; walker; walker = walker->parent) {
       if (aAlreadyFoundTop) {
-        if (!mime_typep(walker, (MimeObjectClass *) &mimeEncryptedClass)
-            && !mime_typep(walker, (MimeObjectClass *) &mimeMultipartSignedClass)) {
+        if (!mime_typep(walker, (PartClass *) &mimeEncryptedClass)
+            && !mime_typep(walker, (PartClass *) &mimeMultipartSignedClass)) {
           ++aTopMessageNestLevel;
         }
       }
@@ -397,10 +397,10 @@ int MIMEGetRelativeCryptoNestLevel(MimeObject *obj)
   // if we are the child of the topmost message, aCryptoPartNestLevel == 1
   int aCryptoPartNestLevel = 0;
   if (obj) {
-    for (MimeObject *walker = obj; walker; walker = walker->parent) {
+    for (Part *walker = obj; walker; walker = walker->parent) {
       // Crypto mime objects are transparent wrt nesting.
-      if (!mime_typep(walker, (MimeObjectClass *) &mimeEncryptedClass)
-          && !mime_typep(walker, (MimeObjectClass *) &mimeMultipartSignedClass)) {
+      if (!mime_typep(walker, (PartClass *) &mimeEncryptedClass)
+          && !mime_typep(walker, (PartClass *) &mimeMultipartSignedClass)) {
         ++aCryptoPartNestLevel;
       }
       if (aTopShownObject && walker->parent == aTopShownObject) {
@@ -416,7 +416,7 @@ int MIMEGetRelativeCryptoNestLevel(MimeObject *obj)
   return aCryptoPartNestLevel - aTopMessageNestLevel;
 }
 
-static void *MimeCMS_init(MimeObject *obj,
+static void *MimeCMS_init(Part *obj,
                           int (*output_fn) (const char *buf, int32_t buf_size, void *output_closure),
                           void *output_closure)
 {
@@ -450,7 +450,7 @@ static void *MimeCMS_init(MimeObject *obj,
   data->parent_holds_stamp_p =
   (obj->parent &&
    (mime_crypto_stamped_p(obj->parent) ||
-    mime_typep(obj->parent, (MimeObjectClass *) &mimeEncryptedClass)));
+    mime_typep(obj->parent, (PartClass *) &mimeEncryptedClass)));
 
   data->parent_is_encrypted_p =
   (obj->parent && MimeEncryptedCMS_encrypted_p (obj->parent));
@@ -531,7 +531,7 @@ MimeCMS_write (const char *buf, int32_t buf_size, void *closure)
   return 0;
 }
 
-void MimeCMSGetFromSender(MimeObject *obj,
+void MimeCMSGetFromSender(Part *obj,
                           nsCString &from_addr,
                           nsCString &from_name,
                           nsCString &sender_addr,
@@ -541,11 +541,11 @@ void MimeCMSGetFromSender(MimeObject *obj,
 
   /* Find the headers of the MimeMessage which is the parent (or grandparent)
    of this object (remember, crypto objects nest.) */
-  MimeObject *o2 = obj;
+  Part *o2 = obj;
   msg_headers = o2->headers;
   while (o2 &&
        o2->parent &&
-       !mime_typep(o2->parent, (MimeObjectClass *) &mimeMessageClass))
+       !mime_typep(o2->parent, (PartClass *) &mimeMessageClass))
     {
     o2 = o2->parent;
     msg_headers = o2->headers;

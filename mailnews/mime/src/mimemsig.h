@@ -16,7 +16,7 @@
 
    The MimeMultipartSigned class provides the following methods:
 
-   void *crypto_init (MimeObject *multipart_object)
+   void *crypto_init (Part *multipart_object)
 
      This is called with the object, the object->headers of which should be
    used to initialize the dexlateion engine.  NULL indicates failure;
@@ -35,7 +35,7 @@
    as we're terminating abnormally.
 
    int crypto_signature_init (void *crypto_closure,
-                              MimeObject *multipart_object,
+                              Part *multipart_object,
                 MimeHeaders *signature_hdrs)
 
      This is called after crypto_data_eof() and just before the first call to
@@ -89,7 +89,7 @@ struct MimeMultipartSignedClass {
   MimeMultipartClass multipart;
 
   /* Callbacks used by dexlateion (really, signature verification) module. */
-  void * (*crypto_init) (MimeObject *multipart_object);
+  void * (*crypto_init) (Part *multipart_object);
 
   int (*crypto_data_hash)      (const char *data, int32_t data_size,
                 void *crypto_closure);
@@ -100,7 +100,7 @@ struct MimeMultipartSignedClass {
   int (*crypto_signature_eof) (void *crypto_closure, bool abort_p);
 
   int (*crypto_signature_init) (void *crypto_closure,
-                MimeObject *multipart_object,
+                Part *multipart_object,
                 MimeHeaders *signature_hdrs);
 
   char * (*crypto_generate_html) (void *crypto_closure);

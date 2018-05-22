@@ -18,52 +18,52 @@
 MimeDefClass(MimeExternalObject, MimeExternalObjectClass,
        mimeExternalObjectClass, &MIME_SUPERCLASS);
 
-static int MimeExternalObject_initialize (MimeObject *);
-static void MimeExternalObject_finalize (MimeObject *);
-static int MimeExternalObject_parse_begin (MimeObject *);
-static int MimeExternalObject_parse_buffer (const char *, int32_t, MimeObject *);
-static int MimeExternalObject_parse_line (const char *, int32_t, MimeObject *);
-static int MimeExternalObject_parse_decoded_buffer (const char*, int32_t, MimeObject*);
-static bool MimeExternalObject_displayable_inline_p (MimeObjectClass *clazz,
+static int MimeExternalObject_initialize (Part *);
+static void MimeExternalObject_finalize (Part *);
+static int MimeExternalObject_ParseBegin (Part *);
+static int MimeExternalObject_ParseBuffer (const char *, int32_t, Part *);
+static int MimeExternalObject_ParseLine (const char *, int32_t, Part *);
+static int MimeExternalObject_ParseDecodedBuffer (const char*, int32_t, Part*);
+static bool MimeExternalObject_displayable_inline_p (PartClass *clazz,
                             MimeHeaders *hdrs);
 
 static int
 MimeExternalObjectClassInitialize(MimeExternalObjectClass *clazz)
 {
-  MimeObjectClass *oclass = (MimeObjectClass *) clazz;
+  PartClass *oclass = (MimeObjectClass *) clazz;
   MimeLeafClass   *lclass = (MimeLeafClass *) clazz;
 
   NS_ASSERTION(!oclass->class_initialized, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   oclass->initialize   = MimeExternalObject_initialize;
   oclass->finalize     = MimeExternalObject_finalize;
-  oclass->parse_begin  = MimeExternalObject_parse_begin;
-  oclass->parse_buffer = MimeExternalObject_parse_buffer;
-  oclass->parse_line   = MimeExternalObject_parse_line;
+  oclass->ParseBegin  = MimeExternalObject_parse_begin;
+  oclass->ParseBuffer = MimeExternalObject_parse_buffer;
+  oclass->ParseLine   = MimeExternalObject_parse_line;
   oclass->displayable_inline_p = MimeExternalObject_displayable_inline_p;
-  lclass->parse_decoded_buffer = MimeExternalObject_parse_decoded_buffer;
+  lclass->ParseDecodedBuffer = MimeExternalObject_parse_decoded_buffer;
   return 0;
 }
 
 
 static int
-MimeExternalObject_initialize (MimeObject *object)
+MimeExternalObject_initialize (Part *object)
 {
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
+  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 static void
-MimeExternalObject_finalize (MimeObject *object)
+MimeExternalObject_finalize (Part *object)
 {
-  ((MimeObjectClass*)&MIME_SUPERCLASS)->finalize(object);
+  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
 }
 
 
 static int
-MimeExternalObject_parse_begin (MimeObject *obj)
+MimeExternalObject_ParseBegin (Part *obj)
 {
   int status;
 
-  status = ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_begin(obj);
+  status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
   if (status < 0) return status;
 
   // If we're writing this object, and we're doing it in raw form, then
@@ -74,14 +74,14 @@ MimeExternalObject_parse_begin (MimeObject *obj)
     !obj->options->write_html_p &&
     !obj->options->state->first_data_written_p)
   {
-    status = MimeObject_output_init(obj, 0);
+    status = Part_output_init(obj, 0);
     if (status < 0) return status;
     NS_ASSERTION(obj->options->state->first_data_written_p, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   }
 
   //
   // If we're writing this object as HTML, do all the work now -- just write
-  // out a table with a link in it.  (Later calls to the `parse_buffer' method
+  // out a table with a link in it.  (Later calls to the `ParseBuffer' method
   // will simply discard the data of the object itself.)
   //
   if (obj->options &&
@@ -178,7 +178,7 @@ GOTTA STILL DO THIS FOR QUOTING!
 }
 
 static int
-MimeExternalObject_parse_buffer (const char *buffer, int32_t size, MimeObject *obj)
+MimeExternalObject_ParseBuffer (const char *buffer, int32_t size, Part *obj)
 {
   NS_ASSERTION(!obj->closed_p, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   if (obj->closed_p) return -1;
@@ -187,24 +187,24 @@ MimeExternalObject_parse_buffer (const char *buffer, int32_t size, MimeObject *o
   // MIME object.
 
   /* The data will be base64-decoded and passed to
-     MimeExternalObject_parse_decoded_buffer. */
-  return ((MimeObjectClass*)&MIME_SUPERCLASS)->parse_buffer(buffer, size, obj);
+     MimeExternalObject_ParseDecodedBuffer. */
+  return ((PartClass*)&MIME_SUPERCLASS)->ParseBuffer(buffer, size, obj);
 }
 
 
 static int
-MimeExternalObject_parse_decoded_buffer (const char *buf, int32_t size,
-                     MimeObject *obj)
+MimeExternalObject_ParseDecodedBuffer (const char *buf, int32_t size,
+                     Part *obj)
 {
-  /* This is called (by MimeLeafClass->parse_buffer) with blocks of data
+  /* This is called (by MimeLeafClass->ParseBuffer) with blocks of data
    that have already been base64-decoded.  This will only be called in
    the case where we're not emitting HTML, and want access to the raw
    data itself.
 
-   We override the `parse_decoded_buffer' method provided by MimeLeaf
+   We override the `ParseDecodedBuffer' method provided by MimeLeaf
    because, unlike most children of MimeLeaf, we do not want to line-
    buffer the decoded data -- we want to simply pass it along to the
-   backend, without going through our `parse_line' method.
+   backend, without going through our `ParseLine' method.
    */
 
   /* Don't do a roundtrip through XPConnect when we're only interested in
@@ -217,19 +217,19 @@ MimeExternalObject_parse_decoded_buffer (const char *buf, int32_t size,
                        obj->options->write_html_p))
     return 0;
   else
-    return MimeObject_write(obj, buf, size, true);
+    return Part_write(obj, buf, size, true);
 }
 
 
 static int
-MimeExternalObject_parse_line (const char *line, int32_t length, MimeObject *obj)
+MimeExternalObject_ParseLine (const char *line, int32_t length, Part *obj)
 {
   NS_ERROR("This method should never be called (externals do no line buffering).");
   return -1;
 }
 
 static bool
-MimeExternalObject_displayable_inline_p (MimeObjectClass *clazz,
+MimeExternalObject_displayable_inline_p (PartClass *clazz,
                      MimeHeaders *hdrs)
 {
   return false;
