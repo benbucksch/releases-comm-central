@@ -26,11 +26,8 @@
 #include "nsMsgUtils.h"
 #include "mozilla/Unused.h"
 
-// Forward declares...
-int32_t MimeHeaders_build_heads_list(MimeHeaders *hdrs);
-
-void
-MimeHeaders_convert_header_value(MimeDisplayOptions *opt, nsCString &value,
+static void
+Headers::ConvertHeaderValue(DisplayOptions* opt, nsCString &value,
                                  bool convert_charset_only)
 {
   if (value.IsEmpty())
@@ -67,163 +64,134 @@ MimeHeaders_convert_header_value(MimeDisplayOptions *opt, nsCString &value,
   }
 }
 
-MimeHeaders *
-MimeHeaders_new (void)
+Headers::Headers()
 {
-  MimeHeaders *hdrs = (MimeHeaders *) PR_MALLOC(sizeof(MimeHeaders));
-  if (!hdrs) return 0;
-
-  memset(hdrs, 0, sizeof(*hdrs));
-  hdrs->done_p = false;
-
-  return hdrs;
+  this.done_p = false;
 }
 
-void
-MimeHeaders_free (MimeHeaders *hdrs)
+Headers::~Headers()
 {
-  if (!hdrs) return;
-  PR_FREEIF(hdrs->all_headers);
-  PR_FREEIF(hdrs->heads);
-  PR_FREEIF(hdrs->obuffer);
-  PR_FREEIF(hdrs->munged_subject);
-  hdrs->obuffer_fp = 0;
-  hdrs->obuffer_size = 0;
-
-# ifdef DEBUG__
-  {
-  int i, size = sizeof(*hdrs);
-  uint32_t *array = (uint32_t*) hdrs;
-  for (i = 0; i < (size / sizeof(*array)); i++)
-    array[i] = (uint32_t) 0xDEADBEEF;
-  }
-# endif /* DEBUG */
-
-  PR_Free(hdrs);
+  PR_FREEIF(this.all_headers);
+  PR_FREEIF(this.heads);
+  PR_FREEIF(this.obuffer);
+  PR_FREEIF(this.munged_subject);
+  this.obuffer_fp = 0;
+  this.obuffer_size = 0;
 }
 
 int
-MimeHeaders_ParseLine (const char *buffer, int32_t size, MimeHeaders *hdrs)
+Headers::ParseLine(const char* buffer, int32_t size)
 {
   int status = 0;
   int desired_size;
 
-  NS_ASSERTION(hdrs, "1.22 <rhp@netscape.com> 22 Aug 1999 08:48");
-  if (!hdrs) return -1;
-
   /* Don't try and feed me more data after having fed me a blank line... */
-  NS_ASSERTION(!hdrs->done_p, "1.22 <rhp@netscape.com> 22 Aug 1999 08:48");
-  if (hdrs->done_p) return -1;
+  NS_ASSERTION(!this.done_p);
+  if (this.done_p) return -1;
 
   if (!buffer || size == 0 || *buffer == '\r' || *buffer == '\n')
   {
     /* If this is a blank line, we're done.
      */
-    hdrs->done_p = true;
-    return MimeHeaders_build_heads_list(hdrs);
+    this.done_p = true;
+    return this.BuildHeadsList();
   }
 
   /* Tack this data on to the end of our copy.
    */
-  desired_size = hdrs->all_headers_fp + size + 1;
-  if (desired_size >= hdrs->all_headers_size)
+  desired_size = this.all_headers_fp + size + 1;
+  if (desired_size >= this.all_headers_size)
   {
-    status = mime_GrowBuffer (desired_size, sizeof(char), 255,
-                 &hdrs->all_headers, &hdrs->all_headers_size);
+    status = mime_GrowBuffer(desired_size, sizeof(char), 255,
+                 &this.all_headers, &this.all_headers_size);
     if (status < 0) return status;
   }
-  memcpy(hdrs->all_headers+hdrs->all_headers_fp, buffer, size);
-  hdrs->all_headers_fp += size;
+  memcpy(this.all_headers + this.all_headers_fp, buffer, size);
+  this.all_headers_fp += size;
 
   return 0;
 }
 
-MimeHeaders *
-MimeHeaders_copy (MimeHeaders *hdrs)
+Headers* Headers::Copy()
 {
-  MimeHeaders *hdrs2;
-  if (!hdrs) return 0;
+  Headers *copy = (Headers*) PR_MALLOC(sizeof(this));
+  if (!copy) return 0;
+  memset(copy, 0, sizeof(*copy));
 
-  hdrs2 = (MimeHeaders *) PR_MALLOC(sizeof(*hdrs));
-  if (!hdrs2) return 0;
-  memset(hdrs2, 0, sizeof(*hdrs2));
-
-  if (hdrs->all_headers)
+  if (this.all_headers)
   {
-    hdrs2->all_headers = (char *) PR_MALLOC(hdrs->all_headers_fp);
-    if (!hdrs2->all_headers)
+    copy->all_headers = (char *) PR_MALLOC(this.all_headers_fp);
+    if (!copy->all_headers)
     {
-      PR_Free(hdrs2);
+      PR_Free(copy);
       return 0;
     }
-    memcpy(hdrs2->all_headers, hdrs->all_headers, hdrs->all_headers_fp);
+    memcpy(copy->all_headers, this.all_headers, this.all_headers_fp);
 
-    hdrs2->all_headers_fp   = hdrs->all_headers_fp;
-    hdrs2->all_headers_size = hdrs->all_headers_fp;
+    copy->all_headers_fp   = this.all_headers_fp;
+    copy->all_headers_size = this.all_headers_fp;
   }
 
-  hdrs2->done_p = hdrs->done_p;
+  copy->done_p = this.done_p;
 
-  if (hdrs->heads)
+  if (this.heads)
   {
     int i;
-    hdrs2->heads = (char **) PR_MALLOC(hdrs->heads_size
-                    * sizeof(*hdrs->heads));
-    if (!hdrs2->heads)
+    copy->heads = (char **) PR_MALLOC(this.heads_size
+                    * sizeof(*this.heads));
+    if (!copy->heads)
     {
-      PR_FREEIF(hdrs2->all_headers);
-      PR_Free(hdrs2);
+      PR_FREEIF(copy->all_headers);
+      PR_Free(copy);
       return 0;
     }
-    hdrs2->heads_size = hdrs->heads_size;
-    for (i = 0; i < hdrs->heads_size; i++)
+    copy->heads_size = this.heads_size;
+    for (i = 0; i < this.heads_size; i++)
     {
-      hdrs2->heads[i] = (hdrs2->all_headers +
-               (hdrs->heads[i] - hdrs->all_headers));
+      copy->heads[i] = (copy->all_headers +
+               (this.heads[i] - this.all_headers));
     }
   }
-  return hdrs2;
+  return copy;
 }
 
 int
-MimeHeaders_build_heads_list(MimeHeaders *hdrs)
+Headers::BuildHeadsList()
 {
   char *s;
   char *end;
   int i;
-  NS_ASSERTION(hdrs, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (!hdrs) return -1;
 
-  NS_ASSERTION(hdrs->done_p && !hdrs->heads, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (!hdrs->done_p || hdrs->heads)
+  NS_ASSERTION(this.done_p && !this.heads);
+  if (!this.done_p || this.heads)
   return -1;
 
-  if (hdrs->all_headers_fp == 0)
+  if (this.all_headers_fp == 0)
   {
     /* Must not have been any headers (we got the blank line right away.) */
-    PR_FREEIF (hdrs->all_headers);
-    hdrs->all_headers_size = 0;
+    PR_FREEIF (this.all_headers);
+    this.all_headers_size = 0;
     return 0;
   }
 
   /* At this point, we might as well realloc all_headers back down to the
    minimum size it must be (it could be up to 1k bigger.)  But don't
    bother if we're only off by a tiny bit. */
-  NS_ASSERTION(hdrs->all_headers_fp <= hdrs->all_headers_size, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (hdrs->all_headers_fp + 60 <= hdrs->all_headers_size)
+  NS_ASSERTION(this.all_headers_fp <= this.all_headers_size);
+  if (this.all_headers_fp + 60 <= this.all_headers_size)
   {
-    char *ls = (char *)PR_Realloc(hdrs->all_headers, hdrs->all_headers_fp);
+    char *ls = (char *)PR_Realloc(this.all_headers, this.all_headers_fp);
     if (ls) /* can this ever fail?  we're making it smaller... */
     {
-      hdrs->all_headers = ls;  /* in case it got relocated */
-      hdrs->all_headers_size = hdrs->all_headers_fp;
+      this.all_headers = ls;  /* in case it got relocated */
+      this.all_headers_size = this.all_headers_fp;
     }
   }
 
   /* First go through and count up the number of headers in the block.
    */
-  end = hdrs->all_headers + hdrs->all_headers_fp;
-  for (s = hdrs->all_headers; s < end; s++)
+  end = this.all_headers + this.all_headers_fp;
+  for (s = this.all_headers; s < end; s++)
   {
     if (s < (end-1) && s[0] == '\r' && s[1] == '\n') /* CRLF -> LF */
       s++;
@@ -231,23 +199,23 @@ MimeHeaders_build_heads_list(MimeHeaders *hdrs)
     if ((s[0] == '\r' || s[0] == '\n') &&      /* we're at a newline, and */
       (s >= (end-1) ||            /* we're at EOF, or */
        !(s[1] == ' ' || s[1] == '\t')))    /* next char is nonwhite */
-    hdrs->heads_size++;
+    this.heads_size++;
   }
 
   /* Now allocate storage for the pointers to each of those headers.
    */
-  hdrs->heads = (char **) PR_MALLOC((hdrs->heads_size + 1) * sizeof(char *));
-  if (!hdrs->heads)
+  this.heads = (char **) PR_MALLOC((this.heads_size + 1) * sizeof(char *));
+  if (!this.heads)
     return MIME_OUT_OF_MEMORY;
-  memset(hdrs->heads, 0, (hdrs->heads_size + 1) * sizeof(char *));
+  memset(this.heads, 0, (this.heads_size + 1) * sizeof(char *));
 
   /* Now make another pass through the headers, and this time, record the
    starting position of each header.
    */
 
   i = 0;
-  hdrs->heads[i++] = hdrs->all_headers;
-  s = hdrs->all_headers;
+  this.heads[i++] = this.all_headers;
+  s = this.all_headers;
 
   while (s < end)
   {
@@ -290,30 +258,28 @@ MimeHeaders_build_heads_list(MimeHeaders *hdrs)
 
     if (s < end)
     {
-      NS_ASSERTION(! (i > hdrs->heads_size), "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-      if (i > hdrs->heads_size)
+      NS_ASSERTION(! (i > this.heads_size));
+      if (i > this.heads_size)
         return -1;
-      hdrs->heads[i++] = s;
+      this.heads[i++] = s;
     }
   }
 
   return 0;
 }
 
-char *
-MimeHeaders_get (MimeHeaders *hdrs, const char *header_name,
-         bool strip_p, bool all_p)
+char*
+Headers::Get(const char* header_name, bool strip_p, bool all_p)
 {
   int i;
   int name_length;
   char *result = 0;
 
-  if (!hdrs) return 0;
-  NS_ASSERTION(header_name, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+  NS_ASSERTION(header_name);
   if (!header_name) return 0;
 
   /* Specifying strip_p and all_p at the same time doesn't make sense... */
-  NS_ASSERTION(!(strip_p && all_p), "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+  NS_ASSERTION(!(strip_p && all_p));
 
   /* One shouldn't be trying to read headers when one hasn't finished
    parsing them yet... but this can happen if the message ended
@@ -322,31 +288,31 @@ MimeHeaders_get (MimeHeaders *hdrs, const char *header_name,
    let's assume that the headers are now finished.  If they aren't
    in fact finished, then a later attempt to write to them will assert.
    */
-  if (!hdrs->done_p)
+  if (!this.done_p)
   {
     int status;
-    hdrs->done_p = true;
-    status = MimeHeaders_build_heads_list(hdrs);
+    this.done_p = true;
+    status = this.BuildHeadsList();
     if (status < 0) return 0;
   }
 
-  if (!hdrs->heads)    /* Must not have been any headers. */
+  if (!this.heads)    /* Must not have been any headers. */
   {
-    NS_ASSERTION(hdrs->all_headers_fp == 0, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+    NS_ASSERTION(this.all_headers_fp == 0);
     return 0;
   }
 
   name_length = strlen(header_name);
 
-  for (i = 0; i < hdrs->heads_size; i++)
+  for (i = 0; i < this.heads_size; i++)
   {
-    char *head = hdrs->heads[i];
-    char *end = (i == hdrs->heads_size-1
-           ? hdrs->all_headers + hdrs->all_headers_fp
-           : hdrs->heads[i+1]);
+    char *head = this.heads[i];
+    char *end = (i == this.heads_size-1
+           ? this.all_headers + this.all_headers_fp
+           : this.heads[i+1]);
     char *colon, *ocolon;
 
-    NS_ASSERTION(head, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+    NS_ASSERTION(head);
     if (!head) continue;
 
     /* Quick hack to skip over BSD Mailbox delimiter. */
@@ -512,15 +478,11 @@ MimeHeaders_get_parameter (const char *header_value, const char *parm_name,
    : 0)
 
 int
-MimeHeaders_write_all_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt, bool attachment)
+Headers::WriteAllHeaders(DisplayOptions* opt, bool attachment)
 {
   int status = 0;
   int i;
   bool wrote_any_p = false;
-
-  NS_ASSERTION(hdrs, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (!hdrs)
-    return -1;
 
   /* One shouldn't be trying to read headers when one hasn't finished
      parsing them yet... but this can happen if the message ended
@@ -529,10 +491,10 @@ MimeHeaders_write_all_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt, bool 
      let's assume that the headers are now finished.  If they aren't
      in fact finished, then a later attempt to write to them will assert.
    */
-  if (!hdrs->done_p)
+  if (!this.done_p)
   {
-    hdrs->done_p = true;
-    status = MimeHeaders_build_heads_list(hdrs);
+    this.done_p = true;
+    status = this.BuildHeadsList();
     if (status < 0) return 0;
   }
 
@@ -543,19 +505,19 @@ MimeHeaders_write_all_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt, bool 
       charset = PL_strdup(opt->default_charset);
     else
     {
-      char *contentType = MimeHeaders_get(hdrs, HEADER_CONTENT_TYPE, false, false);
+      char *contentType = this.Get(HEADER_CONTENT_TYPE, false, false);
       if (contentType)
-        charset = MimeHeaders_get_parameter(contentType, HEADER_PARM_CHARSET, nullptr, nullptr);
+        charset = GetParameter(contentType, HEADER_PARM_CHARSET, nullptr, nullptr);
       PR_FREEIF(contentType);
     }
   }
 
-  for (i = 0; i < hdrs->heads_size; i++)
+  for (i = 0; i < this.heads_size; i++)
   {
-    char *head = hdrs->heads[i];
-    char *end = (i == hdrs->heads_size-1
-                      ? hdrs->all_headers + hdrs->all_headers_fp
-                      : hdrs->heads[i+1]);
+    char *head = this.heads[i];
+    char *end = (i == this.heads_size-1
+                      ? this.all_headers + this.all_headers_fp
+                      : this.heads[i+1]);
     char *colon, *ocolon;
     char *contents = end;
 
@@ -602,7 +564,7 @@ MimeHeaders_write_all_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt, bool 
           MsgLowerCaseEqualsLiteral(name, "to") || MsgLowerCaseEqualsLiteral(name, "from") ||
           MsgLowerCaseEqualsLiteral(name, "cc") || MsgLowerCaseEqualsLiteral(name, "bcc") ||
           MsgLowerCaseEqualsLiteral(name, "reply-to") || MsgLowerCaseEqualsLiteral(name, "sender");
-    MimeHeaders_convert_header_value(opt, hdr_value, convert_charset_only);
+    Headers::ConvertHeaderValue(hdr_value, opt, convert_charset_only);
     // if we're saving as html, we need to convert headers from utf8 to message charset, if any
     if (opt->format_out == nsMimeOutput::nsMimeMessageSaveAs && charset)
     {
@@ -628,7 +590,7 @@ MimeHeaders_write_all_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt, bool 
     if (!wrote_any_p)
       wrote_any_p = (status > 0);
   }
-  mimeEmitterAddAllHeaders(opt, hdrs->all_headers, hdrs->all_headers_fp);
+  mimeEmitterAddAllHeaders(opt, this.all_headers, this.all_headers_fp);
   PR_FREEIF(charset);
 
   return 1;
@@ -670,8 +632,7 @@ extern int16_t INTL_DefaultMailToWinCharSetID(int16_t csid);
 /* Given text purporting to be a qtext header value, strip backslashes that
   may be escaping other chars in the string. */
 char *
-mime_decode_filename(const char *name, const char *charset,
-                     MimeDisplayOptions *opt)
+Headers::DecodeFilename(const char* name, const char* charset, DisplayOptions* opt)
 {
   nsresult rv;
   nsCOMPtr <nsIMIMEHeaderParam> mimehdrpar =
@@ -693,36 +654,36 @@ mime_decode_filename(const char *name, const char *charset,
    Content-Name: NAME (no RFC, but seen to occur)
    X-Sun-Data-Name: NAME (no RFC, but used by MailTool)
  */
-char *
-MimeHeaders_get_name(MimeHeaders *hdrs, MimeDisplayOptions *opt)
+char*
+Headers::GetFilename(DisplayOptions* opt)
 {
   char *s = 0, *name = 0, *cvt = 0;
   char *charset = nullptr; // for RFC2231 support
 
-  s = MimeHeaders_get(hdrs, HEADER_CONTENT_DISPOSITION, false, false);
+  s = this.Get(HEADER_CONTENT_DISPOSITION, false, false);
   if (s)
   {
-    name = MimeHeaders_get_parameter(s, HEADER_PARM_FILENAME, &charset, NULL);
+    name = Header::GetParameter(s, HEADER_PARM_FILENAME, &charset, NULL);
     PR_Free(s);
   }
 
   if (! name)
   {
-    s = MimeHeaders_get(hdrs, HEADER_CONTENT_TYPE, false, false);
+    s = this.Get(HEADER_CONTENT_TYPE, false, false);
     if (s)
     {
       free(charset);
 
-      name = MimeHeaders_get_parameter(s, HEADER_PARM_NAME, &charset, NULL);
+      name = Header::GetParameter(s, HEADER_PARM_NAME, &charset, NULL);
       PR_Free(s);
     }
   }
 
   if (! name)
-    name = MimeHeaders_get (hdrs, HEADER_CONTENT_NAME, false, false);
+    name = this.Get(HEADER_CONTENT_NAME, false, false);
 
   if (! name)
-    name = MimeHeaders_get (hdrs, HEADER_X_SUN_DATA_NAME, false, false);
+    name = this.Get(HEADER_X_SUN_DATA_NAME, false, false);
 
   if (name)
   {
@@ -736,7 +697,7 @@ MimeHeaders_get_name(MimeHeaders *hdrs, MimeDisplayOptions *opt)
     /* Argh. What we should do if we want to be robust is to decode qtext
        in all appropriate headers. Unfortunately, that would be too scary
        at this juncture. So just decode qtext/mime2 here. */
-    cvt = mime_decode_filename(name, charset, opt);
+    cvt = Headers::DecodeFilename(name, charset, opt);
 
     free(charset);
 
@@ -759,7 +720,7 @@ MimeHeaders_get_name(MimeHeaders *hdrs, MimeDisplayOptions *opt)
    = setenv NS_MSG_DISPLAY_HOOK bbdb-srv.perl
  */
 void
-MimeHeaders_do_unix_display_hook_hack(MimeHeaders *hdrs)
+Headers::DoUnixDisplayHookHack()
 {
   static const char *cmd = 0;
   if (!cmd)
@@ -779,26 +740,23 @@ MimeHeaders_do_unix_display_hook_hack(MimeHeaders *hdrs)
     FILE *fp = popen(cmd, "w");
     if (fp)
     {
-      mozilla::Unused << fwrite(hdrs->all_headers, 1, hdrs->all_headers_fp, fp);
+      mozilla::Unused << fwrite(this.all_headers, 1, this.all_headers_fp, fp);
       pclose(fp);
     }
   }
 }
 #endif /* XP_UNIX */
 
-static void
-MimeHeaders_compact (MimeHeaders *hdrs)
+void
+Headers::Compact()
 {
-  NS_ASSERTION(hdrs, "1.22 <rhp@netscape.com> 22 Aug 1999 08:48");
-  if (!hdrs) return;
-
-  PR_FREEIF(hdrs->obuffer);
-  hdrs->obuffer_fp = 0;
-  hdrs->obuffer_size = 0;
+  PR_FREEIF(this.obuffer);
+  this.obuffer_fp = 0;
+  this.obuffer_size = 0;
 
   /* These really shouldn't have gotten out of whack again. */
-  NS_ASSERTION(hdrs->all_headers_fp <= hdrs->all_headers_size &&
-            hdrs->all_headers_fp + 100 > hdrs->all_headers_size, "1.22 <rhp@netscape.com> 22 Aug 1999 08:48");
+  NS_ASSERTION(this.all_headers_fp <= this.all_headers_size &&
+            this.all_headers_fp + 100 > this.all_headers_size);
 }
 
 /* Writes the headers as text/plain.
@@ -807,41 +765,36 @@ MimeHeaders_compact (MimeHeaders *hdrs)
    is not closed off, and none of the Content- headers are written.
  */
 int
-MimeHeaders_write_raw_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt,
-                 bool dont_write_content_type)
+Headers::WriteRawHeaders(DisplayOptions* opt, bool dont_write_content_type)
 {
   int status;
 
-  if (hdrs && !hdrs->done_p)
+  if (!this.done_p)
   {
-    hdrs->done_p = true;
-    status = MimeHeaders_build_heads_list(hdrs);
+    this.done_p = true;
+    status = this.BuildHeadsList();
     if (status < 0) return 0;
   }
 
   if (!dont_write_content_type)
   {
     char nl[] = MSG_LINEBREAK;
-    if (hdrs)
-    {
-      status = MimeHeaders_write(hdrs, opt, hdrs->all_headers,
-                                 hdrs->all_headers_fp);
-      if (status < 0) return status;
-    }
-    status = MimeHeaders_write(hdrs, opt, nl, strlen(nl));
+    status = this.Write(opt, this.all_headers, this.all_headers_fp);
+    if (status < 0) return status;
+    status = this.Write(opt, nl, strlen(nl));
     if (status < 0) return status;
   }
-  else if (hdrs)
+  else
   {
     int32_t i;
-    for (i = 0; i < hdrs->heads_size; i++)
+    for (i = 0; i < this.heads_size; i++)
     {
-      char *head = hdrs->heads[i];
-      char *end = (i == hdrs->heads_size-1
-             ? hdrs->all_headers + hdrs->all_headers_fp
-             : hdrs->heads[i+1]);
+      char *head = this.heads[i];
+      char *end = (i == this.heads_size-1
+             ? this.all_headers + this.all_headers_fp
+             : this.heads[i+1]);
 
-      NS_ASSERTION(head, "1.22 <rhp@netscape.com> 22 Aug 1999 08:48");
+      NS_ASSERTION(head);
       if (!head) continue;
 
       /* Don't write out any Content- header. */
@@ -849,43 +802,12 @@ MimeHeaders_write_raw_headers (MimeHeaders *hdrs, MimeDisplayOptions *opt,
       continue;
 
       /* Write out this (possibly multi-line) header. */
-      status = MimeHeaders_write(hdrs, opt, head, end - head);
+      status = this.Write(opt, head, end - head);
       if (status < 0) return status;
     }
   }
 
-  if (hdrs)
-    MimeHeaders_compact(hdrs);
+  this.Compact();
 
   return 0;
-}
-
-// XXX Fix this XXX //
-char *
-MimeHeaders_open_crypto_stamp(void)
-{
-  return nullptr;
-}
-
-char *
-MimeHeaders_finish_open_crypto_stamp(void)
-{
-  return nullptr;
-}
-
-char *
-MimeHeaders_close_crypto_stamp(void)
-{
-  return nullptr;
-}
-
-char *
-MimeHeaders_make_crypto_stamp(bool encrypted_p,
-                              bool signed_p,
-                              bool good_p,
-                              bool unverified_p,
-                              bool close_parent_stamp_p,
-                              const char *stamp_url)
-{
-  return nullptr;
 }
