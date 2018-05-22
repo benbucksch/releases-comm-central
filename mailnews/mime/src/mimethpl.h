@@ -3,33 +3,38 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* The MimeInlineTextHTMLAsPlaintext class converts HTML->TXT->HTML, i.e.
-   HTML to Plaintext and the result to HTML again.
-   This might sound crazy, maybe it is, but it is for the "View as Plaintext"
-   option, if the sender didn't supply a plaintext alternative (bah!).
- */
-
-#ifndef _MIMETHPL_H_
-#define _MIMETHPL_H_
+#ifndef _MIMEHTMLASPLAINTEXT_H_
+#define _MIMEHTMLASPLAINTEXT_H_
 
 #include "mimetpla.h"
 #include "nsString.h"
 
-typedef struct MimeInlineTextHTMLAsPlaintextClass MimeInlineTextHTMLAsPlaintextClass;
-typedef struct MimeInlineTextHTMLAsPlaintext      MimeInlineTextHTMLAsPlaintext;
+namespace mozilla::mime {
 
-struct MimeInlineTextHTMLAsPlaintextClass {
-  MimeInlineTextPlainClass plaintext;
+/**
+ * The MimeInlineTextHTMLAsPlaintext class converts HTML->TXT->HTML,
+ * i.e. HTML to Plaintext and the result to HTML again.
+ * This might sound crazy, and maybe it is, but it is for the "View as Plaintext"
+ * option, if the sender didn't supply a plaintext alternative (bah!).
+ */
+class HTMLAsPlaintext : TextPlain {
+public:
+  ~HTMLAsPlaintext();
+  override int ParseBegin();
+  override int ParseLine(const char* line, int32_t length);
+  override int ParseEOF(bool abort_p);
+
+protected:
+  /**
+   * Buffers the entire HTML document.
+   * Gecko parser expects the complete document,
+   * as wide string.
+   */
+  nsString* complete_buffer;
 };
 
-extern MimeInlineTextHTMLAsPlaintextClass mimeInlineTextHTMLAsPlaintextClass;
+class HTMLAsPlaintextClass : TextPlainClass {
+}
 
-struct MimeInlineTextHTMLAsPlaintext {
-  MimeInlineTextPlain  plaintext;
-  nsString             *complete_buffer;  // Gecko parser expects wide strings
-};
-
-#define MimeInlineTextHTMLAsPlaintextClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextPlainClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMETHPL_H_ */
+} // namespace
+#endif // _MIMEHTMLASPLAINTEXT_H_

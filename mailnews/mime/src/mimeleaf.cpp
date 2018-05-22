@@ -109,7 +109,7 @@ Leaf::ParseLine(const char* line, int32_t length)
 }
 
 bool
-Leaf::DisplayableInline(MimeHeaders *hdrs)
+LeafClass::DisplayableInline(Headers* hdrs)
 {
   return true;
 }

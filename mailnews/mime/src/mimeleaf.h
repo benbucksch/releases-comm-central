@@ -24,11 +24,10 @@ public:
   virtual ~Leaf();
 
   override int ParseBegin();
-  override int ParseBuffer(const char *buf, int32_t size);
+  override int ParseBuffer(const char* buf, int32_t size);
   override int ParseDecodedBuffer(const char* buf, int32_t size);
-  override int ParseLine(const char *line, int32_t length);
+  override int ParseLine(const char* line, int32_t length);
   override int ParseEOF(bool abort_p);
-  override bool DisplayableInline(Headers *hdrs);
 
   /**
    * This is the callback that is handed to the decoder.
@@ -61,6 +60,7 @@ protected:
 };
 
 class LeafClass : PartClass {
+  override bool DisplayableInline(Headers* hdrs);
 }
 
 } // namespace

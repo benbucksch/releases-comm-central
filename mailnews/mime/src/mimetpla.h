@@ -17,7 +17,7 @@ namespace mozilla::mime {
 class TextPlain : public Text {
 public:
   override int ParseBegin();
-  override int ParseLine(const char *line, int32_t length);
+  override int ParseLine(const char* line, int32_t length);
   override int ParseEOF(bool abort_p);
 
 protected:

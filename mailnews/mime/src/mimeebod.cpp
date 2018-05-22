@@ -16,111 +16,63 @@
 #include "nsINetUtil.h"
 #include <ctype.h>
 
-#define MIME_SUPERCLASS mimeObjectClass
-MimeDefClass(MimeExternalBody, MimeExternalBodyClass,
-       mimeExternalBodyClass, &MIME_SUPERCLASS);
+namespace mozilla::mime {
+
+#define SUPERCLASS Part
 
 #ifdef XP_MACOSX
-extern PartClass mimeMultipartAppleDoubleClass;
+extern PartClass MultipartAppleDoubleClass;
 #endif
 
-static int MimeExternalBody_initialize (Part *);
-static void MimeExternalBody_finalize (Part *);
-static int MimeExternalBody_ParseLine (const char *, int32_t, Part *);
-static int MimeExternalBody_ParseEOF (Part *, bool);
-static bool MimeExternalBody_displayable_inline_p (PartClass *clazz,
-                            MimeHeaders *hdrs);
-
-#if 0
-#if defined(DEBUG) && defined(XP_UNIX)
-static int MimeExternalBody_debug_print (Part *, PRFileDesc *, int32_t);
-#endif
-#endif /* 0 */
-
-static int
-MimeExternalBodyClassInitialize(MimeExternalBodyClass *clazz)
+ExternalBody::~ExternalBody()
 {
-  PartClass *oclass = (MimeObjectClass *) clazz;
-
-  NS_ASSERTION(!oclass->class_initialized, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  oclass->initialize  = MimeExternalBody_initialize;
-  oclass->finalize    = MimeExternalBody_finalize;
-  oclass->ParseLine  = MimeExternalBody_parse_line;
-  oclass->ParseEOF  = MimeExternalBody_parse_eof;
-  oclass->displayable_inline_p = MimeExternalBody_displayable_inline_p;
-
-#if 0
-#if defined(DEBUG) && defined(XP_UNIX)
-  oclass->debug_print = MimeExternalBody_debug_print;
-#endif
-#endif /* 0 */
-
-  return 0;
-}
-
-
-static int
-MimeExternalBody_initialize (Part *object)
-{
-  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
-}
-
-static void
-MimeExternalBody_finalize (Part *object)
-{
-  MimeExternalBody *bod = (MimeExternalBody *) object;
-  if (bod->hdrs)
+  if (this.hdrs)
   {
-    MimeHeaders_free(bod->hdrs);
-    bod->hdrs = 0;
+    delete this.hdrs;
+    this.hdrs = nullptr;
   }
-  PR_FREEIF(bod->body);
-
-  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
+  PR_FREEIF(this.body);
 }
 
-static int
-MimeExternalBody_ParseLine (const char *line, int32_t length, Part *obj)
+int
+ExternalBody::ParseLine(const char* line, int32_t length)
 {
-  MimeExternalBody *bod = (MimeExternalBody *) obj;
   int status = 0;
-
-  NS_ASSERTION(line && *line, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   if (!line || !*line) return -1;
 
-  if (!obj->output_p) return 0;
+  if (!this.output_p) return 0;
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (obj->options &&
-    !obj->options->write_html_p &&
-    obj->options->output_fn)
-  return Part_write(obj, line, length, true);
+  if (this.options &&
+    !this.options->write_html_p &&
+    this.options->output_fn)
+  return this.Write(line, length, true);
 
 
   /* If we already have a `body' then we're done parsing headers, and all
    subsequent lines get tacked onto the body. */
-  if (bod->body)
+  if (this.body)
   {
-    int L = strlen(bod->body);
-    char *new_str = (char *)PR_Realloc(bod->body, L + length + 1);
+    int L = strlen(this.body);
+    char *new_str = (char *)PR_Realloc(this.body, L + length + 1);
     if (!new_str) return MIME_OUT_OF_MEMORY;
-    bod->body = new_str;
-    memcpy(bod->body + L, line, length);
-    bod->body[L + length] = 0;
+    this.body = new_str;
+    memcpy(this.body + L, line, length);
+    this.body[L + length] = 0;
     return 0;
   }
 
   /* Otherwise we don't yet have a body, which means we're not done parsing
    our headers.
    */
-  if (!bod->hdrs)
+  if (!this.hdrs)
   {
-    bod->hdrs = MimeHeaders_new();
-    if (!bod->hdrs) return MIME_OUT_OF_MEMORY;
+    this.hdrs = new Headers();
+    if (!this.hdrs) return MIME_OUT_OF_MEMORY;
   }
 
-  status = MimeHeaders_ParseLine(line, length, bod->hdrs);
+  status = this.hdrs->ParseLine(line, length);
   if (status < 0) return status;
 
   /* If this line is blank, we're now done parsing headers, and should
@@ -128,8 +80,8 @@ MimeExternalBody_ParseLine (const char *line, int32_t length, Part *obj)
    */
   if (*line == '\r' || *line == '\n')
   {
-    bod->body = strdup("");
-    if (!bod->body) return MIME_OUT_OF_MEMORY;
+    this.body = strdup("");
+    if (!this.body) return MIME_OUT_OF_MEMORY;
   }
 
   return 0;
@@ -239,58 +191,53 @@ else if (!PL_strcasecmp(at, "url"))      /* RFC 2017 */
                             return 0;
 }
 
-static int
-MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
+int
+ExternalBody::ParseEOF(bool abort_p)
 {
   int status = 0;
-  MimeExternalBody *bod = (MimeExternalBody *) obj;
-
-  if (obj->closed_p) return 0;
+  if (this.closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
+  status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) return status;
 
 #ifdef XP_MACOSX
-  if (obj->parent && mime_typep(obj->parent,
-                                (PartClass*) &mimeMultipartAppleDoubleClass))
+  if (this.parent && this.parent->IsType(MultipartAppleDoubleClass))
     goto done;
 #endif /* XP_MACOSX */
 
   if (!abort_p &&
-      obj->output_p &&
-      obj->options &&
-      obj->options->write_html_p)
+      this.output_p &&
+      this.options &&
+      this.options->write_html_p)
   {
-    bool all_headers_p = obj->options->headers == MimeHeadersAll;
-    MimeDisplayOptions *newopt = obj->options;  /* copy it */
+    bool all_headers_p = this.options->headers == MimeHeadersAll;
+    DisplayOptions* newopt = this.options;  /* copy it */
 
-    char *ct = MimeHeaders_get(obj->headers, HEADER_CONTENT_TYPE,
-                               false, false);
+    char *ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
     char *at, *lexp, *size, *perm;
     char *url, *dir, *mode, *name, *site, *svr, *subj;
     char *h = 0, *lname = 0, *lurl = 0, *body = 0;
-    MimeHeaders *hdrs = 0;
+    Headers* hdrs = 0;
 
     if (!ct) return MIME_OUT_OF_MEMORY;
 
-    at   = MimeHeaders_get_parameter(ct, "access-type", NULL, NULL);
-    lexp  = MimeHeaders_get_parameter(ct, "expiration", NULL, NULL);
-    size = MimeHeaders_get_parameter(ct, "size", NULL, NULL);
-    perm = MimeHeaders_get_parameter(ct, "permission", NULL, NULL);
-    dir  = MimeHeaders_get_parameter(ct, "directory", NULL, NULL);
-    mode = MimeHeaders_get_parameter(ct, "mode", NULL, NULL);
-    name = MimeHeaders_get_parameter(ct, "name", NULL, NULL);
-    site = MimeHeaders_get_parameter(ct, "site", NULL, NULL);
-    svr  = MimeHeaders_get_parameter(ct, "server", NULL, NULL);
-    subj = MimeHeaders_get_parameter(ct, "subject", NULL, NULL);
-    url  = MimeHeaders_get_parameter(ct, "url", NULL, NULL);
+    at   = Headers::GetParameter(ct, "access-type", NULL, NULL);
+    lexp  = Headers::GetParameter(ct, "expiration", NULL, NULL);
+    size = Headers::GetParameter(ct, "size", NULL, NULL);
+    perm = Headers::GetParameter(ct, "permission", NULL, NULL);
+    dir  = Headers::GetParameter(ct, "directory", NULL, NULL);
+    mode = Headers::GetParameter(ct, "mode", NULL, NULL);
+    name = Headers::GetParameter(ct, "name", NULL, NULL);
+    site = Headers::GetParameter(ct, "site", NULL, NULL);
+    svr  = Headers::GetParameter(ct, "server", NULL, NULL);
+    subj = Headers::GetParameter(ct, "subject", NULL, NULL);
+    url  = Headers::GetParameter(ct, "url", NULL, NULL);
     PR_FREEIF(ct);
 
     /* the *internal* content-type */
-    ct = MimeHeaders_get(bod->hdrs, HEADER_CONTENT_TYPE,
-                         true, false);
-						
+    ct = this.hdrs->Get(HEADER_CONTENT_TYPE, true, false);
+
     uint32_t hlen = ((at ? strlen(at) : 0) +
                     (lexp ? strlen(lexp) : 0) +
                     (size ? strlen(size) : 0) +
@@ -326,7 +273,7 @@ MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
       *out = 0;
     }
 
-    hdrs = MimeHeaders_new();
+    hdrs = new Headers();
     if (!hdrs)
     {
       status = MIME_OUT_OF_MEMORY;
@@ -356,11 +303,11 @@ MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
     FROB("Subject",    subj);
 # undef FROB
     PL_strncpyz(h, MSG_LINEBREAK, hlen);
-    status = MimeHeaders_ParseLine(h, strlen(h), hdrs);
+    status = hdrs->ParseLine(h, strlen(h));
     if (status < 0) goto FAIL;
 
     lurl = MimeExternalBody_make_url(ct, at, lexp, size, perm, dir, mode,
-                                     name, url, site, svr, subj, bod->body);
+                                     name, url, site, svr, subj, this.body);
     if (lurl)
     {
       lname = MimeGetStringByID(MIME_MSG_LINK_TO_DOCUMENT);
@@ -373,9 +320,9 @@ MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
 
     all_headers_p = true;  /* #### just do this all the time? */
 
-    if (bod->body && all_headers_p)
+    if (this.body && all_headers_p)
     {
-      char *s = bod->body;
+      char *s = this.body;
       while (IS_SPACE(*s)) s++;
       if (*s)
       {
@@ -399,11 +346,11 @@ MimeExternalBody_ParseEOF (Part *obj, bool abort_p)
     }
 
     newopt->fancy_headers_p = true;
-    newopt->headers = (all_headers_p ? MimeHeadersAll : MimeHeadersSome);
+    newopt->headers = (all_headers_p ? HeadersStatus::All : HeadersStatus::Some);
 
 FAIL:
     if (hdrs)
-      MimeHeaders_free(hdrs);
+      delete hdrs;
     PR_FREEIF(h);
     PR_FREEIF(lname);
     PR_FREEIF(lurl);
@@ -432,17 +379,16 @@ done:
 #if 0
 #if defined(DEBUG) && defined(XP_UNIX)
 static int
-MimeExternalBody_debug_print (Part *obj, PRFileDesc *stream, int32_t depth)
+ExternalBody::DebugPrint(PRFileDesc* stream, int32_t depth)
 {
-  MimeExternalBody *bod = (MimeExternalBody *) obj;
   int i;
   char *ct, *ct2;
-  char *addr = mime_part_address(obj);
+  char *addr = this.PartAddress();
 
-  if (obj->headers)
-  ct = MimeHeaders_get (obj->headers, HEADER_CONTENT_TYPE, false, false);
-  if (bod->hdrs)
-  ct2 = MimeHeaders_get (bod->hdrs, HEADER_CONTENT_TYPE, false, false);
+  if (this.headers)
+  ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
+  if (this.hdrs)
+  ct2 = this.hdrs->Get(HEADER_CONTENT_TYPE, false, false);
 
   for (i=0; i < depth; i++)
   PR_Write(stream, "  ", 2);
@@ -452,11 +398,11 @@ MimeExternalBody_debug_print (Part *obj, PRFileDesc *stream, int32_t depth)
       "\tcontent-type: %s\n"
       "\tcontent-type: %s\n"
       "\tBody:%s\n\t0x%08X>\n\n",
-      obj->clazz->class_name,
+      this.clazz->class_name,
       addr ? addr : "???",
       ct ? ct : "<none>",
       ct2 ? ct2 : "<none>",
-      bod->body ? bod->body : "<none>",
+      this.body ? this.body : "<none>",
       (uint32_t) obj);
 ***/
   PR_FREEIF(addr);
@@ -465,14 +411,13 @@ MimeExternalBody_debug_print (Part *obj, PRFileDesc *stream, int32_t depth)
   return 0;
 }
 #endif
-#endif /* 0 */
+#endif // 0
 
-static bool
-MimeExternalBody_displayable_inline_p (PartClass *clazz,
-                     MimeHeaders *hdrs)
+bool
+ExternalBodyClass::DisplayableInline(Headers* hdrs)
 {
-  char *ct = MimeHeaders_get (hdrs, HEADER_CONTENT_TYPE, false, false);
-  char *at = MimeHeaders_get_parameter(ct, "access-type", NULL, NULL);
+  char *ct = hdrs->Get(HEADER_CONTENT_TYPE, false, false);
+  char *at = Headers::GetParameter(ct, "access-type", NULL, NULL);
   bool inline_p = false;
 
   if (!at)
@@ -504,3 +449,6 @@ MimeExternalBody_displayable_inline_p (PartClass *clazz,
   PR_FREEIF(at);
   return inline_p;
 }
+
+
+} // namespace

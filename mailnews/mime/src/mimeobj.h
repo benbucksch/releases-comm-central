@@ -49,7 +49,7 @@ public:
   * then the data may be decoded by ParseBuffer() before ParseLine()
   * is called.  (The MimeLeaf class provides this functionality.)
   */
-  virtual int ParseBuffer(const char *buf, int32_t size);
+  virtual int ParseBuffer(const char* buf, int32_t size);
 
   /**
    * This method is called (by ParseBuffer()) for each complete line of
@@ -64,7 +64,7 @@ public:
    * You should generally not call ParseLine() directly, since that could
    * bypass decoding. You should call ParseBuffer() instead.
    */
-  virtual int ParseLine(const char *line, int32_t length);
+  virtual int ParseLine(const char* line, int32_t length);
 
   /**
    * This is called when there is no more data to be handed to the object:
@@ -92,18 +92,6 @@ public:
    * ParseEnd().
    */
   virtual int ParseEnd(bool abort_p);
-
-  /**
-   * This method should return true if this class of object will be displayed
-   * directly, as opposed to being displayed as a link.  This information is
-   * used by the "multipart/alternative" parser to decide which of its children
-   * is the ``best'' one to display.   Note that this is a class method, not
-   * an object method -- there is not yet an instance of this class at the time
-   * that it is called.  The `hdrs' provided are the headers of the object that
-   * might be instantiated -- from this, the method may extract additional
-   * information that it might need to make its decision.
-   */
-  virtual bool DisplayableInline(Headers *hdrs);
 
 
   //////////////////////////////
@@ -256,7 +244,7 @@ public:
   int WriteSeparator();
 
 #if defined(DEBUG) && defined(XP_UNIX)
-  int DebugPrint(PRFileDesc *stream, int32_t depth);
+  int DebugPrint(PRFileDesc* stream, int32_t depth);
 #endif
 
 #ifdef ENABLE_SMIME
@@ -306,8 +294,21 @@ public:
  * for its respective type.
  */
 class PartClass {
+public:
   bool IsSubclassOf(PartClass* parent);
   PartClass* superclass = nullptr:
+
+  /**
+   * This method should return true if this class of object will be displayed
+   * directly, as opposed to being displayed as a link.  This information is
+   * used by the "multipart/alternative" parser to decide which of its children
+   * is the ``best'' one to display.   Note that this is a class method, not
+   * an object method -- there is not yet an instance of this class at the time
+   * that it is called.  The `hdrs' provided are the headers of the object that
+   * might be instantiated -- from this, the method may extract additional
+   * information that it might need to make its decision.
+   */
+  virtual bool DisplayableInline(Headers* hdrs);
 };
 
 

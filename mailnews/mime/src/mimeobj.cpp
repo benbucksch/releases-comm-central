@@ -266,7 +266,7 @@ int Part::ParseEnd(bool abort_p)
   return 0;
 }
 
-bool Part::IsDisplayableInline(PartClass* clazz, Headers* hdrs)
+bool Part::IsDisplayableInline(Headers* hdrs)
 {
   NS_ERROR("abstract function");
   return false;

@@ -14,69 +14,27 @@
 #include "nsMimeTypes.h"
 
 
-#define MIME_SUPERCLASS mimeLeafClass
-MimeDefClass(MimeExternalObject, MimeExternalObjectClass,
-       mimeExternalObjectClass, &MIME_SUPERCLASS);
+namespace mozilla::mime {
 
-static int MimeExternalObject_initialize (Part *);
-static void MimeExternalObject_finalize (Part *);
-static int MimeExternalObject_ParseBegin (Part *);
-static int MimeExternalObject_ParseBuffer (const char *, int32_t, Part *);
-static int MimeExternalObject_ParseLine (const char *, int32_t, Part *);
-static int MimeExternalObject_ParseDecodedBuffer (const char*, int32_t, Part*);
-static bool MimeExternalObject_displayable_inline_p (PartClass *clazz,
-                            MimeHeaders *hdrs);
+#define SUPERCLASS Leaf
 
-static int
-MimeExternalObjectClassInitialize(MimeExternalObjectClass *clazz)
-{
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  MimeLeafClass   *lclass = (MimeLeafClass *) clazz;
-
-  NS_ASSERTION(!oclass->class_initialized, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  oclass->initialize   = MimeExternalObject_initialize;
-  oclass->finalize     = MimeExternalObject_finalize;
-  oclass->ParseBegin  = MimeExternalObject_parse_begin;
-  oclass->ParseBuffer = MimeExternalObject_parse_buffer;
-  oclass->ParseLine   = MimeExternalObject_parse_line;
-  oclass->displayable_inline_p = MimeExternalObject_displayable_inline_p;
-  lclass->ParseDecodedBuffer = MimeExternalObject_parse_decoded_buffer;
-  return 0;
-}
-
-
-static int
-MimeExternalObject_initialize (Part *object)
-{
-  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
-}
-
-static void
-MimeExternalObject_finalize (Part *object)
-{
-  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
-}
-
-
-static int
-MimeExternalObject_ParseBegin (Part *obj)
+int
+ExternalObject::ParseBegin()
 {
   int status;
-
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
+  status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
   // If we're writing this object, and we're doing it in raw form, then
   // now is the time to inform the backend what the type of this data is.
-  //
-  if (obj->output_p &&
-    obj->options &&
-    !obj->options->write_html_p &&
-    !obj->options->state->first_data_written_p)
+  if (this.output_p &&
+    this.options &&
+    !this.options->write_html_p &&
+    !this.options->state->first_data_written_p)
   {
-    status = Part_output_init(obj, 0);
+    status = this.OutputInit(0);
     if (status < 0) return status;
-    NS_ASSERTION(obj->options->state->first_data_written_p, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+    NS_ASSERTION(this.options->state->first_data_written_p);
   }
 
   //
@@ -84,35 +42,35 @@ MimeExternalObject_ParseBegin (Part *obj)
   // out a table with a link in it.  (Later calls to the `ParseBuffer' method
   // will simply discard the data of the object itself.)
   //
-  if (obj->options &&
-      obj->output_p &&
-      obj->options->write_html_p &&
-      obj->options->output_fn)
+  if (this.options &&
+      this.output_p &&
+      this.options->write_html_p &&
+      this.options->output_fn)
   {
-    MimeDisplayOptions newopt = *obj->options;  // copy it
+    DisplayOptions newopt = *this.options;  // copy it
     char *id = 0;
     char *id_url = 0;
     char *id_name = 0;
     nsCString id_imap;
-    bool all_headers_p = obj->options->headers == MimeHeadersAll;
+    bool all_headers_p = this.options->headers == HeadersStatus::All;
 
-    id = mime_part_address (obj);
-    if (obj->options->missing_parts)
-      id_imap.Adopt(mime_imap_part_address (obj));
+    id = this.PartAddress;
+    if (this.options->missing_parts)
+      id_imap.Adopt(this.IMAPPartAddress());
     if (! id) return MIME_OUT_OF_MEMORY;
 
-    if (obj->options && obj->options->url)
+    if (this.options && this.options->url)
     {
-      const char *url = obj->options->url;
+      const char *url = this.options->url;
       if (!id_imap.IsEmpty() && id)
       {
         // if this is an IMAP part.
-        id_url = mime_set_url_imap_part(url, id_imap.get(), id);
+        id_url = SetURLIMAPPart(url, id_imap.get(), id);
       }
       else
       {
         // This is just a normal MIME part as usual.
-        id_url = mime_set_url_part(url, id, true);
+        id_url = SetURLPart(url, id, true);
       }
       if (!id_url)
       {
@@ -138,7 +96,7 @@ MimeExternalObject_ParseBegin (Part *obj)
       }
       // we have a valid id
       if (id)
-        id_name = mime_find_suggested_name_of_part(id, obj);
+        id_name = this.GetSuggestedNameOfPart(id);
       PL_strncpyz(s, p, slen);
       PL_strcatn(s, slen, id);
       PR_Free(id);
@@ -149,23 +107,23 @@ MimeExternalObject_ParseBegin (Part *obj)
     // Don't bother showing all headers on this part if it's the only
     // part in the message: in that case, we've already shown these
     // headers.
-    obj->options->state &&
-    obj->options->state->root == obj->parent)
+    this.options->state &&
+    this.options->state->root == this.parent)
     all_headers_p = false;
 
     newopt.fancy_headers_p = true;
-    newopt.headers = (all_headers_p ? MimeHeadersAll : MimeHeadersSome);
+    newopt.headers = (all_headers_p ? HeadersStatus::All : HeadersStatus::Some);
 
 /******
 RICHIE SHERRY
 GOTTA STILL DO THIS FOR QUOTING!
-     status = MimeHeaders_write_attachment_box (obj->headers, &newopt,
-                                                 obj->content_type,
-                                                 obj->encoding,
+     status = MimeHeaders_write_attachment_box (this.headers, &newopt,
+                                                 this.content_type,
+                                                 this.encoding,
                                                  id_name? id_name : id, id_url, 0)
 *****/
 
-    // obj->options really owns the storage for this.
+    // this.options really owns the storage for this.
     newopt.part_to_load = nullptr;
     newopt.default_charset = nullptr;
     PR_FREEIF(id);
@@ -177,34 +135,33 @@ GOTTA STILL DO THIS FOR QUOTING!
   return 0;
 }
 
-static int
-MimeExternalObject_ParseBuffer (const char *buffer, int32_t size, Part *obj)
+int
+ExternalObject::ParseBuffer(const char *buffer, int32_t size)
 {
-  NS_ASSERTION(!obj->closed_p, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (obj->closed_p) return -1;
+  NS_ASSERTION(!this.closed_p);
+  if (this.closed_p) return -1;
 
   // Currently, we always want to stream, in order to determine the size of the
   // MIME object.
 
   /* The data will be base64-decoded and passed to
-     MimeExternalObject_ParseDecodedBuffer. */
-  return ((PartClass*)&MIME_SUPERCLASS)->ParseBuffer(buffer, size, obj);
+     ExternalObject.ParseDecodedBuffer(). */
+  return SUPERCLASS::ParseBuffer(buffer, size);
 }
 
 
-static int
-MimeExternalObject_ParseDecodedBuffer (const char *buf, int32_t size,
-                     Part *obj)
+int
+ExternalObject::ParseDecodedBuffer(const char *buf, int32_t size)
 {
-  /* This is called (by MimeLeafClass->ParseBuffer) with blocks of data
+  /* This is called by Leaf.ParseBuffer() with blocks of data
    that have already been base64-decoded.  This will only be called in
    the case where we're not emitting HTML, and want access to the raw
    data itself.
 
-   We override the `ParseDecodedBuffer' method provided by MimeLeaf
-   because, unlike most children of MimeLeaf, we do not want to line-
-   buffer the decoded data -- we want to simply pass it along to the
-   backend, without going through our `ParseLine' method.
+   We override the Leaf.ParseDecodedBuffer() method, because,
+   unlike most children of |Leaf|, we do not want to line-buffer
+   the decoded data -- we want to simply pass it along to the backend,
+   without going through our ParseLine() method.
    */
 
   /* Don't do a roundtrip through XPConnect when we're only interested in
@@ -213,24 +170,26 @@ MimeExternalObject_ParseDecodedBuffer (const char *buf, int32_t size,
    * reading them) and the JS emitter (which doesn't care about attachment data
    * at all). 0 means ok, the caller just checks for negative return value.
    */
-  if (obj->options && (obj->options->metadata_only ||
-                       obj->options->write_html_p))
+  if (this.options && (this.options->metadata_only ||
+                       this.options->write_html_p))
     return 0;
   else
-    return Part_write(obj, buf, size, true);
+    return this.Write(buf, size, true);
 }
 
 
-static int
-MimeExternalObject_ParseLine (const char *line, int32_t length, Part *obj)
+int
+ExternalObject::ParseLine(const char *line, int32_t length)
 {
   NS_ERROR("This method should never be called (externals do no line buffering).");
   return -1;
 }
 
-static bool
-MimeExternalObject_displayable_inline_p (PartClass *clazz,
-                     MimeHeaders *hdrs)
+bool
+ExternalObjectClass::DisplayableInline(Headers* hdrs)
 {
   return false;
 }
+
+
+} // namespace
