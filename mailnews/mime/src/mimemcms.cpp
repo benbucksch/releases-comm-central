@@ -458,7 +458,7 @@ MimeMultCMS_generate (void *crypto_closure)
 
   if (data->content_info)
   {
-#if 0 // XXX Fix this. What do we do here? //
+#if 0 // XXX Fix this-> What do we do here? //
     if (SEC_CMSContainsCertsOrCrls(data->content_info))
     {
       /* #### call libsec telling it to import the certs */

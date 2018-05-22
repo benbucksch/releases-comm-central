@@ -22,14 +22,14 @@ HTML::ParseBegin()
   int status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
-  if (!this.output_p) return 0;
+  if (!this->output_p) return 0;
 
-  status = this.WriteSeparator();
+  status = this->WriteSeparator();
   if (status < 0) return status;
 
   // Set a default font (otherwise unicode font will be used since the data is UTF-8).
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this->options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this->options->format_out)
   {
     char buf[256];            // local buffer for html tag
     int32_t fontSize;         // default font size
@@ -39,31 +39,31 @@ HTML::ParseBegin()
     {
       PR_snprintf(buf, 256, "<div class=\"moz-text-html\"  lang=\"%s\">",
                   fontLang.get());
-      status = this.Write(buf, strlen(buf), true);
+      status = this->Write(buf, strlen(buf), true);
     }
     else
     {
-      status = this.Write("<div class=\"moz-text-html\">", 27, true);
+      status = this->Write("<div class=\"moz-text-html\">", 27, true);
     }
     if(status<0) return status;
   }
 
-  this.charset = nullptr;
+  this->charset = nullptr;
 
   /* If this HTML part has a Content-Base header, and if we're displaying
    to the screen (that is, not writing this part "raw") then translate
    that Content-Base header into a <BASE> tag in the HTML.
   */
-  if (this.options &&
-    this.options->write_html_p &&
-    this.options->output_fn)
+  if (this->options &&
+    this->options->write_html_p &&
+    this->options->output_fn)
   {
-    char* base_hdr = this.headers->Get(HEADER_CONTENT_BASE, false, false);
+    char* base_hdr = this->headers->Get(HEADER_CONTENT_BASE, false, false);
 
     // @see MHTML spec
     if (!base_hdr)
     {
-      base_hdr = this.headers->Get(HEADER_CONTENT_LOCATION, false, false);
+      base_hdr = this->headers->Get(HEADER_CONTENT_LOCATION, false, false);
     }
 
     if (base_hdr)
@@ -97,7 +97,7 @@ HTML::ParseBegin()
 
       PR_Free(base_hdr);
 
-      status = this.Write(buf, strlen(buf), false);
+      status = this->Write(buf, strlen(buf), false);
       PR_Free(buf);
       if (status < 0) return status;
     }
@@ -109,10 +109,10 @@ HTML::ParseBegin()
 int
 HTML::ParseLine(const char* line, int32_t length)
 {
-  if (!this.output_p || !this.options || !this.options->output_fn)
+  if (!this->output_p || !this.options || !this.options->output_fn)
     return 0;
 
-  if (!this.charset)
+  if (!this->charset)
   {
     char * cp;
     // First, try to detect a charset via a META tag!
@@ -138,14 +138,14 @@ HTML::ParseLine(const char* line, int32_t length)
             PL_strncasecmp(charset, "UTF-16", 6) &&
             PL_strncasecmp(charset, "UTF-32", 6))
         {
-          this.charset = charset;
+          this->charset = charset;
 
           // write out the data without the charset part...
-          if (this.charset)
+          if (this->charset)
           {
-            int err = this.Write(line, cp - line, true);
+            int err = this->Write(line, cp - line, true);
             if (err == 0)
-              err = this.Write(cp2, length - (int)(cp2 - line), true);
+              err = this->Write(cp2, length - (int)(cp2 - line), true);
 
             return err;
           }
@@ -156,24 +156,24 @@ HTML::ParseLine(const char* line, int32_t length)
   }
 
   // Now, just write out the data...
-  return this.Write(line, length, true);
+  return this->Write(line, length, true);
 }
 
 int
 HTML::ParseEOF(bool abort_p)
 {
   int status;
-  if (this.closed_p) return 0;
+  if (this->closed_p) return 0;
 
-  PR_FREEIF(this.charset);
+  PR_FREEIF(this->charset);
 
   // Run parent method first, to flush out any buffered data.
   status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) return status;
 
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
-    status = this.Write("</div>", 6, false);
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this->options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this->options->format_out)
+    status = this->Write("</div>", 6, false);
 
   return 0;
 }

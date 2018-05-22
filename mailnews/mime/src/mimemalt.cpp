@@ -346,7 +346,7 @@ MimeMultipartAlternative_close_child(Part *obj)
   MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
   MimeMultipart *mult = (MimeMultipart *) obj;
 
-  /* PR_ASSERT(malt->part_buffer);      Some Mac brokenness trips this...
+  /* PR_ASSERT(malt->part_buffer);      Some Mac brokenness trips this->..
   if (!malt->part_buffer) return -1; */
 
   if (malt->pending_parts)

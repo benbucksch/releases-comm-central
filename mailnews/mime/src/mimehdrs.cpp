@@ -66,17 +66,17 @@ Headers::ConvertHeaderValue(DisplayOptions* opt, nsCString &value,
 
 Headers::Headers()
 {
-  this.done_p = false;
+  this->done_p = false;
 }
 
 Headers::~Headers()
 {
-  PR_FREEIF(this.all_headers);
-  PR_FREEIF(this.heads);
-  PR_FREEIF(this.obuffer);
-  PR_FREEIF(this.munged_subject);
-  this.obuffer_fp = 0;
-  this.obuffer_size = 0;
+  PR_FREEIF(this->all_headers);
+  PR_FREEIF(this->heads);
+  PR_FREEIF(this->obuffer);
+  PR_FREEIF(this->munged_subject);
+  this->obuffer_fp = 0;
+  this->obuffer_size = 0;
 }
 
 int
@@ -86,28 +86,28 @@ Headers::ParseLine(const char* buffer, int32_t size)
   int desired_size;
 
   /* Don't try and feed me more data after having fed me a blank line... */
-  NS_ASSERTION(!this.done_p);
-  if (this.done_p) return -1;
+  NS_ASSERTION(!this->done_p);
+  if (this->done_p) return -1;
 
   if (!buffer || size == 0 || *buffer == '\r' || *buffer == '\n')
   {
     /* If this is a blank line, we're done.
      */
-    this.done_p = true;
-    return this.BuildHeadsList();
+    this->done_p = true;
+    return this->BuildHeadsList();
   }
 
   /* Tack this data on to the end of our copy.
    */
-  desired_size = this.all_headers_fp + size + 1;
-  if (desired_size >= this.all_headers_size)
+  desired_size = this->all_headers_fp + size + 1;
+  if (desired_size >= this->all_headers_size)
   {
     status = mime_GrowBuffer(desired_size, sizeof(char), 255,
-                 &this.all_headers, &this.all_headers_size);
+                 &this->all_headers, &this.all_headers_size);
     if (status < 0) return status;
   }
-  memcpy(this.all_headers + this.all_headers_fp, buffer, size);
-  this.all_headers_fp += size;
+  memcpy(this->all_headers + this.all_headers_fp, buffer, size);
+  this->all_headers_fp += size;
 
   return 0;
 }
@@ -118,38 +118,38 @@ Headers* Headers::Copy()
   if (!copy) return 0;
   memset(copy, 0, sizeof(*copy));
 
-  if (this.all_headers)
+  if (this->all_headers)
   {
-    copy->all_headers = (char *) PR_MALLOC(this.all_headers_fp);
+    copy->all_headers = (char *) PR_MALLOC(this->all_headers_fp);
     if (!copy->all_headers)
     {
       PR_Free(copy);
       return 0;
     }
-    memcpy(copy->all_headers, this.all_headers, this.all_headers_fp);
+    memcpy(copy->all_headers, this->all_headers, this.all_headers_fp);
 
-    copy->all_headers_fp   = this.all_headers_fp;
-    copy->all_headers_size = this.all_headers_fp;
+    copy->all_headers_fp   = this->all_headers_fp;
+    copy->all_headers_size = this->all_headers_fp;
   }
 
-  copy->done_p = this.done_p;
+  copy->done_p = this->done_p;
 
-  if (this.heads)
+  if (this->heads)
   {
     int i;
-    copy->heads = (char **) PR_MALLOC(this.heads_size
-                    * sizeof(*this.heads));
+    copy->heads = (char **) PR_MALLOC(this->heads_size
+                    * sizeof(*this->heads));
     if (!copy->heads)
     {
       PR_FREEIF(copy->all_headers);
       PR_Free(copy);
       return 0;
     }
-    copy->heads_size = this.heads_size;
-    for (i = 0; i < this.heads_size; i++)
+    copy->heads_size = this->heads_size;
+    for (i = 0; i < this->heads_size; i++)
     {
       copy->heads[i] = (copy->all_headers +
-               (this.heads[i] - this.all_headers));
+               (this->heads[i] - this.all_headers));
     }
   }
   return copy;
@@ -162,36 +162,36 @@ Headers::BuildHeadsList()
   char *end;
   int i;
 
-  NS_ASSERTION(this.done_p && !this.heads);
-  if (!this.done_p || this.heads)
+  NS_ASSERTION(this->done_p && !this.heads);
+  if (!this->done_p || this.heads)
   return -1;
 
-  if (this.all_headers_fp == 0)
+  if (this->all_headers_fp == 0)
   {
     /* Must not have been any headers (we got the blank line right away.) */
-    PR_FREEIF (this.all_headers);
-    this.all_headers_size = 0;
+    PR_FREEIF (this->all_headers);
+    this->all_headers_size = 0;
     return 0;
   }
 
   /* At this point, we might as well realloc all_headers back down to the
    minimum size it must be (it could be up to 1k bigger.)  But don't
    bother if we're only off by a tiny bit. */
-  NS_ASSERTION(this.all_headers_fp <= this.all_headers_size);
-  if (this.all_headers_fp + 60 <= this.all_headers_size)
+  NS_ASSERTION(this->all_headers_fp <= this.all_headers_size);
+  if (this->all_headers_fp + 60 <= this.all_headers_size)
   {
-    char *ls = (char *)PR_Realloc(this.all_headers, this.all_headers_fp);
+    char *ls = (char *)PR_Realloc(this->all_headers, this.all_headers_fp);
     if (ls) /* can this ever fail?  we're making it smaller... */
     {
-      this.all_headers = ls;  /* in case it got relocated */
-      this.all_headers_size = this.all_headers_fp;
+      this->all_headers = ls;  /* in case it got relocated */
+      this->all_headers_size = this.all_headers_fp;
     }
   }
 
   /* First go through and count up the number of headers in the block.
    */
-  end = this.all_headers + this.all_headers_fp;
-  for (s = this.all_headers; s < end; s++)
+  end = this->all_headers + this.all_headers_fp;
+  for (s = this->all_headers; s < end; s++)
   {
     if (s < (end-1) && s[0] == '\r' && s[1] == '\n') /* CRLF -> LF */
       s++;
@@ -199,23 +199,23 @@ Headers::BuildHeadsList()
     if ((s[0] == '\r' || s[0] == '\n') &&      /* we're at a newline, and */
       (s >= (end-1) ||            /* we're at EOF, or */
        !(s[1] == ' ' || s[1] == '\t')))    /* next char is nonwhite */
-    this.heads_size++;
+    this->heads_size++;
   }
 
   /* Now allocate storage for the pointers to each of those headers.
    */
-  this.heads = (char **) PR_MALLOC((this.heads_size + 1) * sizeof(char *));
-  if (!this.heads)
+  this->heads = (char **) PR_MALLOC((this.heads_size + 1) * sizeof(char *));
+  if (!this->heads)
     return MIME_OUT_OF_MEMORY;
-  memset(this.heads, 0, (this.heads_size + 1) * sizeof(char *));
+  memset(this->heads, 0, (this.heads_size + 1) * sizeof(char *));
 
   /* Now make another pass through the headers, and this time, record the
    starting position of each header.
    */
 
   i = 0;
-  this.heads[i++] = this.all_headers;
-  s = this.all_headers;
+  this->heads[i++] = this.all_headers;
+  s = this->all_headers;
 
   while (s < end)
   {
@@ -258,10 +258,10 @@ Headers::BuildHeadsList()
 
     if (s < end)
     {
-      NS_ASSERTION(! (i > this.heads_size));
-      if (i > this.heads_size)
+      NS_ASSERTION(! (i > this->heads_size));
+      if (i > this->heads_size)
         return -1;
-      this.heads[i++] = s;
+      this->heads[i++] = s;
     }
   }
 
@@ -288,28 +288,28 @@ Headers::Get(const char* header_name, bool strip_p, bool all_p)
    let's assume that the headers are now finished.  If they aren't
    in fact finished, then a later attempt to write to them will assert.
    */
-  if (!this.done_p)
+  if (!this->done_p)
   {
     int status;
-    this.done_p = true;
-    status = this.BuildHeadsList();
+    this->done_p = true;
+    status = this->BuildHeadsList();
     if (status < 0) return 0;
   }
 
-  if (!this.heads)    /* Must not have been any headers. */
+  if (!this->heads)    /* Must not have been any headers. */
   {
-    NS_ASSERTION(this.all_headers_fp == 0);
+    NS_ASSERTION(this->all_headers_fp == 0);
     return 0;
   }
 
   name_length = strlen(header_name);
 
-  for (i = 0; i < this.heads_size; i++)
+  for (i = 0; i < this->heads_size; i++)
   {
-    char *head = this.heads[i];
-    char *end = (i == this.heads_size-1
-           ? this.all_headers + this.all_headers_fp
-           : this.heads[i+1]);
+    char *head = this->heads[i];
+    char *end = (i == this->heads_size-1
+           ? this->all_headers + this.all_headers_fp
+           : this->heads[i+1]);
     char *colon, *ocolon;
 
     NS_ASSERTION(head);
@@ -491,10 +491,10 @@ Headers::WriteAllHeaders(DisplayOptions* opt, bool attachment)
      let's assume that the headers are now finished.  If they aren't
      in fact finished, then a later attempt to write to them will assert.
    */
-  if (!this.done_p)
+  if (!this->done_p)
   {
-    this.done_p = true;
-    status = this.BuildHeadsList();
+    this->done_p = true;
+    status = this->BuildHeadsList();
     if (status < 0) return 0;
   }
 
@@ -505,19 +505,19 @@ Headers::WriteAllHeaders(DisplayOptions* opt, bool attachment)
       charset = PL_strdup(opt->default_charset);
     else
     {
-      char *contentType = this.Get(HEADER_CONTENT_TYPE, false, false);
+      char *contentType = this->Get(HEADER_CONTENT_TYPE, false, false);
       if (contentType)
         charset = GetParameter(contentType, HEADER_PARM_CHARSET, nullptr, nullptr);
       PR_FREEIF(contentType);
     }
   }
 
-  for (i = 0; i < this.heads_size; i++)
+  for (i = 0; i < this->heads_size; i++)
   {
-    char *head = this.heads[i];
-    char *end = (i == this.heads_size-1
-                      ? this.all_headers + this.all_headers_fp
-                      : this.heads[i+1]);
+    char *head = this->heads[i];
+    char *end = (i == this->heads_size-1
+                      ? this->all_headers + this.all_headers_fp
+                      : this->heads[i+1]);
     char *colon, *ocolon;
     char *contents = end;
 
@@ -590,7 +590,7 @@ Headers::WriteAllHeaders(DisplayOptions* opt, bool attachment)
     if (!wrote_any_p)
       wrote_any_p = (status > 0);
   }
-  mimeEmitterAddAllHeaders(opt, this.all_headers, this.all_headers_fp);
+  mimeEmitterAddAllHeaders(opt, this->all_headers, this.all_headers_fp);
   PR_FREEIF(charset);
 
   return 1;
@@ -660,7 +660,7 @@ Headers::GetFilename(DisplayOptions* opt)
   char *s = 0, *name = 0, *cvt = 0;
   char *charset = nullptr; // for RFC2231 support
 
-  s = this.Get(HEADER_CONTENT_DISPOSITION, false, false);
+  s = this->Get(HEADER_CONTENT_DISPOSITION, false, false);
   if (s)
   {
     name = Header::GetParameter(s, HEADER_PARM_FILENAME, &charset, NULL);
@@ -669,7 +669,7 @@ Headers::GetFilename(DisplayOptions* opt)
 
   if (! name)
   {
-    s = this.Get(HEADER_CONTENT_TYPE, false, false);
+    s = this->Get(HEADER_CONTENT_TYPE, false, false);
     if (s)
     {
       free(charset);
@@ -680,10 +680,10 @@ Headers::GetFilename(DisplayOptions* opt)
   }
 
   if (! name)
-    name = this.Get(HEADER_CONTENT_NAME, false, false);
+    name = this->Get(HEADER_CONTENT_NAME, false, false);
 
   if (! name)
-    name = this.Get(HEADER_X_SUN_DATA_NAME, false, false);
+    name = this->Get(HEADER_X_SUN_DATA_NAME, false, false);
 
   if (name)
   {
@@ -740,7 +740,7 @@ Headers::DoUnixDisplayHookHack()
     FILE *fp = popen(cmd, "w");
     if (fp)
     {
-      mozilla::Unused << fwrite(this.all_headers, 1, this.all_headers_fp, fp);
+      mozilla::Unused << fwrite(this->all_headers, 1, this.all_headers_fp, fp);
       pclose(fp);
     }
   }
@@ -750,13 +750,13 @@ Headers::DoUnixDisplayHookHack()
 void
 Headers::Compact()
 {
-  PR_FREEIF(this.obuffer);
-  this.obuffer_fp = 0;
-  this.obuffer_size = 0;
+  PR_FREEIF(this->obuffer);
+  this->obuffer_fp = 0;
+  this->obuffer_size = 0;
 
   /* These really shouldn't have gotten out of whack again. */
-  NS_ASSERTION(this.all_headers_fp <= this.all_headers_size &&
-            this.all_headers_fp + 100 > this.all_headers_size);
+  NS_ASSERTION(this->all_headers_fp <= this.all_headers_size &&
+            this->all_headers_fp + 100 > this.all_headers_size);
 }
 
 /* Writes the headers as text/plain.
@@ -769,30 +769,30 @@ Headers::WriteRawHeaders(DisplayOptions* opt, bool dont_write_content_type)
 {
   int status;
 
-  if (!this.done_p)
+  if (!this->done_p)
   {
-    this.done_p = true;
-    status = this.BuildHeadsList();
+    this->done_p = true;
+    status = this->BuildHeadsList();
     if (status < 0) return 0;
   }
 
   if (!dont_write_content_type)
   {
     char nl[] = MSG_LINEBREAK;
-    status = this.Write(opt, this.all_headers, this.all_headers_fp);
+    status = this->Write(opt, this.all_headers, this.all_headers_fp);
     if (status < 0) return status;
-    status = this.Write(opt, nl, strlen(nl));
+    status = this->Write(opt, nl, strlen(nl));
     if (status < 0) return status;
   }
   else
   {
     int32_t i;
-    for (i = 0; i < this.heads_size; i++)
+    for (i = 0; i < this->heads_size; i++)
     {
-      char *head = this.heads[i];
-      char *end = (i == this.heads_size-1
-             ? this.all_headers + this.all_headers_fp
-             : this.heads[i+1]);
+      char *head = this->heads[i];
+      char *end = (i == this->heads_size-1
+             ? this->all_headers + this.all_headers_fp
+             : this->heads[i+1]);
 
       NS_ASSERTION(head);
       if (!head) continue;
@@ -802,12 +802,12 @@ Headers::WriteRawHeaders(DisplayOptions* opt, bool dont_write_content_type)
       continue;
 
       /* Write out this (possibly multi-line) header. */
-      status = this.Write(opt, head, end - head);
+      status = this->Write(opt, head, end - head);
       if (status < 0) return status;
     }
   }
 
-  this.Compact();
+  this->Compact();
 
   return 0;
 }

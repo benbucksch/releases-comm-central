@@ -444,7 +444,7 @@ PartClass* findClass(const char* contentType,
         else if (html_as == 2) // display HTML source
           /* This is for the freaks. Treat HTML as plaintext,
              which will cause the HTML source to be displayed.
-             Not very user-friendly, but some seem to want this. */
+             Not very user-friendly, but some seem to want this-> */
           clazz = TextPlainClass;
         else if (html_as == 3) // Sanitize
           // Strip all but allowed HTML
@@ -744,7 +744,7 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
   /* There are some clients send out all attachments with a content-type
    of application/octet-stream.  So, if we have an octet-stream attachment,
    try to guess what type it really is based on the file extension.  I HATE
-   that we have to do this...
+   that we have to do this->..
   */
   if (hdrs && opts && opts->file_type_fn &&
 
@@ -903,8 +903,8 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
   {
     if (obj)
     {
-      PR_FREEIF(this.contentType);
-      this.contentType = contentTypeOverride;
+      PR_FREEIF(this->contentType);
+      this->contentType = contentTypeOverride;
     }
     else
     {
@@ -923,20 +923,20 @@ bool PartClass::IsSubclassOf(PartClass* parent)
 {
   if (this == parent)
     return true;
-  else if (!this.superclass)
+  else if (!this->superclass)
     return false;
   else
-    return this.superclass->IsSubclass(parent);
+    return this->superclass->IsSubclass(parent);
 }
 
 bool Part::IsType(PartClass* clazz)
 {
-  return this.clazz->IsSubclassOf(clazz);
+  return this->clazz->IsSubclassOf(clazz);
 }
 
 char* Part::PartAddress()
 {
-  if (!this.parent)
+  if (!this->parent)
     return strdup("0");
   else
   {
@@ -944,8 +944,8 @@ char* Part::PartAddress()
     int32_t i, j = -1;
     char buf [20];
     char *higher = 0;
-    Container *cont = (Container *) this.parent;
-    NS_ASSERTION(this.parent->IsType(ContainerClass));
+    Container *cont = (Container *) this->parent;
+    NS_ASSERTION(this->parent->IsType(ContainerClass));
     for (i = 0; i < cont->nchildren; i++)
     if (cont->children[i] == this)
     {
@@ -959,9 +959,9 @@ char* Part::PartAddress()
     }
 
     PR_snprintf(buf, sizeof(buf), "%ld", j);
-    if (this.parent->parent)
+    if (this->parent->parent)
     {
-      higher = this.parent->PartAddress();
+      higher = this->parent->PartAddress();
       if (!higher) return 0;  /* MIME_OUT_OF_MEMORY */
     }
 
@@ -988,10 +988,10 @@ char* Part::PartAddress()
 
 char* Part::IMAPPartAddress()
 {
-  if (!this.headers)
+  if (!this->headers)
     return 0;
   else
-    return this.headers->Get(IMAP_EXTERNAL_CONTENT_HEADER, false, false);
+    return this->headers->Get(IMAP_EXTERNAL_CONTENT_HEADER, false, false);
 }
 
 /* Returns a full URL if the current Part has a EXTERNAL_ATTACHMENT_URL_HEADER
@@ -1000,10 +1000,10 @@ char* Part::IMAPPartAddress()
 */
 char* Part::ExternalAttachmentURL()
 {
-  if (!this.headers)
+  if (!this->headers)
     return 0;
   else
-    return this.headers->Get(EXTERNAL_ATTACHMENT_URL_HEADER, false, false);
+    return this->headers->Get(EXTERNAL_ATTACHMENT_URL_HEADER, false, false);
 }
 
 /* Whether the given object has written out the HTML version of its headers
@@ -1013,7 +1013,7 @@ char* Part::ExternalAttachmentURL()
  */
 bool Part::IsCryptoStamped()
 {
-  if (this.IsType(MessageClass))
+  if (this->IsType(MessageClass))
     return ((Message)this).IsCryptoStamped();
   else
     return false;
@@ -1189,11 +1189,11 @@ Part* Part::GetObjectForPartAddress(const char *part)
 
   if (!part || !*part)
   {
-    isMyself = !this.parent;
+    isMyself = !this->parent;
   }
   else
   {
-    char* part2 = this.PartAddress();
+    char* part2 = this->PartAddress();
     if (!part2) return 0;  /* MIME_OUT_OF_MEMORY */
     isMyself = !strcmp(part, part2);
     PR_Free(part2);
@@ -1204,7 +1204,7 @@ Part* Part::GetObjectForPartAddress(const char *part)
     /* These are the droids we're looking for. */
     return this;
   }
-  else if (!this.IsType(ContainerClass))
+  else if (!this->IsType(ContainerClass))
   {
     /* Not a container, pull up, pull up! */
     return 0;
@@ -1228,10 +1228,10 @@ Part* Part::GetObjectForPartAddress(const char *part)
  */
 char* Part::GetContentTypeOfPart(const char *part)
 {
-  Part* obj = this.GetObjectForPartAddress(part);
+  Part* obj = this->GetObjectForPartAddress(part);
   if (!obj) return 0;
 
-  return (this.headers ? this.headers->Get(HEADER_CONTENT_TYPE, true, false) : 0);
+  return (this->headers ? this.headers->Get(HEADER_CONTENT_TYPE, true, false) : 0);
 }
 
 /* Given a part ID, looks through the |Part| tree for a sub-part whose ID
@@ -1242,34 +1242,34 @@ char* Part::GetSuggestedNameOfPart(const char *part)
 {
   char *result = 0;
 
-  Part* obj = this.GetObjectForPartAddress(part);
+  Part* obj = this->GetObjectForPartAddress(part);
   if (!obj) return 0;
 
-  result = (this.headers ? this.headers->GetFilename(this.options) : 0);
+  result = (this->headers ? this.headers->GetFilename(this.options) : 0);
 
   /* If this part doesn't have a name, but this part is one fork of an
    AppleDouble, and the AppleDouble itself has a name, then use that. */
   if (!result &&
-    this.parent &&
-    this.parent->headers &&
-    this.parent->IsType(MultipartAppleDoubleClass))
-  result = this.parent->headers->GetFilename(this.options);
+    this->parent &&
+    this->parent->headers &&
+    this->parent->IsType(MultipartAppleDoubleClass))
+  result = this->parent->headers->GetFilename(this.options);
 
   /* Else, if this part is itself an AppleDouble, and one of its children
    has a name, then use that (check data fork first, then resource.) */
-  if (!result && this.IsType(MultipartAppleDoubleClass))
+  if (!result && this->IsType(MultipartAppleDoubleClass))
   {
     Container cont = (Container) this;
     if (cont.nchildren > 1 &&
       cont.children[1] &&
       cont.children[1]->headers)
-    result = cont.children[1]->headers->GetFilename(this.options);
+    result = cont.children[1]->headers->GetFilename(this->options);
 
     if (!result &&
       cont.nchildren > 0 &&
       cont.children[0] &&
       cont.children[0]->headers)
-    result = cont.children[0]->headers->GetFilename(this.options);
+    result = cont.children[0]->headers->GetFilename(this->options);
   }
 
   /* Ok, now we have the suggested name, if any.
@@ -1287,14 +1287,14 @@ char* Part::GetSuggestedNameOfPart(const char *part)
    up on disk, its content-transfer-encoding will have been removed;
    therefore, we should suggest a file name that indicates that.
    */
-  if (result && this.encoding && *this.encoding)
+  if (result && this->encoding && *this.encoding)
   {
     int32_t L = strlen(result);
     const char **exts = 0;
 
     /*
      I'd like to ask the /etc/mime.types file, "what extensions correspond
-     to this.encoding (which happens to be "x-uuencode") but doing that
+     to this->encoding (which happens to be "x-uuencode") but doing that
      in a non-sphagetti way would require brain surgery.  So, since
      currently uuencode is the only content-transfer-encoding which we
      understand which traditionally has an extension, we just special-
@@ -1302,7 +1302,7 @@ char* Part::GetSuggestedNameOfPart(const char *part)
 
      Note that it's special-cased in a similar way in libmsg/compose.c.
      */
-    if (!PL_strcasecmp(this.encoding, ENCODING_UUENCODE))
+    if (!PL_strcasecmp(this->encoding, ENCODING_UUENCODE))
     {
       static const char *uue_exts[] = { "uu", "uue", 0 };
       exts = uue_exts;
@@ -1578,70 +1578,70 @@ int Options::Write(Headers* hdrs, DisplayOptions* opt, const char* data,
 
 int Part::Write(const char* output, int32_t length, bool userVisible)
 {
-  if (!this.output_p) return 0;
+  if (!this->output_p) return 0;
 
   // if we're stripping attachments, check if any parent is not being output
-  if (this.options->format_out == nsMimeOutput::nsMimeMessageAttach)
+  if (this->options->format_out == nsMimeOutput::nsMimeMessageAttach)
   {
     // if true, mime generates a separator in html - we don't want that.
     userVisible = false;
 
-    for (Part* parent = this.parent; parent; parent = parent->parent)
+    for (Part* parent = this->parent; parent; parent = parent->parent)
     {
       if (!parent->output_p)
         return 0;
     }
   }
-  if (!this.options->state->first_data_written_p)
+  if (!this->options->state->first_data_written_p)
   {
-    int status = this.OutputInit(0);
+    int status = this->OutputInit(0);
     if (status < 0) return status;
-    NS_ASSERTION(this.options->state->first_data_written_p);
+    NS_ASSERTION(this->options->state->first_data_written_p);
   }
 
-  return Options::Write(this.headers, this.options, output, length, userVisible);
+  return Options::Write(this->headers, this.options, output, length, userVisible);
 }
 
 int Part::WriteSeparator()
 {
-  if (this.options && this.options->state &&
+  if (this->options && this.options->state &&
       // we never want separators if we are asking for pure bodies
-      !this.options->write_pure_bodies)
-    this.options->state->separator_queued_p = true;
+      !this->options->write_pure_bodies)
+    this->options->state->separator_queued_p = true;
   return 0;
 }
 
 int Part::OutputInit(const char* contentType)
 {
-  if (this.options &&
-    this.options->state &&
+  if (this->options &&
+    this->options->state &&
     !thisoptions->state->firstDataWritten)
   {
     int status;
     const char *charset = 0;
     char *name = 0, *x_mac_type = 0, *x_mac_creator = 0;
 
-    if (!this.options->output_init_fn)
+    if (!this->options->output_init_fn)
     {
-      this.options->state->first_data_written_p = true;
+      this->options->state->first_data_written_p = true;
       return 0;
     }
 
-    if (this.headers)
+    if (this->headers)
     {
       char *ct;
-      name = this.headers->GetFilename(this.options);
+      name = this->headers->GetFilename(this.options);
 
-      ct = this.headers->Get(HEADER_CONTENT_TYPE,
+      ct = this->headers->Get(HEADER_CONTENT_TYPE,
                  false, false);
       if (ct)
       {
         x_mac_type   = Headers::GetParameter(ct, PARAM_X_MAC_TYPE, NULL, NULL);
         x_mac_creator= Headers::GetParameter(ct, PARAM_X_MAC_CREATOR, NULL, NULL);
         /* if don't have a x_mac_type and x_mac_creator, we need to try to get it from its parent */
-        if (!x_mac_type && !x_mac_creator && this.parent && this.parent->headers)
+        if (!x_mac_type && !x_mac_creator && this->parent && this.parent->headers)
         {
-          char * ctp = this.parent->headers->Get(HEADER_CONTENT_TYPE, false, false);
+          char * ctp = this->parent->headers->Get(HEADER_CONTENT_TYPE, false, false);
           if (ctp)
           {
             x_mac_type   = Headers::GetParameter(ctp, PARAM_X_MAC_TYPE, NULL, NULL);
@@ -1650,43 +1650,43 @@ int Part::OutputInit(const char* contentType)
           }
         }
 
-        if (!(this.options->override_charset)) {
+        if (!(this->options->override_charset)) {
           char *charset = Headers::GetParameter(ct, "charset", nullptr, nullptr);
           if (charset)
           {
-            PR_FREEIF(this.options->default_charset);
-            this.options->default_charset = charset;
+            PR_FREEIF(this->options->default_charset);
+            this->options->default_charset = charset;
           }
         }
         PR_Free(ct);
       }
     }
 
-    if (this.IsType(TextClass))
+    if (this->IsType(TextClass))
       charset = ((Text) this).charset;
 
     if (!contentType)
-      contentType = this.contentType;
+      contentType = this->contentType;
     if (!contentType)
       contentType = TEXT_PLAIN;
 
     // Set the charset on the channel we are dealing with so people know
     // what the charset is set to. Do this for quoting/Printing ONLY!
     extern void ResetChannelCharset(Part* obj); // declare
-    if ( (this.options) &&
-         ( (this.options->format_out == nsMimeOutput::nsMimeMessageQuoting) ||
-           (this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting) ||
-           (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs) ||
-           (this.options->format_out == nsMimeOutput::nsMimeMessagePrintOutput) ) )
+    if ( (this->options) &&
+         ( (this->options->format_out == nsMimeOutput::nsMimeMessageQuoting) ||
+           (this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting) ||
+           (this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs) ||
+           (this->options->format_out == nsMimeOutput::nsMimeMessagePrintOutput) ) )
       ResetChannelCharset(obj);
 
-    status = this.options->output_init_fn (contentType, charset, name,
+    status = this->options->output_init_fn (contentType, charset, name,
                        x_mac_type, x_mac_creator,
-                       this.options->stream_closure);
+                       this->options->stream_closure);
     PR_FREEIF(name);
     PR_FREEIF(x_mac_type);
     PR_FREEIF(x_mac_creator);
-    this.options->state->first_data_written_p = true;
+    this->options->state->first_data_written_p = true;
     return status;
   }
   return 0;

@@ -22,40 +22,40 @@ int Leaf::ParseBegin()
 
   /* Initialize a decoder if necessary.
    */
-  if (!this.encoding ||
+  if (!this->encoding ||
       // If we need the object as "raw" for saving or forwarding,
       // don't decode text parts of message types. Other output formats,
       // like "display" (nsMimeMessageBodyDisplay), need decoding.
-      (this.options->format_out == nsMimeOutput::nsMimeMessageRaw &&
-       this.parent &&
-       (!PL_strcasecmp(this.parent->content_type, MESSAGE_NEWS) ||
-        !PL_strcasecmp(this.parent->content_type, MESSAGE_RFC822)) &&
-       !PL_strncasecmp(this.content_type, "text/", 5)))
+      (this->options->format_out == nsMimeOutput::nsMimeMessageRaw &&
+       this->parent &&
+       (!PL_strcasecmp(this->parent->content_type, MESSAGE_NEWS) ||
+        !PL_strcasecmp(this->parent->content_type, MESSAGE_RFC822)) &&
+       !PL_strncasecmp(this->content_type, "text/", 5)))
     /* no-op */ ;
-  else if (!PL_strcasecmp(this.encoding, ENCODING_BASE64))
+  else if (!PL_strcasecmp(this->encoding, ENCODING_BASE64))
   fn = &MimeB64DecoderInit;
-  else if (!PL_strcasecmp(this.encoding, ENCODING_QUOTED_PRINTABLE))
-  this.decoder_data =
+  else if (!PL_strcasecmp(this->encoding, ENCODING_QUOTED_PRINTABLE))
+  this->decoder_data =
           MimeQPDecoderInit(((MimeConverterOutputCallback)
-                        &this.ParseDecodedBuffer,  // TODO virtual function pointer
+                        &this->ParseDecodedBuffer,  // TODO virtual function pointer
                         this, this);
-  else if (!PL_strcasecmp(this.encoding, ENCODING_UUENCODE) ||
-       !PL_strcasecmp(this.encoding, ENCODING_UUENCODE2) ||
-       !PL_strcasecmp(this.encoding, ENCODING_UUENCODE3) ||
-       !PL_strcasecmp(this.encoding, ENCODING_UUENCODE4))
+  else if (!PL_strcasecmp(this->encoding, ENCODING_UUENCODE) ||
+       !PL_strcasecmp(this->encoding, ENCODING_UUENCODE2) ||
+       !PL_strcasecmp(this->encoding, ENCODING_UUENCODE3) ||
+       !PL_strcasecmp(this->encoding, ENCODING_UUENCODE4))
   fn = &MimeUUDecoderInit;
-  else if (!PL_strcasecmp(this.encoding, ENCODING_YENCODE))
+  else if (!PL_strcasecmp(this->encoding, ENCODING_YENCODE))
     fn = &MimeYDecoderInit;
 
   if (fn)
   {
-    this.decoder_data =
+    this->decoder_data =
     fn (/* The MimeConverterOutputCallback cast is to turn the void argument
            into |Part|. */ ((MimeConverterOutputCallback)
-        &this.ParseDecodedBuffer,  // TODO virtual function pointer
+        &this->ParseDecodedBuffer,  // TODO virtual function pointer
         this)
 
-    if (!this.decoder_data)
+    if (!this->decoder_data)
       return MIME_OUT_OF_MEMORY;
   }
 
@@ -68,35 +68,35 @@ int Leaf::ParseDecodedBuffer(const char* buffer, int32_t size)
      data and passes it on to ParseLine().
      We snarf the implementation of this method from our
      superclass's implementation of ParseBuffer(), which inherited it from |Part|. */
-  this.ParseBuffer(buffer, size);
+  this->ParseBuffer(buffer, size);
 }
 
 int Leaf::ParseBuffer(const char* buffer, int32_t size)
 {
-  if (this.closed_p) return -1;
+  if (this->closed_p) return -1;
 
   /* If we're not supposed to write this object, bug out now.
    */
-  if (!this.output_p ||
-    !this.options ||
-    !this.options->output_fn)
+  if (!this->output_p ||
+    !this->options ||
+    !this->options->output_fn)
   return 0;
 
   int status = 0;
-  if (this.sizeSoFar == -1)
-    this.sizeSoFar = 0;
+  if (this->sizeSoFar == -1)
+    this->sizeSoFar = 0;
 
-  if (this.decoder_data &&
-      this.options &&
-      this.options->format_out != nsMimeOutput::nsMimeMessageDecrypt
-      && this.options->format_out != nsMimeOutput::nsMimeMessageAttach) {
+  if (this->decoder_data &&
+      this->options &&
+      this->options->format_out != nsMimeOutput::nsMimeMessageDecrypt
+      && this->options->format_out != nsMimeOutput::nsMimeMessageAttach) {
     int outSize = 0;
-    status = this.decoder_data.Write(buffer, size, &outSize);
-    this.sizeSoFar += outSize;
+    status = this->decoder_data.Write(buffer, size, &outSize);
+    this->sizeSoFar += outSize;
   }
   else {
-    status = this.ParseDecodedBuffer(buffer, size);
-    this.sizeSoFar += size;
+    status = this->ParseDecodedBuffer(buffer, size);
+    this->sizeSoFar += size;
   }
   return status;
 }
@@ -117,15 +117,15 @@ LeafClass::DisplayableInline(Headers* hdrs)
 int
 Leaf::ParseEOF(bool abort_p)
 {
-  if (this.closed_p) return 0;
+  if (this->closed_p) return 0;
 
   /* Close off the decoder, to cause it to give up any buffered data that
    it is still holding.
    */
-  if (this.decoder_data)
+  if (this->decoder_data)
   {
-      int status = this.decoder_data->Destroy();
-      this.decoder_data = nullptr;
+      int status = this->decoder_data->Destroy();
+      this->decoder_data = nullptr;
       if (status < 0) return status;
   }
 
@@ -138,10 +138,10 @@ Leaf::ParseEOF(bool abort_p)
 int
 Leaf::CloseDecoder()
 {
-  if (this.decoder_data)
+  if (this->decoder_data)
   {
-      int status = this.decoder_data->Destroy(false);
-      this.decoder_data = nullptr;
+      int status = this->decoder_data->Destroy(false);
+      this->decoder_data = nullptr;
       return status;
   }
 
@@ -151,13 +151,13 @@ Leaf::CloseDecoder()
 
 Leaf::~Leaf()
 {
-  this.ParseEOF(false);
+  this->ParseEOF(false);
 
   /* Should have been freed by ParseEOF(), but just in case... */
-  if (this.decoder_data)
+  if (this->decoder_data)
   {
-    this.decoder_data->Destroy(true);
-    this.decoder_data = nullptr;
+    this->decoder_data->Destroy(true);
+    this->decoder_data = nullptr;
   }
 }
 

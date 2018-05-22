@@ -40,15 +40,15 @@ TextPlainFlowed::ParseBegin()
   int status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
-  status =  this.Write("", 0, true); /* force out any separators... */
+  status =  this->Write("", 0, true); /* force out any separators... */
   if(status<0) return status;
 
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )       );  // The output will be inserted in the composer as quotation
-  bool plainHTML = quoting || (this.options &&
-       this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
+  bool plainHTML = quoting || (this->options &&
+       this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // Just good(tm) HTML. No reliance on CSS.
 
   // Setup the data structure that is connected to the actual document
@@ -72,14 +72,14 @@ TextPlainFlowed::ParseBegin()
   // check for DelSp=yes (RFC 3676)
 
   char *content_type_row =
-    (this.headers
-     ? this.headers.get(HEADER_CONTENT_TYPE, false, false)
+    (this->headers
+     ? this->headers.get(HEADER_CONTENT_TYPE, false, false)
      : 0);
   char *content_type_delsp =
     (content_type_row
      ? Headers::getParameter(content_type_row, "delsp", NULL,NULL)
      : 0);
-  this.delSp = content_type_delsp && !PL_strcasecmp(content_type_delsp, "yes");
+  this->delSp = content_type_delsp && !PL_strcasecmp(content_type_delsp, "yes");
   PR_Free(content_type_delsp);
   PR_Free(content_type_row);
 
@@ -87,18 +87,18 @@ TextPlainFlowed::ParseBegin()
 
   exdata->fixedwidthfont = false;
   //  Quotes
-  this.mQuotedSizeSetting = 0;   // mail.quoted_size
-  this.mQuotedStyleSetting = 0;  // mail.quoted_style
-  this.mCitationColor.Truncate();  // mail.citation_color
-  this.mStripSig = true; // mail.strip_sig_on_reply
+  this->mQuotedSizeSetting = 0;   // mail.quoted_size
+  this->mQuotedStyleSetting = 0;  // mail.quoted_style
+  this->mCitationColor.Truncate();  // mail.citation_color
+  this->mStripSig = true; // mail.strip_sig_on_reply
 
-  nsIPrefBranch *prefBranch = GetPrefBranch(this.options);
+  nsIPrefBranch *prefBranch = GetPrefBranch(this->options);
   if (prefBranch)
   {
-    prefBranch->GetIntPref("mail.quoted_size", &(this.mQuotedSizeSetting));
-    prefBranch->GetIntPref("mail.quoted_style", &(this.mQuotedStyleSetting));
-    prefBranch->GetCharPref("mail.citation_color", this.mCitationColor);
-    prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(this.mStripSig));
+    prefBranch->GetIntPref("mail.quoted_size", &(this->mQuotedSizeSetting));
+    prefBranch->GetIntPref("mail.quoted_style", &(this->mQuotedStyleSetting));
+    prefBranch->GetCharPref("mail.citation_color", this->mCitationColor);
+    prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(this->mStripSig));
     mozilla::DebugOnly<nsresult> rv =
       prefBranch->GetBoolPref("mail.fixed_width_messages", &(exdata->fixedwidthfont));
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get pref");
@@ -117,8 +117,8 @@ TextPlainFlowed::ParseBegin()
   if (exdata->fixedwidthfont)
     fontstyle = "font-family: -moz-fixed";
 
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this->options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this->options->format_out)
   {
     int32_t fontSize;       // default font size
     int32_t fontSizePercentage;   // size percentage
@@ -155,7 +155,7 @@ TextPlainFlowed::ParseBegin()
       openingDiv += '\"';
     }
     openingDiv += ">";
-    status = this.Write(openingDiv.get(), openingDiv.Length(), false);
+    status = this->Write(openingDiv.get(), openingDiv.Length(), false);
     if (status < 0) return status;
   }
 
@@ -168,14 +168,14 @@ TextPlainFlowed::ParseEOF(bool abort_p)
   int status = 0;
   struct TextFlowedExData *exdata = nullptr;
 
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
 
   // Has this method already been called for this object?
   // In that case return.
-  if (this.closed_p) return 0;
+  if (this->closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
   status = SUPERCLASS::ParseEOF(abort_p);
@@ -196,23 +196,23 @@ TextPlainFlowed::ParseEOF(bool abort_p)
   }
   NS_ASSERTION (exdata, "The extra data has disappeared!");
 
-  if (!this.output_p) {
+  if (!this->output_p) {
     status = 0;
     goto EarlyOut;
   }
 
   for(; exdata->quotelevel > 0; exdata->quotelevel--) {
-    status = this.Write("</blockquote>", 13, false);
+    status = this->Write("</blockquote>", 13, false);
     if(status<0) goto EarlyOut;
   }
 
   if (exdata->isSig && !quoting) {
-    status = this.Write( "</div>", 6, false); // .moz-txt-sig
+    status = this->Write( "</div>", 6, false); // .moz-txt-sig
     if (status<0) goto EarlyOut;
   }
   if (!quoting) // HACK (see above)
   {
-    status = this.Write("</div>", 6, false); // .moz-text-flowed
+    status = this->Write("</div>", 6, false); // .moz-text-flowed
     if (status<0) goto EarlyOut;
   }
 
@@ -222,7 +222,7 @@ EarlyOut:
   delete exdata;
 
   // Clear mCitationColor
-  this.mCitationColor.Truncate();
+  this->mCitationColor.Truncate();
 
   return status;
 }
@@ -232,12 +232,12 @@ int
 TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
 {
   int status;
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
-  bool plainHTML = quoting || (this.options &&
-       this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
+  bool plainHTML = quoting || (this->options &&
+       this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // see above
 
   TextFlowedExData* exdata = gTextFlowedExDataList;
@@ -286,7 +286,7 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
   {
     flowed = true;
     sigSeparator = (index - (linep - line) + 1 == 3) && !strncmp(linep, "-- ", 3);
-    if (this.delSp && !sigSeparator)
+    if (this->delSp && !sigSeparator)
        /* If line is flowed and DelSp=yes, logically
           delete trailing space. Line consisting of
           dash dash space ("-- "), commonly used as
@@ -298,19 +298,19 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
     }
   }
 
-  if (this.options &&
-      this.options->decompose_file_p &&
-      this.options->decompose_file_output_fn)
+  if (this->options &&
+      this->options->decompose_file_p &&
+      this->options->decompose_file_output_fn)
   {
-    return this.options->decompose_file_output_fn(line,
+    return this->options->decompose_file_output_fn(line,
                                                   length,
-                                                  this.options->stream_closure);
+                                                  this->options->stream_closure);
   }
 
-  mozITXTToHTMLConv *conv = GetTextConverter(this.options);
+  mozITXTToHTMLConv *conv = GetTextConverter(this->options);
 
   bool skipConversion = !conv ||
-                          (this.options && this.options->force_user_charset);
+                          (this->options && this.options->force_user_charset);
 
   nsAutoString lineSource;
   nsString lineResult;
@@ -323,7 +323,7 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
     // Convert only if the source string is not empty
     if (length - (linep - line) > 0)
     {
-      uint32_t whattodo = this.options->whattodo;
+      uint32_t whattodo = this->options->whattodo;
       if (plainHTML)
       {
         if (quoting)
@@ -339,12 +339,12 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
 
       // For 'SaveAs', |line| is in |mailCharset|.
       // convert |line| to UTF-16 before 'html'izing (calling ScanTXT())
-      if (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+      if (this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
       {
         // Get the mail charset of this message.
-        if (!this.initializedCharset)
-          this.InitializeCharset();
-        mailCharset = this.charset;
+        if (!this->initializedCharset)
+          this->InitializeCharset();
+        mailCharset = this->charset;
         if (mailCharset && *mailCharset) {
           rv = nsMsgI18NConvertToUnicode(nsDependentCString(mailCharset),
                                          PromiseFlatCString(inputStr),
@@ -387,8 +387,8 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
     preface += "<blockquote type=cite";
 
     nsAutoCString style;
-    MimeTextBuildPrefixCSS(this.mQuotedSizeSetting, this.mQuotedStyleSetting,
-                           this.mCitationColor, style);
+    MimeTextBuildPrefixCSS(this->mQuotedSizeSetting, this.mQuotedStyleSetting,
+                           this->mCitationColor, style);
     if (!plainHTML && !style.IsEmpty())
     {
       preface += " style=\"";
@@ -427,7 +427,7 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
   } else {
     // Fixed paragraph.
     Line_convert_whitespace(lineResult,
-                            !plainHTML && !this.options->wrap_long_lines_p
+                            !plainHTML && !this->options->wrap_long_lines_p
                               /* If wrap, convert all spaces but the last in
                                  a row into nbsp, otherwise all. */,
                             lineResult2);
@@ -435,12 +435,12 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
     exdata->inflow = false;
   } // End Fixed line
 
-  if (!(exdata->isSig && quoting && this.mStripSig))
+  if (!(exdata->isSig && quoting && this->mStripSig))
   {
-    status = this.Write(preface.get(), preface.Length(), true);
+    status = this->Write(preface.get(), preface.Length(), true);
     if (status < 0) return status;
     nsAutoCString outString;
-    if (this.options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
+    if (this->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
         !mailCharset || !*mailCharset)
       CopyUTF16toUTF8(lineResult2, outString);
     else
@@ -450,7 +450,7 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
                                        outString);
       NS_ENSURE_SUCCESS(rv, -1);
     }
-    status = this.Write(outString.get(), outString.Length(), true);
+    status = this->Write(outString.get(), outString.Length(), true);
     return status;
   }
   return 0;

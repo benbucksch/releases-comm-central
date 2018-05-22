@@ -33,40 +33,40 @@ namespace mozilla::mime {
 
 Text::Text()
 {
-  this.initializedCharset = false;
-  this.needUpdateMsgWinCharset = false;
+  this->initializedCharset = false;
+  this->needUpdateMsgWinCharset = false;
 }
 
 int
 Text::InitializeCharset()
 {
-  this.inputAutodetect = false;
-  this.charsetOverridable = false;
+  this->inputAutodetect = false;
+  this->charsetOverridable = false;
 
   /* Figure out an appropriate charset for this object.
   */
-  if (!this.charset && this.headers)
+  if (!this->charset && this.headers)
   {
-    if (this.options && this.options->override_charset)
+    if (this->options && this.options->override_charset)
     {
-      this.charset = strdup(this.options->default_charset);
+      this->charset = strdup(this.options->default_charset);
     }
     else
     {
-      char *ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
+      char *ct = this->headers->Get(HEADER_CONTENT_TYPE, false, false);
       if (ct)
       {
-        this.charset = Headers::GetParameter(ct, "charset", NULL, NULL);
+        this->charset = Headers::GetParameter(ct, "charset", NULL, NULL);
         PR_Free(ct);
       }
 
-      if (!this.charset)
+      if (!this->charset)
       {
         /* If we didn't find "Content-Type: ...; charset=XX" then look
            for "X-Sun-Charset: XX" instead.  (Maybe this should be done
            in SunAttachmentClass, but it's harder there than here.)
          */
-        this.charset = this.headers->Get(HEADER_X_SUN_CHARSET, false, false);
+        this->charset = this.headers->Get(HEADER_X_SUN_CHARSET, false, false);
       }
 
       /* iMIP entities without an explicit charset parameter default to
@@ -75,16 +75,16 @@ Text::InitializeCharset()
        When no charset is defined by the container (e.g. iMIP), iCalendar
        files default to UTF-8 (RFC 2445, section 4.1.4).
        */
-      if (!this.charset &&
-          this.content_type &&
-          !PL_strcasecmp(this.content_type, TEXT_CALENDAR))
-        this.charset = strdup("UTF-8");
+      if (!this->charset &&
+          this->content_type &&
+          !PL_strcasecmp(this->content_type, TEXT_CALENDAR))
+        this->charset = strdup("UTF-8");
 
-      if (!this.charset)
+      if (!this->charset)
       {
         nsresult res;
 
-        this.charsetOverridable = true;
+        this->charsetOverridable = true;
 
         nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &res));
         if (NS_SUCCEEDED(res))
@@ -92,62 +92,62 @@ Text::InitializeCharset()
           nsCOMPtr<nsIPrefLocalizedString> str;
           if (NS_SUCCEEDED(prefBranch->GetComplexValue("intl.charset.detector", NS_GET_IID(nsIPrefLocalizedString), getter_AddRefs(str)))) {
             //only if we can get autodetector name correctly, do we set this to true
-            this.inputAutodetect = true;
+            this->inputAutodetect = true;
           }
         }
 
-        if (this.options && this.options->default_charset)
-          this.charset = strdup(this.options->default_charset);
+        if (this->options && this.options->default_charset)
+          this->charset = strdup(this.options->default_charset);
         else
         {
           if (NS_SUCCEEDED(res))
           {
             nsString value;
             NS_GetLocalizedUnicharPreferenceWithDefault(prefBranch, "mailnews.view_default_charset", EmptyString(), value);
-            this.charset = ToNewUTF8String(value);
+            this->charset = ToNewUTF8String(value);
           }
           else
-            this.charset = strdup("");
+            this->charset = strdup("");
         }
       }
     }
   }
 
-  if (this.inputAutodetect)
+  if (this->inputAutodetect)
   {
     //we need to prepare lineDam for charset detection
-    this.lineDamBuffer = (char*)PR_Malloc(DAM_MAX_BUFFER_SIZE);
-    this.lineDamPtrs = (char**)PR_Malloc(DAM_MAX_LINES*sizeof(char*));
-    this.curDamOffset = 0;
-    this.lastLineInDam = 0;
-    if (!this.lineDamBuffer || !this.lineDamPtrs)
+    this->lineDamBuffer = (char*)PR_Malloc(DAM_MAX_BUFFER_SIZE);
+    this->lineDamPtrs = (char**)PR_Malloc(DAM_MAX_LINES*sizeof(char*));
+    this->curDamOffset = 0;
+    this->lastLineInDam = 0;
+    if (!this->lineDamBuffer || !this.lineDamPtrs)
     {
-      this.inputAutodetect = false;
-      PR_FREEIF(this.lineDamBuffer);
-      PR_FREEIF(this.lineDamPtrs);
+      this->inputAutodetect = false;
+      PR_FREEIF(this->lineDamBuffer);
+      PR_FREEIF(this->lineDamPtrs);
     }
   }
 
-  this.initializedCharset = true;
+  this->initializedCharset = true;
 
   return 0;
 }
 
 Text::~Text()
 {
-  this.ParseEOF(false);
-  this.ParseEnd(false);
+  this->ParseEOF(false);
+  this->ParseEnd(false);
 
-  PR_FREEIF(this.charset);
+  PR_FREEIF(this->charset);
 
   /* Should have been freed by ParseEOF, but just in case... */
-  PR_ASSERT(!this.cbuffer);
-  PR_FREEIF (this.cbuffer);
+  PR_ASSERT(!this->cbuffer);
+  PR_FREEIF (this->cbuffer);
 
-  if (this.inputAutodetect) {
-    PR_FREEIF(this.lineDamBuffer);
-    PR_FREEIF(this.lineDamPtrs);
-    this.inputAutodetect = false;
+  if (this->inputAutodetect) {
+    PR_FREEIF(this->lineDamBuffer);
+    PR_FREEIF(this->lineDamPtrs);
+    this->inputAutodetect = false;
   }
 }
 
@@ -157,8 +157,8 @@ Text::ParseEOF(bool abort_p)
 {
   int status;
 
-  if (this.closed_p) return 0;
-  NS_ASSERTION(!this.parsed_p, "obj already parsed");
+  if (this->closed_p) return 0;
+  NS_ASSERTION(!this->parsed_p, "obj already parsed");
 
   /* Flush any buffered data from Leaf's decoder */
   status = SUPERCLASS::CloseDecoder();
@@ -172,24 +172,24 @@ Text::ParseEOF(bool abort_p)
    aware of the rotating-and-converting / charset detection we need to
    do first.
   */
-  if (!abort_p && this.ibuffer_fp > 0)
+  if (!abort_p && this->ibuffer_fp > 0)
   {
-    status = this.RotateConvertAndParseLine(this.ibuffer, this.ibuffer_fp);
-    this.ibuffer_fp = 0;
+    status = this->RotateConvertAndParseLine(this.ibuffer, this.ibuffer_fp);
+    this->ibuffer_fp = 0;
     if (status < 0)
     {
       //we haven't find charset yet? Do it before return
-      if (this.inputAutodetect)
-        status = this.OpenDAM(nullptr, 0);
+      if (this->inputAutodetect)
+        status = this->OpenDAM(nullptr, 0);
 
-      this.closed_p = true;
+      this->closed_p = true;
       return status;
     }
   }
 
   //we haven't find charset yet? now its the time
-  if (this.inputAutodetect) {
-     status = this.OpenDAM(nullptr, 0);
+  if (this->inputAutodetect) {
+     status = this->OpenDAM(nullptr, 0);
      // TODO check status
   }
 
@@ -198,15 +198,15 @@ Text::ParseEOF(bool abort_p)
 
 int Text:ParseEnd(bool abort_p)
 {
-  if (this.parsed_p)
+  if (this->parsed_p)
   {
-    PR_ASSERT(this.closed_p);
+    PR_ASSERT(this->closed_p);
     return 0;
   }
 
   /* We won't be needing this buffer any more; nuke it. */
-  PR_FREEIF(this.cbuffer);
-  this.cbuffer_size = 0;
+  PR_FREEIF(this->cbuffer);
+  this->cbuffer_size = 0;
 
   return SUPERCLASS::ParseEnd(abort_p);
 }
@@ -253,24 +253,24 @@ Text:ROT13Line(char *line, int32_t length)
 int
 Text::ParseDecodedBuffer(const char *buf, int32_t size)
 {
-  PR_ASSERT(!this.closed_p);
-  if (this.closed_p) return -1;
+  PR_ASSERT(!this->closed_p);
+  if (this->closed_p) return -1;
 
-  /* |Leaf| takes care of this. */
-  PR_ASSERT(this.output_p && this.options && this.options->output_fn);
-  if (!this.options) return -1;
+  /* |Leaf| takes care of this-> */
+  PR_ASSERT(this->output_p && this.options && this.options->output_fn);
+  if (!this->options) return -1;
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (!this.options->write_html_p && this.options->format_out != nsMimeOutput::nsMimeMessageAttach)
-  return this.Write(buf, size, true);
+  if (!this->options->write_html_p && this.options->format_out != nsMimeOutput::nsMimeMessageAttach)
+  return this->Write(buf, size, true);
 
   /* This is just like the ParseDecodedBuffer() method we inherit from the
    Leaf class, except that we line-buffer to our own wrapper on the
    `ParseLine' method instead of calling the `parse_line' method directly.
    */
   return mime_LineBuffer (buf, size,
-             &this.ibuffer, &this.ibuffer_size, &this.ibuffer_fp,
+             &this->ibuffer, &this.ibuffer_size, &this.ibuffer_fp,
              true,
              &Text::RotateConvertAndParseLine, // TODO virtual function pointer
              this);
@@ -283,23 +283,23 @@ Text::ConvertAndParseLine(char* line, int32_t length)
   nsAutoCString converted;
 
   //in case of charset autodetection, charset can be override by meta charset
-  if (this.charsetOverridable) {
-    if (this.IsType(TextHTMLClass))
+  if (this->charsetOverridable) {
+    if (this->IsType(TextHTMLClass))
     {
-      if (this.needUpdateMsgWinCharset &&
-          this.charset && *this.charset)
+      if (this->needUpdateMsgWinCharset &&
+          this->charset && *this.charset)
       {
         //if meta tag specified charset is different from our detected result, use meta charset.
         //update MsgWindow charset if we are instructed to do so
-        SetMailCharacterSetToMsgWindow(this, this.charset);
+        SetMailCharacterSetToMsgWindow(this, this->charset);
       }
     }
   }
 
-  status = this.options->charset_conversion_fn(line, length,
-                       this.charset,
+  status = this->options->charset_conversion_fn(line, length,
+                       this->charset,
                        converted,
-                       this.options->stream_closure);
+                       this->options->stream_closure);
 
   if (status == 0)
   {
@@ -309,8 +309,8 @@ Text::ConvertAndParseLine(char* line, int32_t length)
 
   /* Now that the line has been converted, call the subclass's ParseLine
    method with the decoded data. */
-  //status = this.clazz->ParseLine(line, length);
-  status = this.ParseLine(line, length);
+  //status = this->clazz->ParseLine(line, length);
+  status = this->ParseLine(line, length);
 
   return status;
 }
@@ -325,47 +325,47 @@ Text::OpenDAM(char* line, int32_t length)
   int status = 0;
   int32_t i;
 
-  if (this.curDamOffset <= 0) {
+  if (this->curDamOffset <= 0) {
     //there is nothing in dam, use current line for detection
     if (length > 0) {
       res = MIME_detect_charset(line, length, &detectedCharset);
     }
   } else {
     //we have stuff in dam, use the one
-    res = MIME_detect_charset(this.lineDamBuffer, this.curDamOffset, &detectedCharset);
+    res = MIME_detect_charset(this->lineDamBuffer, this.curDamOffset, &detectedCharset);
   }
 
   //set the charset
   if (NS_SUCCEEDED(res) && detectedCharset && *detectedCharset)  {
-    PR_FREEIF(this.charset);
-    this.charset = strdup(detectedCharset);
+    PR_FREEIF(this->charset);
+    this->charset = strdup(detectedCharset);
 
     //update MsgWindow charset if we are instructed to do so
-    if (this.needUpdateMsgWinCharset && *this.charset)
-      SetMailCharacterSetToMsgWindow(this, this.charset);
+    if (this->needUpdateMsgWinCharset && *this.charset)
+      SetMailCharacterSetToMsgWindow(this, this->charset);
   }
 
   //process dam and line using the charset
-  if (this.curDamOffset) {
-    for (i = 0; i < this.lastLineInDam-1; i++)
+  if (this->curDamOffset) {
+    for (i = 0; i < this->lastLineInDam-1; i++)
     {
-      status = this.ConvertAndParseLine(
-                this.lineDamPtrs[i],
-                this.lineDamPtrs[i+1] - this.lineDamPtrs[i]);
+      status = this->ConvertAndParseLine(
+                this->lineDamPtrs[i],
+                this->lineDamPtrs[i+1] - this.lineDamPtrs[i]);
     }
-    status = this.ConvertAndParseLine(
-                this.lineDamPtrs[i],
-                this.lineDamBuffer + this.curDamOffset - this.lineDamPtrs[i]);
+    status = this->ConvertAndParseLine(
+                this->lineDamPtrs[i],
+                this->lineDamBuffer + this.curDamOffset - this.lineDamPtrs[i]);
   }
 
   if (length)
-    status = this.ConvertAndParseLine(line, length);
+    status = this->ConvertAndParseLine(line, length);
 
-  PR_Free(this.lineDamPtrs);
-  PR_Free(this.lineDamBuffer);
-  this.lineDamPtrs = nullptr;
-  this.lineDamBuffer = nullptr;
-  this.inputAutodetect = false;
+  PR_Free(this->lineDamPtrs);
+  PR_Free(this->lineDamBuffer);
+  this->lineDamPtrs = nullptr;
+  this->lineDamBuffer = nullptr;
+  this->inputAutodetect = false;
 
   return status;
 }
@@ -375,63 +375,63 @@ Text::RotateConvertAndParseLine(char* line, int32_t length)
 {
   int status = 0;
 
-  PR_ASSERT(!this.closed_p);
-  if (this.closed_p) return -1;
+  PR_ASSERT(!this->closed_p);
+  if (this->closed_p) return -1;
 
   /* Rotate the line, if desired (this happens on the raw data, before any
    charset conversion.) */
-  if (this.options && this.options->rot13_p)
+  if (this->options && this.options->rot13_p)
   {
-    status = this.ROT13Line(line, length);
+    status = this->ROT13Line(line, length);
     if (status < 0) return status;
   }
 
   // Now convert to the canonical charset, if desired.
   bool    doConvert = true;
   // Don't convert vCard data
-  if ( ( (this.content_type) && (!PL_strcasecmp(this.content_type, TEXT_VCARD)) ) ||
-       (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
-       || this.options->format_out == nsMimeOutput::nsMimeMessageAttach)
+  if ( ( (this->content_type) && (!PL_strcasecmp(this.content_type, TEXT_VCARD)) ) ||
+       (this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+       || this->options->format_out == nsMimeOutput::nsMimeMessageAttach)
     doConvert = false;
 
   // Only convert if the user prefs is false
-  if ( (this.options && this.options->charset_conversion_fn) &&
-       (!this.options->force_user_charset) &&
+  if ( (this->options && this.options->charset_conversion_fn) &&
+       (!this->options->force_user_charset) &&
        (doConvert)
      )
   {
-    if (!this.initializedCharset)
+    if (!this->initializedCharset)
     {
-      this.InitializeCharset();
+      this->InitializeCharset();
       //update MsgWindow charset if we are instructed to do so
-      if (this.needUpdateMsgWinCharset && *this.charset)
-        SetMailCharacterSetToMsgWindow(this, this.charset);
+      if (this->needUpdateMsgWinCharset && *this.charset)
+        SetMailCharacterSetToMsgWindow(this, this->charset);
     }
 
     //if autodetect is on, push line to dam
-    if (this.inputAutodetect)
+    if (this->inputAutodetect)
     {
       //see if we reach the lineDam buffer limit, if so, there is no need to keep buffering
-      if (this.lastLineInDam >= DAM_MAX_LINES ||
-          DAM_MAX_BUFFER_SIZE - this.curDamOffset <= length) {
+      if (this->lastLineInDam >= DAM_MAX_LINES ||
+          DAM_MAX_BUFFER_SIZE - this->curDamOffset <= length) {
         //we let open dam process this line as well as thing that already in Dam
         //In case there is nothing in dam because this line is too big, we need to
         //perform autodetect on this line
-        status = this.OpenDAM(line, length);
+        status = this->OpenDAM(line, length);
       }
       else {
         //buffering current line
-        this.lineDamPtrs[this.lastLineInDam] = this.lineDamBuffer + this.curDamOffset;
-        memcpy(this.lineDamPtrs[this.lastLineInDam], line, length);
-        this.lastLineInDam++;
-        this.curDamOffset += length;
+        this->lineDamPtrs[this.lastLineInDam] = this.lineDamBuffer + this.curDamOffset;
+        memcpy(this->lineDamPtrs[this.lastLineInDam], line, length);
+        this->lastLineInDam++;
+        this->curDamOffset += length;
       }
     }
     else
-      status = this.ConvertAndParseLine(line, length);
+      status = this->ConvertAndParseLine(line, length);
   }
   else
-    status = this.ParseLine(line, length);
+    status = this->ParseLine(line, length);
 
   return status;
 }

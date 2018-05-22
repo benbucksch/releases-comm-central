@@ -26,20 +26,20 @@ MultipartAppleDouble::ParseBegin()
   /* If we're writing this object, and we're doing it in raw form, then
    now is the time to inform the backend what the type of this data is.
    */
-  if (this.output_p &&
-    this.options &&
-    !this.options->write_html_p &&
-    !this.options->state->first_data_written_p)
+  if (this->output_p &&
+    this->options &&
+    !this->options->write_html_p &&
+    !this->options->state->first_data_written_p)
   {
-    status = this.OutputInit(0);
+    status = this->OutputInit(0);
     if (status < 0) return status;
-    NS_ASSERTION(this.options->state->first_data_written_p, "first data not written");
+    NS_ASSERTION(this->options->state->first_data_written_p, "first data not written");
   }
 
 #ifdef XP_MACOSX
-  if (this.options && this.options->state)
+  if (this->options && this.options->state)
   {
-//  this.options->state->separator_suppressed_p = true;
+//  this->options->state->separator_suppressed_p = true;
   goto done;
   }
   /*
@@ -53,23 +53,23 @@ MultipartAppleDouble::ParseBegin()
    multipart/appledouble part (both links) that looks just like the
    links that MimeExternalObject emits for external leaf parts.
    */
-  if (this.options &&
-    this.output_p &&
-    this.options->write_html_p &&
-    this.options->output_fn)
+  if (this->options &&
+    this->output_p &&
+    this->options->write_html_p &&
+    this->options->output_fn)
   {
     char *id = 0;
     char *id_url = 0;
     char *id_imap = 0;
 
-    id = this.PartAddress();
+    id = this->PartAddress();
     if (! id) return MIME_OUT_OF_MEMORY;
-    if (this.options->missing_parts)
-    id_imap = this.IMAPPartAddress();
+    if (this->options->missing_parts)
+    id_imap = this->IMAPPartAddress();
 
-      if (this.options && this.options->url)
+      if (this->options && this.options->url)
     {
-      const char *url = this.options->url;
+      const char *url = this->options->url;
       if (id_imap && id)
       {
       /* if this is an IMAP part. */
@@ -113,8 +113,8 @@ MultipartAppleDouble::ParseBegin()
       // Don't bother showing all headers on this part if it's the only
       // part in the message: in that case, we've already shown these
       // headers.
-      this.options->state &&
-      this.options->state->root == this.parent)
+      this->options->state &&
+      this->options->state->root == this.parent)
     all_headers_p = false;
 
     newopt.fancy_headers_p = true;
@@ -123,9 +123,9 @@ MultipartAppleDouble::ParseBegin()
 //
 RICHIE SHERRY
 GOTTA STILL DO THIS FOR QUOTING!
-     status = MimeHeaders_write_attachment_box (this.headers, &newopt,
-                                                 this.content_type,
-                                                 this.encoding,
+     status = MimeHeaders_write_attachment_box (this->headers, &newopt,
+                                                 this->content_type,
+                                                 this->encoding,
                                                  id_name? id_name : id, id_url, 0
 //
 *********************************************************************************/
@@ -152,11 +152,11 @@ MultipartAppleDouble::OutputChild(Part* child)
    the first one should always be an application/applefile.)
    */
 
-  if (this.nchildren >= 1 && this.children[0] == child && child->content_type &&
+  if (this->nchildren >= 1 && this.children[0] == child && child->content_type &&
       !PL_strcasecmp(child->content_type, APPLICATION_APPLEFILE))
   {
 #ifdef XP_MACOSX
-    if (this.output_p && this.options && this.options->write_html_p) //output HTML
+    if (this->output_p && this.options && this.options->write_html_p) //output HTML
       return false;
 #else
     /* if we are not on a Macintosh, don't emitte the resources fork at all. */

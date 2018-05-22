@@ -26,12 +26,12 @@ extern PartClass MultipartAppleDoubleClass;
 
 ExternalBody::~ExternalBody()
 {
-  if (this.hdrs)
+  if (this->hdrs)
   {
-    delete this.hdrs;
-    this.hdrs = nullptr;
+    delete this->hdrs;
+    this->hdrs = nullptr;
   }
-  PR_FREEIF(this.body);
+  PR_FREEIF(this->body);
 }
 
 int
@@ -40,39 +40,39 @@ ExternalBody::ParseLine(const char* line, int32_t length)
   int status = 0;
   if (!line || !*line) return -1;
 
-  if (!this.output_p) return 0;
+  if (!this->output_p) return 0;
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (this.options &&
-    !this.options->write_html_p &&
-    this.options->output_fn)
-  return this.Write(line, length, true);
+  if (this->options &&
+    !this->options->write_html_p &&
+    this->options->output_fn)
+  return this->Write(line, length, true);
 
 
   /* If we already have a `body' then we're done parsing headers, and all
    subsequent lines get tacked onto the body. */
-  if (this.body)
+  if (this->body)
   {
-    int L = strlen(this.body);
-    char *new_str = (char *)PR_Realloc(this.body, L + length + 1);
+    int L = strlen(this->body);
+    char *new_str = (char *)PR_Realloc(this->body, L + length + 1);
     if (!new_str) return MIME_OUT_OF_MEMORY;
-    this.body = new_str;
-    memcpy(this.body + L, line, length);
-    this.body[L + length] = 0;
+    this->body = new_str;
+    memcpy(this->body + L, line, length);
+    this->body[L + length] = 0;
     return 0;
   }
 
   /* Otherwise we don't yet have a body, which means we're not done parsing
    our headers.
    */
-  if (!this.hdrs)
+  if (!this->hdrs)
   {
-    this.hdrs = new Headers();
-    if (!this.hdrs) return MIME_OUT_OF_MEMORY;
+    this->hdrs = new Headers();
+    if (!this->hdrs) return MIME_OUT_OF_MEMORY;
   }
 
-  status = this.hdrs->ParseLine(line, length);
+  status = this->hdrs->ParseLine(line, length);
   if (status < 0) return status;
 
   /* If this line is blank, we're now done parsing headers, and should
@@ -80,8 +80,8 @@ ExternalBody::ParseLine(const char* line, int32_t length)
    */
   if (*line == '\r' || *line == '\n')
   {
-    this.body = strdup("");
-    if (!this.body) return MIME_OUT_OF_MEMORY;
+    this->body = strdup("");
+    if (!this->body) return MIME_OUT_OF_MEMORY;
   }
 
   return 0;
@@ -195,26 +195,26 @@ int
 ExternalBody::ParseEOF(bool abort_p)
 {
   int status = 0;
-  if (this.closed_p) return 0;
+  if (this->closed_p) return 0;
 
   /* Run parent method first, to flush out any buffered data. */
   status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) return status;
 
 #ifdef XP_MACOSX
-  if (this.parent && this.parent->IsType(MultipartAppleDoubleClass))
+  if (this->parent && this.parent->IsType(MultipartAppleDoubleClass))
     goto done;
 #endif /* XP_MACOSX */
 
   if (!abort_p &&
-      this.output_p &&
-      this.options &&
-      this.options->write_html_p)
+      this->output_p &&
+      this->options &&
+      this->options->write_html_p)
   {
-    bool all_headers_p = this.options->headers == HeadersState::All;
-    DisplayOptions* newopt = this.options;  /* copy it */
+    bool all_headers_p = this->options->headers == HeadersState::All;
+    DisplayOptions* newopt = this->options;  /* copy it */
 
-    char *ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
+    char *ct = this->headers->Get(HEADER_CONTENT_TYPE, false, false);
     char *at, *lexp, *size, *perm;
     char *url, *dir, *mode, *name, *site, *svr, *subj;
     char *h = 0, *lname = 0, *lurl = 0, *body = 0;
@@ -236,7 +236,7 @@ ExternalBody::ParseEOF(bool abort_p)
     PR_FREEIF(ct);
 
     /* the *internal* content-type */
-    ct = this.hdrs->Get(HEADER_CONTENT_TYPE, true, false);
+    ct = this->hdrs->Get(HEADER_CONTENT_TYPE, true, false);
 
     uint32_t hlen = ((at ? strlen(at) : 0) +
                     (lexp ? strlen(lexp) : 0) +
@@ -307,7 +307,7 @@ ExternalBody::ParseEOF(bool abort_p)
     if (status < 0) goto FAIL;
 
     lurl = MimeExternalBody_make_url(ct, at, lexp, size, perm, dir, mode,
-                                     name, url, site, svr, subj, this.body);
+                                     name, url, site, svr, subj, this->body);
     if (lurl)
     {
       lname = MimeGetStringByID(MIME_MSG_LINK_TO_DOCUMENT);
@@ -320,9 +320,9 @@ ExternalBody::ParseEOF(bool abort_p)
 
     all_headers_p = true;  /* #### just do this all the time? */
 
-    if (this.body && all_headers_p)
+    if (this->body && all_headers_p)
     {
-      char *s = this.body;
+      char *s = this->body;
       while (IS_SPACE(*s)) s++;
       if (*s)
       {
@@ -383,12 +383,12 @@ ExternalBody::DebugPrint(PRFileDesc* stream, int32_t depth)
 {
   int i;
   char *ct, *ct2;
-  char *addr = this.PartAddress();
+  char *addr = this->PartAddress();
 
-  if (this.headers)
-  ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
-  if (this.hdrs)
-  ct2 = this.hdrs->Get(HEADER_CONTENT_TYPE, false, false);
+  if (this->headers)
+  ct = this->headers->Get(HEADER_CONTENT_TYPE, false, false);
+  if (this->hdrs)
+  ct2 = this->hdrs->Get(HEADER_CONTENT_TYPE, false, false);
 
   for (i=0; i < depth; i++)
   PR_Write(stream, "  ", 2);
@@ -398,11 +398,11 @@ ExternalBody::DebugPrint(PRFileDesc* stream, int32_t depth)
       "\tcontent-type: %s\n"
       "\tcontent-type: %s\n"
       "\tBody:%s\n\t0x%08X>\n\n",
-      this.clazz->class_name,
+      this->clazz->class_name,
       addr ? addr : "???",
       ct ? ct : "<none>",
       ct2 ? ct2 : "<none>",
-      this.body ? this.body : "<none>",
+      this->body ? this.body : "<none>",
       (uint32_t) obj);
 ***/
   PR_FREEIF(addr);

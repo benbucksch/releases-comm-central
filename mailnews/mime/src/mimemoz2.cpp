@@ -100,7 +100,7 @@ ProcessBodyAsAttachment(Part *obj, nsMsgAttachmentData **data)
   // body of an RFC822 message...I really don't think this is the way this
   // should be done.  I believe this should really be a multipart/mixed message
   // with an empty body part, but what can ya do...our friends to the North seem
-  // to do this.
+  // to do this->
   Part    *child = obj;
 
   *data = new nsMsgAttachmentData[2];

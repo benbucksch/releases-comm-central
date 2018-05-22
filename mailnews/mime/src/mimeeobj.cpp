@@ -27,14 +27,14 @@ ExternalObject::ParseBegin()
 
   // If we're writing this object, and we're doing it in raw form, then
   // now is the time to inform the backend what the type of this data is.
-  if (this.output_p &&
-    this.options &&
-    !this.options->write_html_p &&
-    !this.options->state->first_data_written_p)
+  if (this->output_p &&
+    this->options &&
+    !this->options->write_html_p &&
+    !this->options->state->first_data_written_p)
   {
-    status = this.OutputInit(0);
+    status = this->OutputInit(0);
     if (status < 0) return status;
-    NS_ASSERTION(this.options->state->first_data_written_p);
+    NS_ASSERTION(this->options->state->first_data_written_p);
   }
 
   //
@@ -42,26 +42,26 @@ ExternalObject::ParseBegin()
   // out a table with a link in it.  (Later calls to the `ParseBuffer' method
   // will simply discard the data of the object itself.)
   //
-  if (this.options &&
-      this.output_p &&
-      this.options->write_html_p &&
-      this.options->output_fn)
+  if (this->options &&
+      this->output_p &&
+      this->options->write_html_p &&
+      this->options->output_fn)
   {
-    DisplayOptions newopt = *this.options;  // copy it
+    DisplayOptions newopt = *this->options;  // copy it
     char *id = 0;
     char *id_url = 0;
     char *id_name = 0;
     nsCString id_imap;
-    bool all_headers_p = this.options->headers == HeadersState::All;
+    bool all_headers_p = this->options->headers == HeadersState::All;
 
-    id = this.PartAddress;
-    if (this.options->missing_parts)
-      id_imap.Adopt(this.IMAPPartAddress());
+    id = this->PartAddress;
+    if (this->options->missing_parts)
+      id_imap.Adopt(this->IMAPPartAddress());
     if (! id) return MIME_OUT_OF_MEMORY;
 
-    if (this.options && this.options->url)
+    if (this->options && this.options->url)
     {
-      const char *url = this.options->url;
+      const char *url = this->options->url;
       if (!id_imap.IsEmpty() && id)
       {
         // if this is an IMAP part.
@@ -96,7 +96,7 @@ ExternalObject::ParseBegin()
       }
       // we have a valid id
       if (id)
-        id_name = this.GetSuggestedNameOfPart(id);
+        id_name = this->GetSuggestedNameOfPart(id);
       PL_strncpyz(s, p, slen);
       PL_strcatn(s, slen, id);
       PR_Free(id);
@@ -107,8 +107,8 @@ ExternalObject::ParseBegin()
     // Don't bother showing all headers on this part if it's the only
     // part in the message: in that case, we've already shown these
     // headers.
-    this.options->state &&
-    this.options->state->root == this.parent)
+    this->options->state &&
+    this->options->state->root == this.parent)
     all_headers_p = false;
 
     newopt.fancy_headers_p = true;
@@ -117,13 +117,13 @@ ExternalObject::ParseBegin()
 /******
 RICHIE SHERRY
 GOTTA STILL DO THIS FOR QUOTING!
-     status = MimeHeaders_write_attachment_box (this.headers, &newopt,
-                                                 this.content_type,
-                                                 this.encoding,
+     status = MimeHeaders_write_attachment_box (this->headers, &newopt,
+                                                 this->content_type,
+                                                 this->encoding,
                                                  id_name? id_name : id, id_url, 0)
 *****/
 
-    // this.options really owns the storage for this.
+    // this->options really owns the storage for this.
     newopt.part_to_load = nullptr;
     newopt.default_charset = nullptr;
     PR_FREEIF(id);
@@ -138,8 +138,8 @@ GOTTA STILL DO THIS FOR QUOTING!
 int
 ExternalObject::ParseBuffer(const char *buffer, int32_t size)
 {
-  NS_ASSERTION(!this.closed_p);
-  if (this.closed_p) return -1;
+  NS_ASSERTION(!this->closed_p);
+  if (this->closed_p) return -1;
 
   // Currently, we always want to stream, in order to determine the size of the
   // MIME object.
@@ -170,11 +170,11 @@ ExternalObject::ParseDecodedBuffer(const char *buf, int32_t size)
    * reading them) and the JS emitter (which doesn't care about attachment data
    * at all). 0 means ok, the caller just checks for negative return value.
    */
-  if (this.options && (this.options->metadata_only ||
-                       this.options->write_html_p))
+  if (this->options && (this.options->metadata_only ||
+                       this->options->write_html_p))
     return 0;
   else
-    return this.Write(buf, size, true);
+    return this->Write(buf, size, true);
 }
 
 

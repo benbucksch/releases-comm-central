@@ -66,49 +66,49 @@ int
 TextPlain::ParseBegin()
 {
   int status = 0;
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )       );  // The output will be inserted in the composer as quotation
-  bool plainHTML = quoting || (this.options &&
-       (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs));
+  bool plainHTML = quoting || (this->options &&
+       (this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs));
        // Just good(tm) HTML. No reliance on CSS.
-  bool rawPlainText = this.options &&
-       (this.options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
-         || this.options->format_out == nsMimeOutput::nsMimeMessageAttach);
+  bool rawPlainText = this->options &&
+       (this->options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
+         || this->options->format_out == nsMimeOutput::nsMimeMessageAttach);
 
   status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
-  if (!this.output_p) return 0;
+  if (!this->output_p) return 0;
 
-  if (this.options &&
-    this.options->write_html_p &&
-    this.options->output_fn)
+  if (this->options &&
+    this->options->write_html_p &&
+    this->options->output_fn)
   {
-      this.mCiteLevel = 0;
+      this->mCiteLevel = 0;
 
       // Get the prefs
 
       // Quoting
-      this.mBlockquoting = true; // mail.quoteasblock
+      this->mBlockquoting = true; // mail.quoteasblock
 
       // Viewing
-      this.mQuotedSizeSetting = 0;   // mail.quoted_size
-      this.mQuotedStyleSetting = 0;  // mail.quoted_style
-      this.mCitationColor.Truncate();  // mail.citation_color
-      this.mStripSig = true; // mail.strip_sig_on_reply
+      this->mQuotedSizeSetting = 0;   // mail.quoted_size
+      this->mQuotedStyleSetting = 0;  // mail.quoted_style
+      this->mCitationColor.Truncate();  // mail.citation_color
+      this->mStripSig = true; // mail.strip_sig_on_reply
       bool graphicalQuote = true; // mail.quoted_graphical
 
-      nsIPrefBranch *prefBranch = GetPrefBranch(this.options);
+      nsIPrefBranch *prefBranch = GetPrefBranch(this->options);
       if (prefBranch)
       {
-        prefBranch->GetIntPref("mail.quoted_size", &(this.mQuotedSizeSetting));
-        prefBranch->GetIntPref("mail.quoted_style", &(this.mQuotedStyleSetting));
-        prefBranch->GetCharPref("mail.citation_color", this.mCitationColor);
-        prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(this.mStripSig));
+        prefBranch->GetIntPref("mail.quoted_size", &(this->mQuotedSizeSetting));
+        prefBranch->GetIntPref("mail.quoted_style", &(this->mQuotedStyleSetting));
+        prefBranch->GetCharPref("mail.citation_color", this->mCitationColor);
+        prefBranch->GetBoolPref("mail.strip_sig_on_reply", &(this->mStripSig));
         prefBranch->GetBoolPref("mail.quoted_graphical", &graphicalQuote);
-        prefBranch->GetBoolPref("mail.quoteasblock", &(this.mBlockquoting));
+        prefBranch->GetBoolPref("mail.quoteasblock", &(this->mBlockquoting));
       }
 
       if (!rawPlainText)
@@ -121,16 +121,16 @@ TextPlain::ParseBegin()
         // generic font-family name ( -moz-fixed for fixed font and NULL for
         // variable font ) is sufficient now that bug 105199 has been fixed.
 
-        if (!this.options->variable_width_plaintext_p)
+        if (!this->options->variable_width_plaintext_p)
           fontstyle = "font-family: -moz-fixed";
 
-        if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
-            nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
+        if (nsMimeOutput::nsMimeMessageBodyDisplay == this->options->format_out ||
+            nsMimeOutput::nsMimeMessagePrintOutput == this->options->format_out)
         {
           int32_t fontSize;       // default font size
           int32_t fontSizePercentage;   // size percentage
           nsresult rv = GetMailNewsFont(this,
-                             !this.options->variable_width_plaintext_p,
+                             !this->options->variable_width_plaintext_p,
                              &fontSize, &fontSizePercentage, fontLang);
           if (NS_SUCCEEDED(rv))
           {
@@ -152,7 +152,7 @@ TextPlain::ParseBegin()
           openingDiv = "<div class=\"moz-text-plain\"";
           if (!plainHTML)
           {
-            if (this.options->wrap_long_lines_p)
+            if (this->options->wrap_long_lines_p)
               openingDiv += " wrap=true";
             else
               openingDiv += " wrap=false";
@@ -181,10 +181,10 @@ TextPlain::ParseBegin()
           openingDiv = "<pre wrap class=\"moz-quote-pre\">\n";
 
       // text/plain objects always have separators before and after them
-      status = this.WriteSeparator();
+      status = this->WriteSeparator();
       if (status < 0) return status;
 
-      status = this.Write(openingDiv.get(), openingDiv.Length(), true);
+      status = this->Write(openingDiv.get(), openingDiv.Length(), true);
       if (status < 0) return status;
     }
   }
@@ -199,49 +199,49 @@ TextPlain::ParseEOF(bool abort_p)
 
   // Has this method already been called for this object?
   // In that case return.
-  if (this.closed_p) return 0;
+  if (this->closed_p) return 0;
 
   nsCString citationColor;
-  if (text && !this.mCitationColor.IsEmpty())
-    citationColor = this.mCitationColor;
+  if (text && !this->mCitationColor.IsEmpty())
+    citationColor = this->mCitationColor;
 
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
 
-  bool rawPlainText = this.options &&
-       (this.options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
-        || this.options->format_out == nsMimeOutput::nsMimeMessageAttach);
+  bool rawPlainText = this->options &&
+       (this->options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
+        || this->options->format_out == nsMimeOutput::nsMimeMessageAttach);
 
   /* Run parent method first, to flush out any buffered data. */
   status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) return status;
 
-  if (!this.output_p) return 0;
+  if (!this->output_p) return 0;
 
-  if (this.options &&
-    this.options->write_html_p &&
-    this.options->output_fn &&
+  if (this->options &&
+    this->options->write_html_p &&
+    this->options->output_fn &&
     !abort_p && !rawPlainText)
   {
-      if (this.mIsSig && !quoting)
+      if (this->mIsSig && !quoting)
       {
-        status = this.Write("</div>", 6, false);  // .moz-txt-sig
+        status = this->Write("</div>", 6, false);  // .moz-txt-sig
         if (status < 0) return status;
       }
-      status = this.Write( "</pre>", 6, false);
+      status = this->Write( "</pre>", 6, false);
       if (status < 0) return status;
       if (!quoting)
       {
-        status = this.Write("</div>", 6, false); // .moz-text-plain
+        status = this->Write("</div>", 6, false); // .moz-text-plain
         if (status < 0) return status;
       }
 
       /* text/plain objects always have separators before and after them.
      Note that this is not the case for text/enriched objects.
      */
-    status = this.WriteSeparator();
+    status = this->WriteSeparator();
     if (status < 0) return status;
   }
 
@@ -252,17 +252,17 @@ TextPlain::ParseEOF(bool abort_p)
 int
 TextPlain::ParseLine(const char* line, int32_t length)
 {
-  bool quoting = ( this.options
-    && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
-         this.options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
+  bool quoting = ( this->options
+    && ( this->options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
+         this->options->format_out == nsMimeOutput::nsMimeMessageBodyQuoting
        )           );  // see above
-  bool plainHTML = quoting || (this.options &&
-       this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
+  bool plainHTML = quoting || (this->options &&
+       this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // see above
 
-  bool rawPlainText = this.options &&
-       (this.options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
-       || this.options->format_out == nsMimeOutput::nsMimeMessageAttach);
+  bool rawPlainText = this->options &&
+       (this->options->format_out == nsMimeOutput::nsMimeMessageFilterSniffer
+       || this->options->format_out == nsMimeOutput::nsMimeMessageAttach);
 
   // this routine gets called for every line of data that comes through the
   // mime converter. It's important to make sure we are efficient with
@@ -272,10 +272,10 @@ TextPlain::ParseLine(const char* line, int32_t length)
   NS_ASSERTION(length > 0, "zero length");
   if (length <= 0) return 0;
 
-  mozITXTToHTMLConv* conv = GetTextConverter(this.options);
+  mozITXTToHTMLConv* conv = GetTextConverter(this->options);
 
   bool skipConversion = !conv || rawPlainText ||
-                          (this.options && this.options->force_user_charset);
+                          (this->options && this.options->force_user_charset);
 
   char* mailCharset = NULL;
   nsresult rv;
@@ -288,11 +288,11 @@ TextPlain::ParseLine(const char* line, int32_t length)
 
     // For 'SaveAs', |line| is in |mailCharset|.
     // convert |line| to UTF-16 before 'html'izing (calling ScanTXT())
-    if (this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+    if (this->options->format_out == nsMimeOutput::nsMimeMessageSaveAs)
     { // Get the mail charset of this message.
-      if (!this.initializedCharset)
-         this.InitializeCharset(this);
-      mailCharset = this.charset;
+      if (!this->initializedCharset)
+         this->InitializeCharset(this);
+      mailCharset = this->charset;
       if (mailCharset && *mailCharset) {
         rv = nsMsgI18NConvertToUnicode(nsDependentCString(mailCharset),
                                        inputStr,
@@ -308,14 +308,14 @@ TextPlain::ParseLine(const char* line, int32_t length)
     nsAutoCString prefaceResultStr;  // Quoting stuff before the real text
 
     // Recognize quotes
-    uint32_t oldCiteLevel = this.mCiteLevel;
+    uint32_t oldCiteLevel = this->mCiteLevel;
     uint32_t logicalLineStart = 0;
     rv = conv->CiteLevelTXT(lineSourceStr.get(),
-                            &logicalLineStart, &(this.mCiteLevel));
+                            &logicalLineStart, &(this->mCiteLevel));
     NS_ENSURE_SUCCESS(rv, -1);
 
     // Find out, which recognitions to do
-    uint32_t whattodo = this.options->whattodo;
+    uint32_t whattodo = this->options->whattodo;
     if (plainHTML)
     {
       if (quoting)
@@ -325,19 +325,19 @@ TextPlain::ParseLine(const char* line, int32_t length)
                    /* Do recognition for the case, the result is viewed in
                       Mozilla, but not GlyphSubstitution, because other UAs
                       might not be able to display the glyphs. */
-      if (!this.mBlockquoting)
-        this.mCiteLevel = 0;
+      if (!this->mBlockquoting)
+        this->mCiteLevel = 0;
     }
 
     // Write blockquote
-    if (this.mCiteLevel > oldCiteLevel)
+    if (this->mCiteLevel > oldCiteLevel)
     {
       prefaceResultStr += "</pre>";
-      for (uint32_t i = 0; i < this.mCiteLevel - oldCiteLevel; i++)
+      for (uint32_t i = 0; i < this->mCiteLevel - oldCiteLevel; i++)
       {
         nsAutoCString style;
-        MimeTextBuildPrefixCSS(this.mQuotedSizeSetting, this.mQuotedStyleSetting,
-                               this.mCitationColor, style);
+        MimeTextBuildPrefixCSS(this->mQuotedSizeSetting, this.mQuotedStyleSetting,
+                               this->mCitationColor, style);
         if (!plainHTML && !style.IsEmpty())
         {
           prefaceResultStr += "<blockquote type=cite style=\"";
@@ -349,16 +349,16 @@ TextPlain::ParseLine(const char* line, int32_t length)
       }
       prefaceResultStr += "<pre wrap class=\"moz-quote-pre\">\n";
     }
-    else if (this.mCiteLevel < oldCiteLevel)
+    else if (this->mCiteLevel < oldCiteLevel)
     {
       prefaceResultStr += "</pre>";
-      for (uint32_t i = 0; i < oldCiteLevel - this.mCiteLevel; i++)
+      for (uint32_t i = 0; i < oldCiteLevel - this->mCiteLevel; i++)
         prefaceResultStr += "</blockquote>";
       prefaceResultStr += "<pre wrap class=\"moz-quote-pre\">\n";
     }
 
     // Write plain text quoting tags
-    if (logicalLineStart != 0 && !(plainHTML && this.mBlockquoting))
+    if (logicalLineStart != 0 && !(plainHTML && this->mBlockquoting))
     {
       if (!plainHTML)
         prefaceResultStr += "<span class=\"moz-txt-citetags\">";
@@ -383,7 +383,7 @@ TextPlain::ParseLine(const char* line, int32_t length)
         && Substring(lineSourceStr, 0, 3).EqualsLiteral("-- ")
         && (lineSourceStr[3] == '\r' || lineSourceStr[3] == '\n') )
     {
-      this.mIsSig = true;
+      this->mIsSig = true;
       if (!quoting)
         prefaceResultStr += "<div class=\"moz-txt-sig\">";
     }
@@ -397,12 +397,12 @@ TextPlain::ParseLine(const char* line, int32_t length)
                        whattodo, getter_Copies(lineResultUnichar));
     NS_ENSURE_SUCCESS(rv, -1);
 
-    if (!(this.mIsSig && quoting && this.mStripSig))
+    if (!(this->mIsSig && quoting && this.mStripSig))
     {
-      status = this.Write(prefaceResultStr.get(), prefaceResultStr.Length(), true);
+      status = this->Write(prefaceResultStr.get(), prefaceResultStr.Length(), true);
       if (status < 0) return status;
       nsAutoCString outString;
-      if (this.options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
+      if (this->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
           !mailCharset || !*mailCharset)
         CopyUTF16toUTF8(lineResultUnichar, outString);
       else
@@ -413,7 +413,7 @@ TextPlain::ParseLine(const char* line, int32_t length)
         NS_ENSURE_SUCCESS(rv, -1);
       }
 
-      status = this.Write(outString.get(), outString.Length(), true);
+      status = this->Write(outString.get(), outString.Length(), true);
     }
     else
     {
@@ -422,7 +422,7 @@ TextPlain::ParseLine(const char* line, int32_t length)
   }
   else
   {
-    status = this.Write(line, length, true);
+    status = this->Write(line, length, true);
   }
 
   return status;

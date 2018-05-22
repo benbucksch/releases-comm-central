@@ -23,14 +23,14 @@ namespace mozilla::mime {
 int
 HTMLParsed::ParseBegin()
 {
-  this.complete_buffer = new nsString();
+  this->complete_buffer = new nsString();
   int status = SUPERCLASS::ParseBegin();
   if (status < 0)
     return status;
 
   // Dump the charset we get from the mime headers into a HTML <meta http-equiv>.
-  char* contentType = this.headers ?
-      this.headers->Get(HEADER_CONTENT_TYPE, false, false) : 0;
+  char* contentType = this->headers ?
+      this->headers->Get(HEADER_CONTENT_TYPE, false, false) : 0;
   if (contentType) {
     char* charset = Headers::GetParameter(contentType,
                                               HEADER_PARM_CHARSET,
@@ -41,7 +41,7 @@ HTMLParsed::ParseBegin()
         "\n<meta http-equiv=\"content-type\" content=\"text/html; charset=");
       charsetline += charset;
       charsetline += "\">\n";
-      int status = this.Write(charsetline.get(), charsetline.Length(), true);
+      int status = this->Write(charsetline.get(), charsetline.Length(), true);
       PR_Free(charset);
       if (status < 0)
         return status;
@@ -53,7 +53,7 @@ HTMLParsed::ParseBegin()
 int
 HTMLParsed::ParseEOF(bool abort_p)
 {
-  if (this.closed_p)
+  if (this->closed_p)
     return 0;
   int status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0)
@@ -63,10 +63,10 @@ HTMLParsed::ParseEOF(bool abort_p)
   // There's a useful sounding function parseFromStream(), but it only allows XML
   // mimetypes, not HTML. Methinks that's because the HTML soup parser
   // needs the entire doc to make sense of the gibberish that people write.
-  if (!this.complete_buffer)
+  if (!this->complete_buffer)
     return 0;
 
-  nsString& rawHTML = *this.complete_buffer;
+  nsString& rawHTML = *this->complete_buffer;
   nsString parsed;
   nsresult rv;
 
@@ -99,24 +99,24 @@ HTMLParsed::ParseEOF(bool abort_p)
 void
 HTMLParsed::~HTMLParsed()
 {
-  if (this.complete_buffer) {
-    this.ParseEOF(false);
-    delete this.complete_buffer;
-    this.complete_buffer = NULL;
+  if (this->complete_buffer) {
+    this->ParseEOF(false);
+    delete this->complete_buffer;
+    this->complete_buffer = NULL;
   }
 }
 
 int
 HTMLParsed::ParseLine(const char *line, int32_t length)
 {
-  if (!this.complete_buffer)
+  if (!this->complete_buffer)
     return -1;
 
   nsCString linestr(line, length);
   NS_ConvertUTF8toUTF16 line_ucs2(linestr.get());
   if (length && line_ucs2.IsEmpty())
     CopyASCIItoUTF16(linestr, line_ucs2);
-  this.complete_buffer->Append(line_ucs2);
+  this->complete_buffer->Append(line_ucs2);
 
   return 0;
 }
