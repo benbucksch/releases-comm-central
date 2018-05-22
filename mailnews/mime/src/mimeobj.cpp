@@ -22,16 +22,26 @@
 #include "nsMsgUtils.h"
 #include "mimemsg.h"
 
-/* Way to destroy any notions of modularity or class hierarchy, Terry! */
-# include "mimetpla.h"
-# include "mimethtm.h"
-# include "mimecont.h"
-#include "mimemapl.h"
-
-MimeDefClass (Part, PartClass, mimeObjectClass, NULL);
-
-Part::Part()
+Part::Part(Headers* hdrs, const char* contentTypeOverride)
 {
+  this.clazz = PartClass; // TODO Get singleton instance
+
+  if (hdrs)
+  {
+    this.hdrs = hdrs;
+  }
+
+  this.dontShowAsAttachment = false;
+
+  if (contentTypeOverride && *contentTypeOverride)
+    this.contentType = strdup(contentTypeOverride);
+}
+
+Part::Part(const char* contentType, Headers* hdrs,
+           DisplayOptions* opts, bool forceInline = false);
+{
+  this.clazz = PartClass; // see above
+
   /* Set up the content-type and encoding. */
   if (!this.content_type && this.headers)
     this.content_type = this.headers->Get(HEADER_CONTENT_TYPE, true, false);
@@ -46,7 +56,7 @@ Part::Part()
    the "alias" type that the sender used.)
    */
   if (!this.content_type || !*(this.content_type))
-  ;
+    ;
   else if (!PL_strcasecmp(this.content_type, APPLICATION_UUENCODE2) ||
        !PL_strcasecmp(this.content_type, APPLICATION_UUENCODE3) ||
        !PL_strcasecmp(this.content_type, APPLICATION_UUENCODE4))
@@ -94,7 +104,7 @@ Part::Part()
 
 Part::~Part()
 {
-  this.ParseEOF( false);
+  this.ParseEOF(false);
   this.ParseEnd(false);
 
   if (this.headers)
@@ -103,7 +113,7 @@ Part::~Part()
     this.headers = nullptr;
   }
 
-  /* Should have been freed by ParseEOF, but just in case... */
+  /* Should have been freed by ParseEOF(), but just in case... */
   NS_ASSERTION(!this.ibuffer, "buffer not freed");
   NS_ASSERTION(!this.obuffer, "buffer not freed");
   PR_FREEIF (this.ibuffer);
@@ -215,7 +225,7 @@ int Part::ParseEOF(bool abort_p)
 
   /* If there is still data in the ibuffer, that means that the last line of
    this part didn't end in a newline; so push it out anyway (this means that
-   the ParseLine method will be called with a string with no trailing
+   the ParseLine() method will be called with a string with no trailing
    newline, which isn't the usual case.)
    */
   if (!abort_p &&

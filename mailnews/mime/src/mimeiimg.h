@@ -8,28 +8,22 @@
 
 #include "mimeleaf.h"
 
-/* The MimeInlineImage class implements those MIME image types which can be
-   displayed inline.
+namespace MIME {
+
+/** The MimeInlineImage class implements those MIME image types which can be
+ * displayed inline.
  */
-
-typedef struct MimeInlineImageClass MimeInlineImageClass;
-typedef struct MimeInlineImage      MimeInlineImage;
-
-struct MimeInlineImageClass {
-  MimeLeafClass leaf;
-};
-
-extern MimeInlineImageClass mimeInlineImageClass;
-
-struct MimeInlineImage {
-  MimeLeaf leaf;
-
-  /* Opaque data object for the backend-specific inline-image-display code
-   (internal-external-reconnect nastiness.) */
+public class InlineImage : Leaf {
+public:
+  /**
+   * Opaque data object for the backend-specific inline-image-display code
+   * (internal-external-reconnect nastiness).
+   */
   void *image_data;
 };
 
-#define MimeInlineImageClassInitializer(ITYPE,CSUPER) \
-  { MimeLeafClassInitializer(ITYPE,CSUPER) }
+class InlineImageClass : LeafClass {
+}
 
-#endif /* _MIMEIIMG_H_ */
+} // namespace
+#endif // _MIMEIIMG_H_

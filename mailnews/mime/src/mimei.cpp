@@ -146,17 +146,11 @@ AddContentTypeAttribs(const char* contentType,
   gContentTypeHandlerList->AppendElement(ptr);
 }
 
-/*
- * This routine will find all content type handler for a specific content
- * type (if it exists)
- */
-bool
-forceInlineDisplay(const char *contentType)
+bool IsForceInlineDisplay(const char* contentType)
 {
-  bool       forceInlineDisp;
-
-  find_contentType_attribs(contentType, &forceInlineDisp);
-  return (forceInlineDisp);
+  bool forceInlineDisp;
+  GetContentTypeAttribs(contentType, &forceInlineDisp);
+  return forceInlineDisp;
 }
 
 /*
@@ -199,7 +193,7 @@ PartClass* locateExternalContentHandler(const char* contentType,
   if (NS_FAILED(rv))
     return nullptr;
 
-  add_contentType_attribs(contentType.get(), ctHandlerInfo);
+  AddContentTypeAttribs(contentType.get(), ctHandlerInfo);
   return newObj;
 }
 
@@ -208,37 +202,6 @@ int
 MIME_Part::Write(Part* part, const char* output, int32_t length, bool userVisible)
 {
   part->write(output, length, userVisible);
-}
-
-Part::Part(Headers* hdrs, const char* contentTypeOverride)
-{
-  int status;
-
-  if (!Part::classInitialized)
-  {
-    // TODO needed?
-    status = Part::classInitialized();
-    if (status < 0) throw new Exception("class not initialized");
-  }
-  this.clazz = *Part;
-
-  if (hdrs)
-  {
-    this.hdrs = new Headers(hdrs);
-    NS_ASSERTION(this.hdrs);
-  }
-
-  this.dontShowAsAttachment = false;
-
-  if (contentTypeOverride && *contentTypeOverride)
-    this.contentType = strdup(contentTypeOverride);
-
-  status = clazz->initialize(object);
-  if (status < 0) throw new Exception("init failed");
-}
-
-Part::destroy() {
-  object->clazz->finalize(object);
 }
 
 bool IsAllowedClass(const PartClass* clazz,
@@ -425,17 +388,17 @@ PartClass* findClass(const char* contentType,
       // This will enable iMIP support in Lightning
       if ( hdrs && (!PL_strncasecmp(contentType, "text/calendar", 13)))
       {
-          char* full_contentType = hdrs->Get(HEADER_CONTENT_TYPE, false, false);
-          if (full_contentType)
+          char* fullContentType = hdrs->Get(HEADER_CONTENT_TYPE, false, false);
+          if (fullContentType)
           {
-              char *imip_method = Headers::GetParameter(full_contentType, "method", NULL, NULL);
+              char *imip_method = Headers::GetParameter(fullContentType, "method", NULL, NULL);
               nsCOMPtr<nsIMsgDBHdr> msgHdr;
               getMsgHdrForCurrentURL(opts, getter_AddRefs(msgHdr));
               if (msgHdr)
                 msgHdr->SetStringProperty("imip_method", (imip_method) ? imip_method : "nomethod");
               // PR_Free checks for null
               PR_Free(imip_method);
-              PR_Free(full_contentType);
+              PR_Free(fullContentType);
           }
       }
 #endif
@@ -762,10 +725,10 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
    this is to spec, but from a usability standpoint, I think it's necessary.
    */
 
-  PartClass* clazz = 0;
-  char *content_disposition = 0;
-  Part* obj = 0;
-  char *contentTypeOverride = 0;
+  PartClass* clazz = nullptr;
+  char *content_disposition = nullptr;
+  Part* obj = nullptr;
+  char *contentTypeOverride = nullptr;
 
   /* We've had issues where the incoming contentType is invalid, of a format:
      contentType="=?windows-1252?q?application/pdf" (bug 659355)
@@ -848,7 +811,7 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
     /* Check to see if the plugin should override the content disposition
        to make it appear inline. One example is a vcard which has a content
        disposition of an "attachment;" */
-    if (forceInlineDisplay(contentType))
+    if (IsForceInlineDisplay(contentType))
       NS_MsgSACopy(&content_disposition, "inline");
     else
       content_disposition = (hdrs
@@ -960,10 +923,10 @@ bool PartClass::IsSubclassOf(PartClass* parent)
 {
   if (this == parent)
     return true;
-  else if (!this->superclass)
+  else if (!this.superclass)
     return false;
   else
-    return this->superclass->IsSubclass(parent);
+    return this.superclass->IsSubclass(parent);
 }
 
 bool Part::IsType(PartClass* clazz)
@@ -974,7 +937,7 @@ bool Part::IsType(PartClass* clazz)
 char* Part::PartAddress()
 {
   if (!this.parent)
-  return strdup("0");
+    return strdup("0");
   else
   {
     /* Find this object in its parent. */
@@ -984,11 +947,11 @@ char* Part::PartAddress()
     Container *cont = (Container *) this.parent;
     NS_ASSERTION(this.parent->IsType(ContainerClass));
     for (i = 0; i < cont->nchildren; i++)
-    if (cont->children[i] == obj)
-      {
+    if (cont->children[i] == this)
+    {
       j = i+1;
       break;
-      }
+    }
     if (j == -1)
     {
       NS_ERROR("No children under MeimContainer");
@@ -1003,7 +966,7 @@ char* Part::PartAddress()
     }
 
     if (!higher)
-    return strdup(buf);
+      return strdup(buf);
     else
     {
       uint32_t slen = strlen(higher) + strlen(buf) + 3;
@@ -1249,10 +1212,10 @@ Part* Part::GetObjectForPartAddress(const char *part)
   else
   {
     int32_t i;
-    Container *cont = (Container *) obj;
-    for (i = 0; i < cont->nchildren; i++)
+    Container cont = (Container) this;
+    for (i = 0; i < cont.nchildren; i++)
     {
-      Part* o2 = cont->children[i]->GetObjectForPartAddress(part);
+      Part* o2 = cont.children[i]->GetObjectForPartAddress(part);
       if (o2) return o2;
     }
     return 0;
@@ -1265,14 +1228,10 @@ Part* Part::GetObjectForPartAddress(const char *part)
  */
 char* Part::GetContentTypeOfPart(const char *part)
 {
-  char *result = 0;
-
   Part* obj = this.GetObjectForPartAddress(part);
   if (!obj) return 0;
 
-  result = (this.headers ? this.headers->Get(HEADER_CONTENT_TYPE, true, false) : 0);
-
-  return result;
+  return (this.headers ? this.headers->Get(HEADER_CONTENT_TYPE, true, false) : 0);
 }
 
 /* Given a part ID, looks through the |Part| tree for a sub-part whose ID
@@ -1298,19 +1257,19 @@ char* Part::GetSuggestedNameOfPart(const char *part)
 
   /* Else, if this part is itself an AppleDouble, and one of its children
    has a name, then use that (check data fork first, then resource.) */
-  if (!result && obj->IsType(MultipartAppleDoubleClass))
+  if (!result && this.IsType(MultipartAppleDoubleClass))
   {
-    Container *cont = (Container *) obj;
-    if (cont->nchildren > 1 &&
-      cont->children[1] &&
-      cont->children[1]->headers)
-    result = cont->children[1]->headers->GetName(this.options);
+    Container cont = (Container) this;
+    if (cont.nchildren > 1 &&
+      cont.children[1] &&
+      cont.children[1]->headers)
+    result = cont.children[1]->headers->GetName(this.options);
 
     if (!result &&
-      cont->nchildren > 0 &&
-      cont->children[0] &&
-      cont->children[0]->headers)
-    result = cont->children[0]->headers->GetName(this.options);
+      cont.nchildren > 0 &&
+      cont.children[0] &&
+      cont.children[0]->headers)
+    result = cont.children[0]->headers->GetName(this.options);
   }
 
   /* Ok, now we have the suggested name, if any.
@@ -1703,7 +1662,7 @@ int Part::OutputInit(const char* contentType)
       }
     }
 
-    if (obj->IsType(TextClass))
+    if (this.IsType(TextClass))
       charset = ((Text) this).charset;
 
     if (!contentType)

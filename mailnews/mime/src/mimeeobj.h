@@ -8,27 +8,19 @@
 
 #include "mimeleaf.h"
 
-/* The MimeExternalObject class represents MIME parts which contain data
-   which cannot be displayed inline -- application/octet-stream and any
-   other type that is not otherwise specially handled.  (This is not to
-   be confused with MimeExternalBody, which is the handler for the
-   message/external-object MIME type only.)
+namespace MIME {
+
+/**
+ * The MimeExternalObject class represents MIME parts which contain data
+ * which cannot be displayed inline -- application/octet-stream and any
+ * other type that is not otherwise specially handled.
+ *
+ * This is not to be confused with MimeExternalBody, which is the handler for the
+ * message/external-object MIME type only.
  */
-
-typedef struct MimeExternalObjectClass MimeExternalObjectClass;
-typedef struct MimeExternalObject      MimeExternalObject;
-
-struct MimeExternalObjectClass {
-  MimeLeafClass leaf;
+public class MimeExternalObject {
+public:
 };
 
-extern "C" MimeExternalObjectClass mimeExternalObjectClass;
-
-struct MimeExternalObject {
-  MimeLeaf leaf;
-};
-
-#define MimeExternalObjectClassInitializer(ITYPE,CSUPER) \
-  { MimeLeafClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMEEOBJ_H_ */
+} // namespace
+#endif // _MIMEEOBJ_H_

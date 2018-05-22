@@ -284,9 +284,23 @@ public:
 #endif // ENABLE_SMIME
 };
 
+
+/**
+ * RTTI forbidden
+ * <https://developer.mozilla.org/en-US/docs/Mozilla/Using_CXX_in_Mozilla_code>
+ *
+ * This allows a dynamic class system and inspection, that is,
+ * 1. to query your own subtype in runtime, and
+ * 2. to allow instantiation of a passed-in class in mimei.cpp.
+ *
+ * For this to work, each PartClass needs to be a singleton
+ * for its respective type.
+ */
 class PartClass {
   bool IsSubclassOf(PartClass* parent);
+  PartClass* superclass = nullptr:
 };
+
 
 } // namespace
 #endif // _MIMEOBJ_H_

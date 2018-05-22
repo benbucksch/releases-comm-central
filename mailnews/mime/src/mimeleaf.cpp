@@ -14,6 +14,7 @@
 
 namespace MIME {
 
+#define SUPERCLASS Part
 
 int Leaf::ParseBegin()
 {
@@ -128,7 +129,7 @@ int Leaf::ParseEOF(bool abort_p)
       if (status < 0) return status;
   }
 
-  /* Now run the superclass's ParseEOF, which will force out the line
+  /* Now run the superclass's ParseEOF(), which will force out the line
    buffer (which we may have just repopulated, above.)
    */
   return SUPERCLASS::ParseEOF(abort_p);
@@ -152,8 +153,7 @@ Leaf::~Leaf()
 {
   this.ParseEOF(false);
 
-  /* Free the decoder data, if it's still around.  It was probably freed
-   in MimeLeaf_ParseEOF(), but just in case... */
+  /* Should have been freed by ParseEOF(), but just in case... */
   if (this.decoder_data)
   {
     this.decoder_data->Destroy(true);

@@ -29,6 +29,8 @@
 
 namespace MIME {
 
+#define SUPERCLASS Leaf
+
 int Text::Text()
 {
   this.initializedCharset = false;

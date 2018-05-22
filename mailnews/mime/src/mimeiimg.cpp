@@ -13,6 +13,10 @@
 #include "nsINetUtil.h"
 #include "nsMsgUtils.h"
 
+namespace MIME {
+
+#define SUPERCLASS Leaf
+
 int InlineImage::ParseBegin()
 {
   int status;
@@ -198,3 +202,6 @@ int InlineImage::ParseLine(const char *line, int32_t length)
   NS_ERROR("This method should never be called. Inline images do no line buffering.");
   return -1;
 }
+
+
+} // namespace
