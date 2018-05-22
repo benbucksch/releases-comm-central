@@ -52,7 +52,7 @@ ExternalObject::ParseBegin()
     char *id_url = 0;
     char *id_name = 0;
     nsCString id_imap;
-    bool all_headers_p = this.options->headers == HeadersStatus::All;
+    bool all_headers_p = this.options->headers == HeadersState::All;
 
     id = this.PartAddress;
     if (this.options->missing_parts)
@@ -112,7 +112,7 @@ ExternalObject::ParseBegin()
     all_headers_p = false;
 
     newopt.fancy_headers_p = true;
-    newopt.headers = (all_headers_p ? HeadersStatus::All : HeadersStatus::Some);
+    newopt.headers = (all_headers_p ? HeadersState::All : HeadersState::Some);
 
 /******
 RICHIE SHERRY

@@ -211,7 +211,7 @@ ExternalBody::ParseEOF(bool abort_p)
       this.options &&
       this.options->write_html_p)
   {
-    bool all_headers_p = this.options->headers == MimeHeadersAll;
+    bool all_headers_p = this.options->headers == HeadersState::All;
     DisplayOptions* newopt = this.options;  /* copy it */
 
     char *ct = this.headers->Get(HEADER_CONTENT_TYPE, false, false);
@@ -346,7 +346,7 @@ ExternalBody::ParseEOF(bool abort_p)
     }
 
     newopt->fancy_headers_p = true;
-    newopt->headers = (all_headers_p ? HeadersStatus::All : HeadersStatus::Some);
+    newopt->headers = (all_headers_p ? HeadersState::All : HeadersState::Some);
 
 FAIL:
     if (hdrs)

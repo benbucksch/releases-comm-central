@@ -8,25 +8,21 @@
 
 #include "mimemult.h"
 
-/* The MimeMultipartAppleDouble class implements the multipart/appledouble
-   MIME container, which provides a method of encapsulating and reconstructing
-   a two-forked Macintosh file.
+namespace mozilla::mime {
+
+/**
+ * The MimeMultipartAppleDouble class implements the multipart/appledouble
+ * MIME container, which provides a method of encapsulating and reconstructing
+ * a two-forked Macintosh file.
  */
-
-typedef struct MimeMultipartAppleDoubleClass MimeMultipartAppleDoubleClass;
-typedef struct MimeMultipartAppleDouble      MimeMultipartAppleDouble;
-
-struct MimeMultipartAppleDoubleClass {
-  MimeMultipartClass multipart;
+class MultipartAppleDouble : public Multipart {
+public:
+  override int ParseBegin();
+  override bool OutputChild(Part *child);
 };
 
-extern MimeMultipartAppleDoubleClass mimeMultipartAppleDoubleClass;
+class MultipartAppleDoubleClass : MultipartClass {
+}
 
-struct MimeMultipartAppleDouble {
-  MimeMultipart multipart;
-};
-
-#define MimeMultipartAppleDoubleClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMEMAPL_H_ */
+} // namespace
+#endif // _MIMEMAPL_H_

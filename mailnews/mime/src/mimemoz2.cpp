@@ -52,9 +52,9 @@
 #include "mozilla/Services.h"
 #include "mozilla/Unused.h"
 
-void                 ValidateRealName(nsMsgAttachmentData *aAttach, MimeHeaders *aHdrs);
+void ValidateRealName(nsMsgAttachmentData* aAttach, Headers* aHdrs);
 
-static MimeHeadersState MIME_HeaderType;
+static HeadersState MIME_HeaderType;
 static bool MIME_WrapLongLines;
 static bool MIME_VariableWidthPlaintext;
 
@@ -1445,7 +1445,7 @@ mime_bridge_create_display_stream(
   //
   // Set the defaults, based on the context, and the output-type.
   //
-  MIME_HeaderType = MimeHeadersAll;
+  MIME_HeaderType = HeadersState::All;
   msd->options->write_html_p = true;
   switch (format_out)
   {

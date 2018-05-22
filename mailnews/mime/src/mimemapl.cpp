@@ -11,54 +11,35 @@
 #include "mimemoz2.h"
 #include "nsMimeTypes.h"
 
-#define MIME_SUPERCLASS mimeMultipartClass
-MimeDefClass(MimeMultipartAppleDouble, MimeMultipartAppleDoubleClass,
-       mimeMultipartAppleDoubleClass, &MIME_SUPERCLASS);
+namespace mozilla::mime {
 
-static int MimeMultipartAppleDouble_ParseBegin (Part *);
-static bool MimeMultipartAppleDouble_output_child_p(Part *,
-                             Part *);
+#define SUPERCLASS MultipartClass
 
-static int
-MimeMultipartAppleDoubleClassInitialize(MimeMultipartAppleDoubleClass *clazz)
+int
+MultipartAppleDouble::ParseBegin()
 {
-  PartClass    *oclass = (MimeObjectClass *)    clazz;
-  MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
-
-  NS_ASSERTION(!oclass->class_initialized, "mime class not initialized");
-  oclass->ParseBegin    = MimeMultipartAppleDouble_parse_begin;
-  mclass->output_child_p = MimeMultipartAppleDouble_output_child_p;
-  return 0;
-}
-
-static int
-MimeMultipartAppleDouble_ParseBegin (Part *obj)
-{
-  /* #### This method is identical to MimeExternalObject_ParseBegin
-   which kinda s#$%s...
-   */
+  // This method is identical to ExternalObject.ParseBegin(), which kinda s#$%s...
   int status;
-
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
+  status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
   /* If we're writing this object, and we're doing it in raw form, then
    now is the time to inform the backend what the type of this data is.
    */
-  if (obj->output_p &&
-    obj->options &&
-    !obj->options->write_html_p &&
-    !obj->options->state->first_data_written_p)
+  if (this.output_p &&
+    this.options &&
+    !this.options->write_html_p &&
+    !this.options->state->first_data_written_p)
   {
-    status = Part_output_init(obj, 0);
+    status = this.OutputInit(0);
     if (status < 0) return status;
-    NS_ASSERTION(obj->options->state->first_data_written_p, "first data not written");
+    NS_ASSERTION(this.options->state->first_data_written_p, "first data not written");
   }
 
 #ifdef XP_MACOSX
-  if (obj->options && obj->options->state)
+  if (this.options && this.options->state)
   {
-//  obj->options->state->separator_suppressed_p = true;
+//  this.options->state->separator_suppressed_p = true;
   goto done;
   }
   /*
@@ -72,32 +53,32 @@ MimeMultipartAppleDouble_ParseBegin (Part *obj)
    multipart/appledouble part (both links) that looks just like the
    links that MimeExternalObject emits for external leaf parts.
    */
-  if (obj->options &&
-    obj->output_p &&
-    obj->options->write_html_p &&
-    obj->options->output_fn)
+  if (this.options &&
+    this.output_p &&
+    this.options->write_html_p &&
+    this.options->output_fn)
   {
     char *id = 0;
     char *id_url = 0;
     char *id_imap = 0;
 
-    id = mime_part_address (obj);
+    id = this.PartAddress();
     if (! id) return MIME_OUT_OF_MEMORY;
-    if (obj->options->missing_parts)
-    id_imap = mime_imap_part_address (obj);
+    if (this.options->missing_parts)
+    id_imap = this.IMAPPartAddress();
 
-      if (obj->options && obj->options->url)
+      if (this.options && this.options->url)
     {
-      const char *url = obj->options->url;
+      const char *url = this.options->url;
       if (id_imap && id)
       {
       /* if this is an IMAP part. */
-      id_url = mime_set_url_imap_part(url, id_imap, id);
+      id_url = SetURLIMAPart(url, id_imap, id);
       }
       else
       {
       /* This is just a normal MIME part as usual. */
-      id_url = mime_set_url_part(url, id, true);
+      id_url = SetURLPart(url, id, true);
       }
       if (!id_url)
       {
@@ -132,19 +113,19 @@ MimeMultipartAppleDouble_ParseBegin (Part *obj)
       // Don't bother showing all headers on this part if it's the only
       // part in the message: in that case, we've already shown these
       // headers.
-      obj->options->state &&
-      obj->options->state->root == obj->parent)
+      this.options->state &&
+      this.options->state->root == this.parent)
     all_headers_p = false;
 
     newopt.fancy_headers_p = true;
-    newopt.headers = (all_headers_p ? MimeHeadersAll : MimeHeadersSome);
+    newopt.headers = (all_headers_p ? HeadersState::All : HeadersState::Some);
 
 //
 RICHIE SHERRY
 GOTTA STILL DO THIS FOR QUOTING!
-     status = MimeHeaders_write_attachment_box (obj->headers, &newopt,
-                                                 obj->content_type,
-                                                 obj->encoding,
+     status = MimeHeaders_write_attachment_box (this.headers, &newopt,
+                                                 this.content_type,
+                                                 this.encoding,
                                                  id_name? id_name : id, id_url, 0
 //
 *********************************************************************************/
@@ -163,21 +144,19 @@ done:
   return 0;
 }
 
-static bool
-MimeMultipartAppleDouble_output_child_p(Part *obj, MimeObject *child)
+bool
+MultipartAppleDouble::OutputChild(Part* child)
 {
-  MimeContainer *cont = (MimeContainer *) obj;
-
   /* If this is the first child, and it's an application/applefile, then
    don't emit a link for it.  (There *should* be only two children, and
    the first one should always be an application/applefile.)
    */
 
-  if (cont->nchildren >= 1 && cont->children[0] == child && child->content_type &&
+  if (this.nchildren >= 1 && this.children[0] == child && child->content_type &&
       !PL_strcasecmp(child->content_type, APPLICATION_APPLEFILE))
   {
 #ifdef XP_MACOSX
-    if (obj->output_p && obj->options && obj->options->write_html_p) //output HTML
+    if (this.output_p && this.options && this.options->write_html_p) //output HTML
       return false;
 #else
     /* if we are not on a Macintosh, don't emitte the resources fork at all. */
@@ -187,3 +166,6 @@ MimeMultipartAppleDouble_output_child_p(Part *obj, MimeObject *child)
 
   return true;
 }
+
+
+} // namespace

@@ -651,7 +651,7 @@ PartClass* findClass(const char* contentType,
         else {
           /* look at the file extension... less reliable, but still covered
              by the S/MIME specification (RFC 3851, section 3.2.1)  */
-          char *name = (hdrs ? hdrs->GetName(opts) : nullptr);
+          char *name = (hdrs ? hdrs->GetFilename(opts) : nullptr);
           if (name) {
             char *suf = PL_strrchr(name, '.');
             bool p7mExternal = false;
@@ -756,7 +756,7 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
      !PL_strcasecmp(contentType, APPLICATION_OCTET_STREAM) ||
      !PL_strcasecmp(contentType, UNKNOWN_CONTENT_TYPE)))
   {
-    char *name = hdrs->GetName(opts);
+    char *name = hdrs->GetFilename(opts);
     if (name)
     {
       contentTypeOverride = opts->file_type_fn (name, opts->stream_closure);
@@ -859,7 +859,7 @@ Part* CreatePart(const char* contentType, Headers* hdrs,
       else
       {
         /* If there's a name, then write this as an attachment. */
-        char *name = (hdrs ? hdrs->GetName(opts) : nullptr);
+        char *name = (hdrs ? hdrs->GetFilename(opts) : nullptr);
         if (name)
         {
           clazz = ExternalObjectClass;
@@ -1245,7 +1245,7 @@ char* Part::GetSuggestedNameOfPart(const char *part)
   Part* obj = this.GetObjectForPartAddress(part);
   if (!obj) return 0;
 
-  result = (this.headers ? this.headers->GetName(this.options) : 0);
+  result = (this.headers ? this.headers->GetFilename(this.options) : 0);
 
   /* If this part doesn't have a name, but this part is one fork of an
    AppleDouble, and the AppleDouble itself has a name, then use that. */
@@ -1253,7 +1253,7 @@ char* Part::GetSuggestedNameOfPart(const char *part)
     this.parent &&
     this.parent->headers &&
     this.parent->IsType(MultipartAppleDoubleClass))
-  result = this.parent->headers->GetName(this.options);
+  result = this.parent->headers->GetFilename(this.options);
 
   /* Else, if this part is itself an AppleDouble, and one of its children
    has a name, then use that (check data fork first, then resource.) */
@@ -1263,13 +1263,13 @@ char* Part::GetSuggestedNameOfPart(const char *part)
     if (cont.nchildren > 1 &&
       cont.children[1] &&
       cont.children[1]->headers)
-    result = cont.children[1]->headers->GetName(this.options);
+    result = cont.children[1]->headers->GetFilename(this.options);
 
     if (!result &&
       cont.nchildren > 0 &&
       cont.children[0] &&
       cont.children[0]->headers)
-    result = cont.children[0]->headers->GetName(this.options);
+    result = cont.children[0]->headers->GetFilename(this.options);
   }
 
   /* Ok, now we have the suggested name, if any.
@@ -1533,7 +1533,7 @@ int Options::Write(Headers* hdrs, DisplayOptions* opt, const char* data,
       if (lstatus < 0) return lstatus;
 
       nsCString name;
-      name.Adopt(hdrs->GetName(opt));
+      name.Adopt(hdrs->GetFilename(opt));
       Headers::ConvertHeaderValue(opt, name, false);
 
       if (!name.IsEmpty()) {
@@ -1630,7 +1630,7 @@ int Part::OutputInit(const char* contentType)
     if (this.headers)
     {
       char *ct;
-      name = this.headers->GetName(this.options);
+      name = this.headers->GetFilename(this.options);
 
       ct = this.headers->Get(HEADER_CONTENT_TYPE,
                  false, false);

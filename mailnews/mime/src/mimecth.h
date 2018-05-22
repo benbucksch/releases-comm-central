@@ -14,71 +14,20 @@
 #define _MIMECTH_H_
 
 #include "mimei.h"
-#include "mimeobj.h"  /*  Part (abstract)              */
-#include "mimecont.h"  /*   |--- MimeContainer (abstract)          */
-#include "mimemult.h"  /*   |     |--- MimeMultipart (abstract)      */
-#include "mimemsig.h"  /*   |     |     |--- MimeMultipartSigned (abstract)*/
-#include "mimetext.h"  /*   |     |--- MimeInlineText (abstract)      */
-#include "mimecryp.h"
-
-/*
-  This header exposes functions that are necessary to access the
-  object hierarchy for the mime chart. The class hierarchy is:
-
-     Part (abstract)
-      |
-      |--- MimeContainer (abstract)
-      |     |
-      |     |--- MimeMultipart (abstract)
-      |     |     |
-      |     |     |--- MimeMultipartMixed
-      |     |     |
-      |     |     |--- MimeMultipartDigest
-      |     |     |
-      |     |     |--- MimeMultipartParallel
-      |     |     |
-      |     |     |--- MimeMultipartAlternative
-      |     |     |
-      |     |     |--- MimeMultipartRelated
-      |     |     |
-      |     |     |--- MimeMultipartAppleDouble
-      |     |     |
-      |     |     |--- MimeSunAttachment
-      |     |     |
-      |     |     |--- MimeMultipartSigned (abstract)
-      |     |          |
-      |     |          |--- MimeMultipartSigned
-      |     |
-      |     |--- MimeXlateed (abstract)
-      |     |     |
-      |     |     |--- MimeXlateed
-      |     |
-      |     |--- MimeMessage
-      |     |
-      |     |--- MimeUntypedText
-      |
-      |--- MimeLeaf (abstract)
-      |     |
-      |     |--- MimeInlineText (abstract)
-      |     |     |
-      |     |     |--- MimeInlineTextPlain
-      |     |     |
-      |     |     |--- MimeInlineTextHTML
-      |     |     |
-      |     |     |--- MimeInlineTextRichtext
-      |     |     |     |
-      |     |     |     |--- MimeInlineTextEnriched
-      |     |      |
-      |     |      |--- MimeInlineTextVCard
-      |     |
-      |     |--- MimeInlineImage
-      |     |
-      |     |--- MimeExternalObject
-      |
-      |--- MimeExternalBody
- */
+#include "mimeobj.h"   //  Part (abstract)
+#include "mimecont.h"  //   |--- MimeContainer (abstract)
+#include "mimemult.h"  //   |     |--- MimeMultipart (abstract)
+#include "mimemsig.h"  //   |     |     |--- MimeMultipartSigned (abstract)
+#include "mimetext.h"  //   |     |--- MimeInlineText (abstract)
+#include "mimecryp.h"  //   |     |--- Encrypted (abstract)
 
 #include "nsIMimeContentTypeHandler.h"
+
+/**
+ * This file exposes functions that are necessary to access the
+ * object hierarchy for the mime chart.
+ * @see mimei.cpp for the hierarchy.
+ */
 
 /*
  * These functions are exposed by libmime to be used by content type
@@ -87,21 +36,19 @@
 /*
  * This is the write call for outputting processed stream data.
  */
-extern int                        MIME_Part_write(MimeObject *,
-                                                        const char *data,
-                                                        int32_t length,
-                                                        bool user_visible_p);
+extern int MIME_Part_write(Part*, const char *data,
+                           int32_t length, bool user_visible_p);
 /*
  * The following group of calls expose the pointers for the object
  * system within libmime.
  */
-extern MimeInlineTextClass       *MIME_GetmimeInlineTextClass(void);
-extern MimeLeafClass             *MIME_GetmimeLeafClass(void);
-extern PartClass           *MIME_GetmimeObjectClass(void);
-extern MimeContainerClass        *MIME_GetmimeContainerClass(void);
-extern MimeMultipartClass        *MIME_GetmimeMultipartClass(void);
-extern MimeMultipartSignedClass  *MIME_GetmimeMultipartSignedClass(void);
-extern MimeEncryptedClass        *MIME_GetmimeEncryptedClass(void);
+extern TextClass             *MIME_GetmimeInlineTextClass(void);
+extern LeafClass             *MIME_GetmimeLeafClass(void);
+extern PartClass             *MIME_GetmimeObjectClass(void);
+extern ContainerClass        *MIME_GetmimeContainerClass(void);
+extern MultipartClass        *MIME_GetmimeMultipartClass(void);
+extern MultipartSignedClass  *MIME_GetmimeMultipartSignedClass(void);
+extern EncryptedClass        *MIME_GetmimeEncryptedClass(void);
 
 /*
  * These are the functions that need to be implemented by the
@@ -114,14 +61,14 @@ extern MimeEncryptedClass        *MIME_GetmimeEncryptedClass(void);
  * type handled by this plugin.
  */
 extern "C"
-char            *MIME_GetContentType(void);
+char* MIME_GetContentType(void);
 
 /*
  * This will create the PartClass object to be used by the libmime
  * object system.
  */
 extern "C"
-PartClass *MIME_CreateContentTypeHandlerClass(const char *content_type,
+PartClass* MIME_CreateContentTypeHandlerClass(const char *content_type,
                                    contentTypeHandlerInitStruct *initStruct);
 
 /*
@@ -129,7 +76,7 @@ PartClass *MIME_CreateContentTypeHandlerClass(const char *content_type,
  * defined functions.
  */
 typedef char * (*mime_get_ct_fn_type)(void);
-typedef PartClass * (*mime_create_class_fn_type)
+typedef PartClass* (*mime_create_class_fn_type)
                               (const char *, contentTypeHandlerInitStruct *);
 
 #endif /* _MIMECTH_H_ */
