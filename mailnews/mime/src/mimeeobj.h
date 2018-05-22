@@ -8,7 +8,7 @@
 
 #include "mimeleaf.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 /**
  * The MimeExternalObject class represents MIME parts which contain data

@@ -9,7 +9,7 @@
 #include "mimeobj.h"
 #include "modmimee.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 /**
  * MimeLeaf is the class for the objects representing all MIME types which
@@ -19,7 +19,7 @@ namespace MIME {
  *
  * This class provides that service in its ParseBuffer() method.
  */
-public class Leaf {
+abstract public class Leaf {
 public:
   Leaf();
   virtual ~Leaf();

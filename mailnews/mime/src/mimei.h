@@ -23,74 +23,72 @@
 
   The class hierarchy is:
 
-     MimeObject (abstract)
+     Object (abstract)
       |
-      +--- MimeContainer (abstract)
+      +--- Container (abstract)
       |     |
-      |     +--- MimeMultipart (abstract)
+      |     +--- Multipart (abstract)
       |     |     |
-      |     |     +--- MimeMultipartMixed
+      |     |     +--- MultipartMixed
       |     |     |
-      |     |     +--- MimeMultipartDigest
+      |     |     +--- MultipartDigest
       |     |     |
-      |     |     +--- MimeMultipartParallel
+      |     |     +--- MultipartParallel
       |     |     |
-      |     |     +--- MimeMultipartAlternative
+      |     |     +--- MultipartAlternative
       |     |     |
-      |     |     +--- MimeMultipartRelated
+      |     |     +--- MultipartRelated
       |     |     |
-      |     |     +--- MimeMultipartAppleDouble
+      |     |     +--- MultipartAppleDouble
       |     |     |
-      |     |     +--- MimeSunAttachment
+      |     |     +--- SunAttachment
       |     |     |
-      |     |     \--- MimeMultipartSigned (abstract)
+      |     |     \--- MultipartSigned (abstract)
       |     |          |
-      |     |          \--- MimeMultipartSignedCMS
+      |     |          \--- MultipartSignedCMS
       |     |
-      |     +--- MimeEncrypted (abstract)
+      |     +--- Encrypted (abstract)
       |     |     |
-      |     |     \--- MimeEncryptedPKCS7
+      |     |     \--- EncryptedPKCS7
       |     |
-      |     +--- MimeXlateed (abstract)
+      |     +--- Xlateed (abstract)
       |     |     |
-      |     |     \--- MimeXlateed
+      |     |     \--- Xlateed
       |     |
-      |     +--- MimeMessage
+      |     +--- Message
       |     |
-      |     \--- MimeUntypedText
+      |     \--- UntypedText
       |
-      +--- MimeLeaf (abstract)
+      +--- Leaf (abstract)
       |     |
-      |     +--- MimeInlineText (abstract)
+      |     +--- Text (abstract)
       |     |     |
-      |     |     +--- MimeInlineTextPlain
+      |     |     +--- TextPlain
       |     |     |     |
-      |     |     |     \--- MimeInlineTextHTMLAsPlaintext
+      |     |     |     \--- TextHTMLAsPlaintext
       |     |     |
-      |     |     +--- MimeInlineTextPlainFlowed
+      |     |     +--- TextPlainFlowed
       |     |     |
-      |     |     +--- MimeInlineTextHTML
+      |     |     +--- TextHTML
       |     |     |     |
-      |     |     |     +--- MimeInlineTextHTMLParsed
+      |     |     |     +--- TextHTMLParsed
       |     |     |     |
-      |     |     |     \--- MimeInlineTextHTMLSanitized
+      |     |     |     \--- TextHTMLSanitized
       |     |     |
-      |     |     +--- MimeInlineTextRichtext
+      |     |     +--- TextRichtext
       |     |     |     |
-      |     |     |     \--- MimeInlineTextEnriched
+      |     |     |     \--- TextEnriched
       |     |    |
-      |     |    +--- MimeInlineTextVCard
+      |     |    +--- TextVCard
       |     |
-      |     +--- MimeInlineImage
+      |     +--- InlineImage
       |     |
-      |     \--- MimeExternalObject
+      |     \--- ExternalObject
       |
-      \--- MimeExternalBody
+      \--- ExternalBody
 
 
   =========================================================================
-  There is one header file and one source file for each class (for example,
-  the InlineText class is defined in "text.h" and "text.c".)
 
   Code style follows the Mozilla Style Guide
   <https://developer.mozilla.org/en-US/docs/Mozilla/Developer_guide/Coding_Style>
@@ -103,7 +101,7 @@
 #include "nsTArray.h"
 #include "mimeobj.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 #ifdef ENABLE_SMIME
 class nsICMSMessage;
@@ -123,7 +121,7 @@ class nsICMSMessage;
  * @param exactMatch If |exactMatch| is true, then
  * only fully-known types will be returned.
  * For example:
- * - if true, "text/x-unknown" will return MimeInlineTextPlainType
+ * - if true, "text/x-unknown" will return TextPlainType
  * - if false, "text/x-unknown" will return NULL
  * @returns  A class object
  */

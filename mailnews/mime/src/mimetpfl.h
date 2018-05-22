@@ -8,7 +8,7 @@
 
 #include "mimetext.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 /**
  * The TextPlainFlowed class implements the text/plain MIME content type

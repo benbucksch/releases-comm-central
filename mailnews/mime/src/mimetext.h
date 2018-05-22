@@ -8,7 +8,7 @@
 
 #include "mimeleaf.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 /* The |Text| class is the superclass of all handlers for the MIME
    text/ content types, which convert various text formats

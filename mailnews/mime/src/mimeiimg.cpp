@@ -13,7 +13,7 @@
 #include "nsINetUtil.h"
 #include "nsMsgUtils.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 #define SUPERCLASS Leaf
 

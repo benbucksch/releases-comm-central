@@ -13,8 +13,8 @@
  */
 
 #include "nsCOMPtr.h"
-                        // If you add classes here, also add them to mimei.h
-#include "mimeobj.h"  //  Part (abstract)
+                       // If you add classes here, also add them to mimei.h
+#include "mimeobj.h"   //  Part (abstract)
 #include "mimecont.h"  //   |--- Container (abstract)
 #include "mimemult.h"  //   |     |--- Multipart (abstract)
 #include "mimemmix.h"  //   |     |     |--- MultipartMixed
@@ -23,28 +23,28 @@
 #include "mimemalt.h"  //   |     |     |--- MultipartAlternative
 #include "mimemrel.h"  //   |     |     |--- MultipartRelated
 #include "mimemapl.h"  //   |     |     |--- MultipartAppleDouble
-#include "mimesun.h"  //   |     |     |--- SunAttachment
+#include "mimesun.h"   //   |     |     |--- SunAttachment
 #include "mimemsig.h"  //   |     |     |--- MultipartSigned (abstract)
-#ifdef ENABLE_SMIME
-#include "mimemcms.h"   //   |     |           |---MultipartSignedCMS
-#endif
+#ifdef ENABLE_SMIME    //   |     |           |
+#include "mimemcms.h"  //   |     |           |---MultipartSignedCMS
+#endif                 //   |     |
 #include "mimecryp.h"  //   |     |--- Encrypted (abstract)
-#ifdef ENABLE_SMIME
-#include "mimecms.h"  //   |     |     |--- EncryptedPKCS7
-#endif
-#include "mimemsg.h"  //   |     |--- Message
+#ifdef ENABLE_SMIME    //   |     |     |
+#include "mimecms.h"   //   |     |     |--- EncryptedPKCS7
+#endif                 //   |     |
+#include "mimemsg.h"   //   |     |--- Message
 #include "mimeunty.h"  //   |     |--- UntypedText
 #include "mimeleaf.h"  //   |--- Leaf (abstract)
 #include "mimetext.h"  //   |     |--- Text (abstract)
 #include "mimetpla.h"  //   |     |     |--- TextPlain
 #include "mimethpl.h"  //   |     |     |     |--- TextHTMLAsPlaintext
-#include "mimetpfl.h"   //   |     |     |--- TextPlainFlowed
+#include "mimetpfl.h"  //   |     |     |--- TextPlainFlowed
 #include "mimethtm.h"  //   |     |     |--- TextHTML
 #include "mimethsa.h"  //   |     |     |     |--- TextHTMLSanitized
-#include "mimeTextHTMLParsed.h" //|     |     |--- .TextHTMLParsed
+#include "mimeTextHTMLParsed.h" //|     |     |--- TextHTMLParsed
 #include "mimetric.h"  //   |     |     |--- TextRichtext
 #include "mimetenr.h"  //   |     |     |     |--- TextEnriched
-// SUPPORTED VIA PLUGIN      |     |     |--- TextVCard
+// SUPPORTED VIA PLUGIN     |     |     |--- TextVCard
 #include "mimeiimg.h"  //   |     |--- InlineImage
 #include "mimeeobj.h"  //   |     |--- ExternalObject
 #include "mimeebod.h"  //   |--- ExternalBody
@@ -72,7 +72,7 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsIMsgHdr.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 // forward declaration
 void getMsgHdrForCurrentURL(DisplayOptions* opts, nsIMsgDBHdr** aMsgHdr);
@@ -1401,9 +1401,9 @@ int ParseURLOptions(const char* url, DisplayOptions* options)
         //  really appreciates.
         options->show_attachment_inline_p = true;
         // however, show_attachment_inline_p also results in a few
-        //  subclasses writing junk into the body for display purposes.
-        // put a stop to these shenanigans by enabling write_pure_bodies.
-        //  current offenders are: |Text|
+        // subclasses writing junk into the body for display purposes.
+        // Put a stop to these shenanigans by enabling write_pure_bodies.
+        // Current offenders are: |InlineImage|
         options->write_pure_bodies = true;
         // we don't actually care about the data in the attachments, just the
         // metadata (i.e. size)

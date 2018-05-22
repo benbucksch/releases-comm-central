@@ -9,13 +9,13 @@
 #include "mimei.h"
 #include "prio.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 /**
  * This is the base-class for the objects representing all other MIME types.
  * was: MimeObject
  */
-public class Part {
+abstract public class Part {
 public:
   Part(Headers* hdrs, const char* contentTypeOverride);
 

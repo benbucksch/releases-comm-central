@@ -15,7 +15,7 @@
 #include "prprf.h"
 #include "nsMsgI18N.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 #define SUPERCLASS Text
 

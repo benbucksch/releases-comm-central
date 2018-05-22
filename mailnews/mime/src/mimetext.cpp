@@ -27,7 +27,7 @@
 #include "nsMimeTypes.h"
 #include "nsServiceManagerUtils.h"
 
-namespace MIME {
+namespace mozilla::mime {
 
 #define SUPERCLASS Leaf
 

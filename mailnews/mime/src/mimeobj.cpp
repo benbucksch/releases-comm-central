@@ -22,6 +22,8 @@
 #include "nsMsgUtils.h"
 #include "mimemsg.h"
 
+namespace mozilla::mime {
+
 Part::Part(Headers* hdrs, const char* contentTypeOverride)
 {
   this.clazz = PartClass; // TODO Get singleton instance
@@ -281,3 +283,5 @@ int Part::DebugPrint(PRFileDesc* stream, int32_t depth)
   return 0;
 }
 #endif
+
+} // namespace
