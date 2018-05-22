@@ -21,9 +21,17 @@ struct MimeMessageClass {
 
 extern MimeMessageClass mimeMessageClass;
 
-struct MimeMessage {
-  MimeContainer container;    /* superclass variables */
-  MimeHeaders *hdrs;      /* headers of this message */
+class Message {
+
+  /**
+   * Whether this |Part| has written out the HTML version of its headers
+   * in such a way that it will have a "crypto stamp" next to the headers.  If
+   * this is true, then the child must write out its HTML slightly differently
+   * to take this into account...
+   */
+  bool IsCryptoStamped();
+
+  Headers *hdrs;      /* headers of this message */
   bool newline_p;      /* whether the last line ended in a newline */
   bool crypto_stamped_p;    /* whether the header of this message has been
                    emitted expecting its child to emit HTML

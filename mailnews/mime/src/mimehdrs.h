@@ -66,7 +66,7 @@ public:
   /**
    * Does all the heuristic silliness to find the filename in the given headers.
    */
-  char* GetFilename(MimeDisplayOptions* opt);
+  char* GetFilename(DisplayOptions* opt);
 
   /**
     * Convert this value to a unicode string, based on the charset.

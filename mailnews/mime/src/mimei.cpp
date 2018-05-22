@@ -1013,10 +1013,7 @@ char* Part::ExternalAttachmentURL()
  */
 bool Part::IsCryptoStamped()
 {
-  if (this->IsType(MessageClass))
-    return ((Message)this).IsCryptoStamped();
-  else
-    return false;
+  return false;
 }
 
 // </move>
@@ -1212,7 +1209,7 @@ Part* Part::GetObjectForPartAddress(const char *part)
   else
   {
     int32_t i;
-    Container cont = (Container) this;
+    Container cont = (Container) *this;
     for (i = 0; i < cont.nchildren; i++)
     {
       Part* o2 = cont.children[i]->GetObjectForPartAddress(part);
@@ -1259,7 +1256,7 @@ char* Part::GetSuggestedNameOfPart(const char *part)
    has a name, then use that (check data fork first, then resource.) */
   if (!result && this->IsType(MultipartAppleDoubleClass))
   {
-    Container cont = (Container) this;
+    Container cont = (Container) *this;
     if (cont.nchildren > 1 &&
       cont.children[1] &&
       cont.children[1]->headers)
