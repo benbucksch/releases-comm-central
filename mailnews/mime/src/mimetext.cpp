@@ -402,7 +402,7 @@ Text::RotateConvertAndParseLine(char* line, int32_t length)
   {
     if (!this.initializedCharset)
     {
-      this.initializeCharset();
+      this.InitializeCharset();
       //update MsgWindow charset if we are instructed to do so
       if (this.needUpdateMsgWinCharset && *this.charset)
         SetMailCharacterSetToMsgWindow(this, this.charset);

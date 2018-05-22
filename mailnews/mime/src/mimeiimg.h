@@ -20,6 +20,7 @@ public:
   override int ParseLine(const char *line, int32_t length);
   override int ParseEOF(bool abort_p);
 
+protected:
   /**
    * Opaque data object for the backend-specific inline-image-display code
    * (internal-external-reconnect nastiness).

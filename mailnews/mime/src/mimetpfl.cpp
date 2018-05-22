@@ -21,7 +21,7 @@ namespace mozilla::mime {
 
 static const uint32_t kSpacesForATab = 4; // Must be at least 1.
 
-static TextPlainFlowedExData* gTextPlainFlowedExDataList = nullptr;
+static TextFlowedExData* gTextFlowedExDataList = nullptr;
 
 // From mimetpla.cpp
 extern "C" void MimeTextBuildPrefixCSS(
@@ -54,13 +54,13 @@ TextPlainFlowed::ParseBegin()
   // Setup the data structure that is connected to the actual document
   // Saved in a linked list in case this is called with several documents
   // at the same time.
-  /* This memory is freed when parse_eof is called. So it better be! */
-  TextPlainFlowedExData *exdata = new TextPlainFlowedExData();
+  /* This memory is freed when ParseEOF() is called. So it better be! */
+  TextFlowedExData *exdata = new TextFlowedExData();
   if(!exdata) return MIME_OUT_OF_MEMORY;
 
   // Link it up.
-  exdata->next = gTextPlainFlowedExDataList;
-  gTextPlainFlowedExDataList = exdata;
+  exdata->next = gTextFlowedExDataList;
+  gTextFlowedExDataList = exdata;
 
   // Initialize data
 
@@ -166,7 +166,7 @@ int
 TextPlainFlowed::ParseEOF(bool abort_p)
 {
   int status = 0;
-  struct TextPlainFlowedExData *exdata = nullptr;
+  struct TextFlowedExData *exdata = nullptr;
 
   bool quoting = ( this.options
     && ( this.options->format_out == nsMimeOutput::nsMimeMessageQuoting ||
@@ -184,7 +184,7 @@ TextPlainFlowed::ParseEOF(bool abort_p)
   // Look up and unlink "our" extended data structure
   // We do it in the beginning so that if an error occur, we can
   // just free |exdata|.
-  TextPlainFlowedExData** prevexdata = &gTextPlainFlowedExDataList;
+  TextFlowedExData** prevexdata = &gTextFlowedExDataList;
 
   while ((exdata = *prevexdata) != nullptr) {
     if (exdata->ownerobj == this) {
@@ -240,7 +240,7 @@ TextPlainFlowed::ParseLine(const char* aLine, int32_t length)
        this.options->format_out == nsMimeOutput::nsMimeMessageSaveAs);
        // see above
 
-  TextPlainFlowedExData* exdata = gTextPlainFlowedExDataList;
+  TextFlowedExData* exdata = gTextFlowedExDataList;
   while(exdata && (exdata->ownerobj != this)) {
     exdata = exdata->next;
   }

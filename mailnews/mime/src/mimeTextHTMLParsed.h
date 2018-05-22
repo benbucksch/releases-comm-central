@@ -3,26 +3,44 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef _MIMETEXTHTMLPARSED_H_
-#define _MIMETEXTHTMLPARSED_H_
+#ifndef _MIMEHTMLPARSED_H_
+#define _MIMEHTMLPARSED_H_
 
 #include "mimethtm.h"
 
-typedef struct MimeInlineTextHTMLParsedClass MimeInlineTextHTMLParsedClass;
-typedef struct MimeInlineTextHTMLParsed      MimeInlineTextHTMLParsed;
+namespace mozilla::mime {
 
-struct MimeInlineTextHTMLParsedClass {
-  MimeInlineTextHTMLClass html;
+/**
+ * This runs the entire HTML document through the Mozilla HTML parser, and
+ * then outputs it as string again. This ensures that the HTML document is
+ * syntactically correct and complete and all tags and attributes are closed.
+ *
+ * That prevents "MIME in the middle" attacks like efail.de.
+ * The base problem is that we concatenate different MIME parts in the output
+ * and render them all together as a single HTML document in the display.
+ *
+ * The better solution would be to put each MIME part into its own <iframe type="content">.
+ * during rendering. Unfortunately, we'd need <iframe seamless> for that.
+ * That would remove the need for this workaround, and stop even more attack classes.
+ */
+class HTMLParsed : public HTML {
+public:
+  ~HTMLParsed();
+  override int ParseBegin();
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
+
+protected:
+  /**
+   * Buffers the entire HTML document.
+   * Gecko parser expects the complete document,
+   * as wide string.
+   */
+  nsString* complete_buffer;
 };
 
-extern MimeInlineTextHTMLParsedClass mimeInlineTextHTMLParsedClass;
+class HTMLParsedClass : HTMLClass {
+}
 
-struct MimeInlineTextHTMLParsed {
-  MimeInlineTextHTML    html;
-  nsString             *complete_buffer;  // Gecko parser expects wide strings
-};
-
-#define MimeInlineTextHTMLParsedClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextHTMLClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMETEXTHTMLPARSED_H_ */
+} // namespace
+#endif // _MIMEHTMLPARSED_H_

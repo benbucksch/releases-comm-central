@@ -7,22 +7,20 @@
    and is also used for all otherwise-unknown text/ subtypes.
  */
 
-#ifndef _MIMETPLA_H_
-#define _MIMETPLA_H_
+#ifndef _MIMETEXTPLAIN_H_
+#define _MIMETEXTPLAIN_H_
 
 #include "mimetext.h"
 
-typedef struct MimeInlineTextPlainClass MimeInlineTextPlainClass;
-typedef struct MimeInlineTextPlain      MimeInlineTextPlain;
+namespace mozilla::mime {
 
-struct MimeInlineTextPlainClass {
-  MimeInlineTextClass text;
-};
+class TextPlain : public Text {
+public:
+  override int ParseBegin();
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
 
-extern MimeInlineTextPlainClass mimeInlineTextPlainClass;
-
-struct MimeInlineTextPlain {
-  MimeInlineText text;
+protected:
   uint32_t mCiteLevel;
   bool            mBlockquoting;
   //bool            mInsideQuote;
@@ -33,7 +31,8 @@ struct MimeInlineTextPlain {
   bool            mIsSig;
 };
 
-#define MimeInlineTextPlainClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextClassInitializer(ITYPE,CSUPER) }
+class TextPlainClass : TextClass {
+}
 
-#endif /* _MIMETPLA_H_ */
+} // namespace
+#endif // _MIMETEXTPLAIN_H_

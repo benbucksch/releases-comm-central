@@ -61,6 +61,8 @@ public:
   char *charset;
   bool charsetOverridable;
   bool needUpdateMsgWinCharset;
+
+protected:
   /**
    * Buffer used for charset conversion.
    */

@@ -3,29 +3,31 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef _MIMETHTM_H_
-#define _MIMETHTM_H_
+#ifndef _MIMEHTML_H_
+#define _MIMEHTML_H_
 
 #include "mimetext.h"
 
-/* The MimeInlineTextHTML class implements the text/html MIME content type.
+namespace mozilla::mime {
+
+/**
+ * The HTML class implements the text/html MIME content type.
  */
+class HTML : public Text{
+public:
+  override int ParseBegin();
+  override int ParseLine(const char *line, int32_t length);
+  override int ParseEOF(bool abort_p);
 
-typedef struct MimeInlineTextHTMLClass MimeInlineTextHTMLClass;
-typedef struct MimeInlineTextHTML      MimeInlineTextHTML;
-
-struct MimeInlineTextHTMLClass {
-  MimeInlineTextClass text;
+protected:
+  /**
+   * If we found a charset, do some converting
+   */
+  char* charset;
 };
 
-extern MimeInlineTextHTMLClass mimeInlineTextHTMLClass;
+class HTMLClass : TextClass {
+}
 
-struct MimeInlineTextHTML {
-  MimeInlineText  text;
-  char            *charset;  /* If we sniffed a charset, do some converting! */
-};
-
-#define MimeInlineTextHTMLClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMETHTM_H_ */
+} // namespace
+#endif // _MIMEHTML_H_

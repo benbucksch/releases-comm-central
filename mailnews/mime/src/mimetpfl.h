@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef _MIMETPFL_H_
-#define _MIMETPFL_H_
+#ifndef _MIMETEXTFLOWED_H_
+#define _MIMETEXTFLOWED_H_
 
 #include "mimetext.h"
 
@@ -18,15 +18,13 @@ namespace mozilla::mime {
  * This implementation was based on the earlier draft
  * <ftp://ftp.ietf.org/internet-drafts/draft-gellens-format-06.txt>
  */
-class TextPlainFlowed : public Text {
+class TextFlowed : public Text {
 public:
-  TextPlainFlowed();
-  virtual ~TextPlainFlowed();
-
   override int ParseBegin();
   override int ParseLine(const char *line, int32_t length);
   override int ParseEOF(bool abort_p);
 
+protected:
   bool            delSp;                // DelSp=yes (RFC 3676)
   int32_t         mQuotedSizeSetting;   // mail.quoted_size
   int32_t         mQuotedStyleSetting;  // mail.quoted_style
@@ -34,20 +32,20 @@ public:
   bool            mStripSig;            // mail.strip_sig_on_reply
 };
 
-class TextPlainFlowedClass : TextClass {
+class TextFlowedClass : TextClass {
 }
 
 /*
  * Made to contain information to be kept during the whole message parsing.
  */
-class TextPlainFlowedExData {
-  struct Part* ownerobj; /* The owner of this struct */
+class TextFlowedExData {
+  Part* ownerobj; /* The owner of this struct */
   bool inflow; /* If we currently are in flow */
   bool fixedwidthfont; /* If we output text for fixed width font */
   uint32_t quotelevel; /* How deep is your love, uhr, quotelevel I meen. */
   bool isSig;  // we're currently in a signature
-  TextPlainFlowedExData* next;
+  TextFlowedExData* next;
 };
 
 } // namespace
-#endif // _MIMETPFL_H_
+#endif // _MIMETEXTFLOWED_H_

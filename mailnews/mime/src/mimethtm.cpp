@@ -12,79 +12,59 @@
 #include "mimemoz2.h"
 #include <ctype.h>
 
-#define MIME_SUPERCLASS mimeInlineTextClass
-MimeDefClass(MimeInlineTextHTML, MimeInlineTextHTMLClass,
-       mimeInlineTextHTMLClass, &MIME_SUPERCLASS);
+namespace mozilla::mime {
 
-static int MimeInlineTextHTML_ParseLine (const char *, int32_t, Part *);
-static int MimeInlineTextHTML_ParseEOF (Part *, bool);
-static int MimeInlineTextHTML_ParseBegin (Part *obj);
+#define SUPERCLASS Text
 
-static int
-MimeInlineTextHTMLClassInitialize(MimeInlineTextHTMLClass *clazz)
+int
+HTML::ParseBegin()
 {
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->ParseBegin = MimeInlineTextHTML_parse_begin;
-  oclass->ParseLine  = MimeInlineTextHTML_parse_line;
-  oclass->ParseEOF   = MimeInlineTextHTML_parse_eof;
-
-  return 0;
-}
-
-static int
-MimeInlineTextHTML_ParseBegin (Part *obj)
-{
-  int status = ((PartClass*)&mimeLeafClass)->ParseBegin(obj);
+  int status = SUPERCLASS::ParseBegin();
   if (status < 0) return status;
 
-  if (!obj->output_p) return 0;
+  if (!this.output_p) return 0;
 
-  status = Part_write_separator(obj);
+  status = this.WriteSeparator();
   if (status < 0) return status;
 
   // Set a default font (otherwise unicode font will be used since the data is UTF-8).
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == obj->options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == obj->options->format_out)
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
   {
     char buf[256];            // local buffer for html tag
     int32_t fontSize;         // default font size
     int32_t fontSizePercentage;   // size percentage
     nsAutoCString fontLang;       // langgroup of the font.
-    if (NS_SUCCEEDED(GetMailNewsFont(obj, false, &fontSize, &fontSizePercentage,fontLang)))
+    if (NS_SUCCEEDED(GetMailNewsFont(this, false, &fontSize, &fontSizePercentage,fontLang)))
     {
       PR_snprintf(buf, 256, "<div class=\"moz-text-html\"  lang=\"%s\">",
                   fontLang.get());
-      status = Part_write(obj, buf, strlen(buf), true);
+      status = this.Write(buf, strlen(buf), true);
     }
     else
     {
-      status = Part_write(obj, "<div class=\"moz-text-html\">", 27, true);
+      status = this.Write("<div class=\"moz-text-html\">", 27, true);
     }
     if(status<0) return status;
   }
 
-  MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
-
-  textHTML->charset = nullptr;
+  this.charset = nullptr;
 
   /* If this HTML part has a Content-Base header, and if we're displaying
    to the screen (that is, not writing this part "raw") then translate
    that Content-Base header into a <BASE> tag in the HTML.
   */
-  if (obj->options &&
-    obj->options->write_html_p &&
-    obj->options->output_fn)
+  if (this.options &&
+    this.options->write_html_p &&
+    this.options->output_fn)
   {
-    char *base_hdr = MimeHeaders_get (obj->headers, HEADER_CONTENT_BASE,
-      false, false);
+    char* base_hdr = this.headers->Get(HEADER_CONTENT_BASE, false, false);
 
-    /* rhp - for MHTML Spec changes!!! */
+    // @see MHTML spec
     if (!base_hdr)
     {
-      base_hdr = MimeHeaders_get (obj->headers, HEADER_CONTENT_LOCATION, false, false);
+      base_hdr = this.headers->Get(HEADER_CONTENT_LOCATION, false, false);
     }
-    /* rhp - for MHTML Spec changes!!! */
 
     if (base_hdr)
     {
@@ -117,7 +97,7 @@ MimeInlineTextHTML_ParseBegin (Part *obj)
 
       PR_Free(base_hdr);
 
-      status = Part_write(obj, buf, strlen(buf), false);
+      status = this.Write(buf, strlen(buf), false);
       PR_Free(buf);
       if (status < 0) return status;
     }
@@ -126,19 +106,13 @@ MimeInlineTextHTML_ParseBegin (Part *obj)
   return 0;
 }
 
-
-static int
-MimeInlineTextHTML_ParseLine (const char *line, int32_t length, Part *obj)
+int
+HTML::ParseLine(const char* line, int32_t length)
 {
-  MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
-
-  if (!obj->output_p)
+  if (!this.output_p || !this.options || !this.options->output_fn)
     return 0;
 
-  if (!obj->options || !obj->options->output_fn)
-    return 0;
-
-  if (!textHTML->charset)
+  if (!this.charset)
   {
     char * cp;
     // First, try to detect a charset via a META tag!
@@ -164,14 +138,14 @@ MimeInlineTextHTML_ParseLine (const char *line, int32_t length, Part *obj)
             PL_strncasecmp(charset, "UTF-16", 6) &&
             PL_strncasecmp(charset, "UTF-32", 6))
         {
-          textHTML->charset = charset;
+          this.charset = charset;
 
           // write out the data without the charset part...
-          if (textHTML->charset)
+          if (this.charset)
           {
-            int err = Part_write(obj, line, cp - line, true);
+            int err = this.Write(line, cp - line, true);
             if (err == 0)
-              err = Part_write(obj, cp2, length - (int)(cp2 - line), true);
+              err = this.Write(cp2, length - (int)(cp2 - line), true);
 
             return err;
           }
@@ -182,25 +156,27 @@ MimeInlineTextHTML_ParseLine (const char *line, int32_t length, Part *obj)
   }
 
   // Now, just write out the data...
-  return Part_write(obj, line, length, true);
+  return this.Write(line, length, true);
 }
 
-static int
-MimeInlineTextHTML_ParseEOF (Part *obj, bool abort_p)
+int
+HTML::ParseEOF(bool abort_p)
 {
   int status;
-  MimeInlineTextHTML  *textHTML = (MimeInlineTextHTML *) obj;
-  if (obj->closed_p) return 0;
+  if (this.closed_p) return 0;
 
-  PR_FREEIF(textHTML->charset);
+  PR_FREEIF(this.charset);
 
-  /* Run parent method first, to flush out any buffered data. */
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
+  // Run parent method first, to flush out any buffered data.
+  status = SUPERCLASS::ParseEOF(abort_p);
   if (status < 0) return status;
 
-  if (nsMimeOutput::nsMimeMessageBodyDisplay == obj->options->format_out ||
-      nsMimeOutput::nsMimeMessagePrintOutput == obj->options->format_out)
-    status = Part_write(obj, "</div>", 6, false);
+  if (nsMimeOutput::nsMimeMessageBodyDisplay == this.options->format_out ||
+      nsMimeOutput::nsMimeMessagePrintOutput == this.options->format_out)
+    status = this.Write("</div>", 6, false);
 
   return 0;
 }
+
+
+} // namespace

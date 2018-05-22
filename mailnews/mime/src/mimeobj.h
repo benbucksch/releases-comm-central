@@ -103,7 +103,8 @@ public:
    * might be instantiated -- from this, the method may extract additional
    * information that it might need to make its decision.
    */
-  virtual static bool DisplayableInline(Headers *hdrs);
+  virtual bool DisplayableInline(Headers *hdrs);
+
 
   //////////////////////////////
   // Properties
@@ -150,6 +151,11 @@ public:
   char* GetContentTypeOfPart(const char* part);
 
   bool IsMessageBody();
+
+
+  ////////////////////////////////////
+  // Public member variables
+public:
 
   PartClass* clazz;
 
@@ -211,6 +217,7 @@ public:
    */
   bool dontShowAsAttachment = false;
 
+protected:
   /**
    * Read-buffer and write-buffer (on input, ParseBuffer() uses ibuffer to
    * compose calls to ParseLine(); on output, `obuffer' is used in various
@@ -225,8 +232,10 @@ public:
   int32_t ibuffer_fp
   int32_t obuffer_fp;
 
+
   //////////////////////////////
   // Some output-generation utility functions
+public:
 
   int OutputInit(const char* content_type);
 

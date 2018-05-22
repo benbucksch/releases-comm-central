@@ -21,7 +21,6 @@ namespace mozilla::mime {
  */
 abstract class Leaf : public Part {
 public:
-  Leaf();
   virtual ~Leaf();
 
   override int ParseBegin();
@@ -29,7 +28,7 @@ public:
   override int ParseDecodedBuffer(const char* buf, int32_t size);
   override int ParseLine(const char *line, int32_t length);
   override int ParseEOF(bool abort_p);
-  override static bool DisplayableInline(Headers *hdrs);
+  override bool DisplayableInline(Headers *hdrs);
 
   /**
    * This is the callback that is handed to the decoder.
@@ -48,6 +47,7 @@ public:
 
   virtual int CloseDecoder();
 
+protected:
   /**
    * If we're doing Base64, Quoted-Printable, or UU decoding,
    * this is the state object for the decoder. */
