@@ -27,7 +27,7 @@ HTML::ParseBegin()
   status = this->WriteSeparator();
   if (status < 0) return status;
 
-  // Set a default font (otherwise unicode font will be used since the data is UTF-8).
+ // Set a default font (otherwise unicode font will be used since the data is UTF-8).
   if (nsMimeOutput::nsMimeMessageBodyDisplay == this->options->format_out ||
       nsMimeOutput::nsMimeMessagePrintOutput == this->options->format_out)
   {

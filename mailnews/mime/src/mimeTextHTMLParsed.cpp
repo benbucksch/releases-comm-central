@@ -28,25 +28,6 @@ HTMLParsed::ParseBegin()
   if (status < 0)
     return status;
 
-  // Dump the charset we get from the mime headers into a HTML <meta http-equiv>.
-  char* contentType = this->headers ?
-      this->headers->Get(HEADER_CONTENT_TYPE, false, false) : 0;
-  if (contentType) {
-    char* charset = Headers::GetParameter(contentType,
-                                              HEADER_PARM_CHARSET,
-                                              NULL, NULL);
-    PR_Free(contentType);
-    if (charset) {
-      nsAutoCString charsetline(
-        "\n<meta http-equiv=\"content-type\" content=\"text/html; charset=");
-      charsetline += charset;
-      charsetline += "\">\n";
-      int status = this->Write(charsetline.get(), charsetline.Length(), true);
-      PR_Free(charset);
-      if (status < 0)
-        return status;
-    }
-  }
   return 0;
 }
 
