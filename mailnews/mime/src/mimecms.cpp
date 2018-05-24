@@ -28,36 +28,9 @@
 
 using namespace mozilla::mailnews;
 
-
-#define MIME_SUPERCLASS mimeEncryptedClass
-MimeDefClass(MimeEncryptedCMS, MimeEncryptedCMSClass,
-       mimeEncryptedCMSClass, &MIME_SUPERCLASS);
-
-static void *MimeCMS_init(Part *, int (*output_fn) (const char *, int32_t, void *), void *);
-static int MimeCMS_write (const char *, int32_t, void *);
-static int MimeCMS_eof (void *, bool);
-static char * MimeCMS_generate (void *);
-static void MimeCMS_free (void *);
-
 extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 
-static int MimeEncryptedCMSClassInitialize(MimeEncryptedCMSClass *clazz)
-{
-#ifdef DEBUG
-  PartClass    *oclass = (MimeObjectClass *)    clazz;
-  NS_ASSERTION(!oclass->class_initialized, "1.2 <mscott@netscape.com> 01 Nov 2001 17:59");
-#endif
-
-  MimeEncryptedClass *eclass = (MimeEncryptedClass *) clazz;
-  eclass->crypto_init          = MimeCMS_init;
-  eclass->crypto_write         = MimeCMS_write;
-  eclass->crypto_eof           = MimeCMS_eof;
-  eclass->crypto_generate_html = MimeCMS_generate;
-  eclass->crypto_free          = MimeCMS_free;
-
-  return 0;
-}
-
+namespace mozilla::mime {
 
 typedef struct MimeCMSdata
 {
@@ -101,6 +74,25 @@ typedef struct MimeCMSdata
   }
 } MimeCMSdata;
 
+class EncryptedCMS : public Encrypted {
+  typedef Encrypted Super;
+
+protected:
+  EncryptedCMS();
+  virtual ~EncryptedCMS();
+
+public:
+  // Part
+  virtual bool IsEncrypted() override;
+
+  // Encrypted
+  virtual void* CryptoInit(int (*output_fn) (const char *buf, int32_t bufSize, void *output_closure), void* output_closure) override;
+  virtual int CryptoWrite(const char* buf, int32_t bufSize, void *closure) override;
+  virtual int CryptoEOF(void *crypto_closure, bool abort_p) override;
+  virtual char* GenerateHTML(void *crypto_closure) override;
+  virtual int CryptoFree(void *crypto_closure) override;
+};
+
 /*   SEC_PKCS7DecoderContentCallback for SEC_PKCS7DecoderStart() */
 static void MimeCMS_content_callback (void *arg, const char *buf, unsigned long length)
 {
@@ -123,22 +115,16 @@ static void MimeCMS_content_callback (void *arg, const char *buf, unsigned long 
   data->decoded_bytes += length;
 }
 
-bool MimeEncryptedCMS_encrypted_p (Part *obj)
+bool EncryptedCMS::IsEncrypted()
 {
+  MimeCMSdata *data = (MimeCMSdata*)this->crypto_closure;
+  if (!data || !data->content_info) return false;
   bool encrypted;
-
-  if (!obj) return false;
-  if (mime_typep(obj, (PartClass *) &mimeEncryptedCMSClass))
-  {
-    MimeEncrypted *enc = (MimeEncrypted *) obj;
-    MimeCMSdata *data = (MimeCMSdata *) enc->crypto_closure;
-    if (!data || !data->content_info) return false;
-                data->content_info->ContentIsEncrypted(&encrypted);
-          return encrypted;
-  }
-  return false;
+  data->content_info->ContentIsEncrypted(&encrypted);
+  return encrypted;
 }
 
+} // namespace mozilla::mime
 
 bool MimeCMSHeadersAndCertsMatch(nsICMSMessage *content_info,
                                    nsIX509Cert *signerCert,
@@ -348,6 +334,8 @@ NS_IMETHODIMP nsSMimeVerificationListener::Notify(nsICMSMessage2 *aVerifiedMessa
   return NS_OK;
 }
 
+namespace mozilla::mime {
+
 int MIMEGetRelativeCryptoNestLevel(Part *obj)
 {
   /*
@@ -416,21 +404,19 @@ int MIMEGetRelativeCryptoNestLevel(Part *obj)
   return aCryptoPartNestLevel - aTopMessageNestLevel;
 }
 
-static void *MimeCMS_init(Part *obj,
-                          int (*output_fn) (const char *buf, int32_t buf_size, void *output_closure),
-                          void *output_closure)
+void* EncryptedCMS::CryptoInit(int (*output_fn) (const char *buf, int32_t buf_size, void *output_closure), void *output_closure)
 {
   MimeCMSdata *data;
   nsresult rv;
 
-  if (!(obj && obj->options && output_fn)) return 0;
+  if (!(this->options && output_fn)) return nullptr;
 
   data = new MimeCMSdata;
   if (!data) return 0;
 
-  data->self = obj;
+  data->self = this;
   data->output_fn = output_fn;
-  data->output_closure = output_closure;
+  date->output_closure = this;
   PR_SetError(0, 0);
   data->decoder_context = do_CreateInstance(NS_CMSDECODER_CONTRACTID, &rv);
   if (NS_FAILED(rv))
@@ -448,12 +434,11 @@ static void *MimeCMS_init(Part *obj,
 
   // XXX Fix later XXX //
   data->parent_holds_stamp_p =
-  (obj->parent &&
-   (mime_crypto_stamped_p(obj->parent) ||
-    mime_typep(obj->parent, (PartClass *) &mimeEncryptedClass)));
+  (this->parent &&
+   (this->parent->IsCryptoStamped() ||
+    this->parent->IsType(EncryptedClass)));
 
-  data->parent_is_encrypted_p =
-  (obj->parent && MimeEncryptedCMS_encrypted_p (obj->parent));
+  data->parent_is_encrypted_p = this->parent && this->parent->IsEncrypted();
 
   /* If the parent of this object is a crypto-blob, then it's the grandparent
    who would have written out the headers and prepared for a stamp...
@@ -461,11 +446,10 @@ static void *MimeCMS_init(Part *obj,
    */
   if (data->parent_is_encrypted_p &&
     !data->parent_holds_stamp_p &&
-    obj->parent && obj->parent->parent)
-  data->parent_holds_stamp_p =
-    mime_crypto_stamped_p (obj->parent->parent);
+    this->parent && this->parent->parent)
+  data->parent_holds_stamp_p = this->parent->parent->IsCryptoStamped();
 
-  mime_stream_data *msd = (mime_stream_data *) (data->self->options->stream_closure);
+  mime_stream_data *msd = (mime_stream_data *) (this->options->stream_closure);
   if (msd)
   {
     nsIChannel *channel = msd->channel;  // note the lack of ref counting...
@@ -517,7 +501,7 @@ static void *MimeCMS_init(Part *obj,
 }
 
 static int
-MimeCMS_write (const char *buf, int32_t buf_size, void *closure)
+EncryptedCMS::CryptoWrite(const char *buf, int32_t buf_size, void *closure);
 {
   MimeCMSdata *data = (MimeCMSdata *) closure;
   nsresult rv;
@@ -591,8 +575,7 @@ void MimeCMSRequestAsyncSignatureVerification(nsICMSMessage *aCMSMsg,
     msg2->AsyncVerifySignature(listener);
 }
 
-static int
-MimeCMS_eof (void *crypto_closure, bool abort_p)
+int EncryptedCMS::CryptoEOF(void *crypto_closure, bool abort_p)
 {
   MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
   nsresult rv;
@@ -602,7 +585,7 @@ MimeCMS_eof (void *crypto_closure, bool abort_p)
     return -1;
   }
 
-  int aRelativeNestLevel = MIMEGetRelativeCryptoNestLevel(data->self);
+  int aRelativeNestLevel = MIMEGetRelativeCryptoNestLevel(this);
 
   /* Hand an EOF to the crypto library.  It may call data->output_fn.
    (Today, the crypto library has no flushing to do, but maybe there
@@ -681,7 +664,7 @@ MimeCMS_eof (void *crypto_closure, bool abort_p)
       nsCString sender_addr;
       nsCString sender_name;
 
-      MimeCMSGetFromSender(data->self,
+      MimeCMSGetFromSender(this,
                            from_addr, from_name,
                            sender_addr, sender_name);
 
@@ -705,8 +688,7 @@ MimeCMS_eof (void *crypto_closure, bool abort_p)
   return 0;
 }
 
-static void
-MimeCMS_free (void *crypto_closure)
+void EncryptedCMS::CryptoFree(void *crypto_closure)
 {
   MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
   if (!data) return;
@@ -715,8 +697,9 @@ MimeCMS_free (void *crypto_closure)
 }
 
 static char *
-MimeCMS_generate (void *crypto_closure)
+EncryptedCMS::GenerateHTML(void *crypto_closure)
 {
   return nullptr;
 }
 
+} // namespace mozilla::mime

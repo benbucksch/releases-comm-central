@@ -278,6 +278,10 @@ public:
    */
   void SetCryptoStamp(bool signed, bool encrypted);
 
+  /**
+   * Whether this |Part| contains encrypted content.
+   */
+  virtual bool IsEncrypted() { return false; }
 #endif // ENABLE_SMIME
 };
 
