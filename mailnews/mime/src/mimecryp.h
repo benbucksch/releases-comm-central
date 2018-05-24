@@ -31,10 +31,7 @@
 
    The MimeEncrypted class provides the following methods:
 
-   void *crypto_init(Part *obj,
-           int (*output_fn) (const char *data, int32 data_size,
-                     void *output_closure),
-           void *output_closure)
+   void* CryptoInit(int (*output_fn) (const char *data, int32 data_size, void *output_closure), void *output_closure)
 
      This is called with the Part representing the encrypted data.
    The obj->headers should be used to initialize the decryption engine.
@@ -59,72 +56,62 @@
    appropriately.  (This also imples that encrypted objects may nest, and
    thus that the underlying decryption module must be reentrant.)
 
-   int crypto_write (const char *data, int32 data_size, void *crypto_closure)
+   int CryptoWrite(const char *data, int32 data_size, void *crypto_closure)
 
      This is called with the raw encrypted data.  This data might not come
    in line-based chunks: if there was a Content-Transfer-Encoding applied
    to the data (base64 or quoted-printable) then it will have been decoded
    first (handing binary data to the filter_fn.)  `crypto_closure' is the
-   object that `crypto_init' returned.  This may return negative on error.
+   object that `CryptoInit' returned.  This may return negative on error.
 
-   int crypto_eof (void *crypto_closure, bool abort_p)
+   int CryptoEOF(void *crypto_closure, bool abort_p)
 
      This is called when no more data remains.  It may call `output_fn' again
    to flush out any buffered data.  If `abort_p' is true, then it may choose
    to discard any data rather than processing it, as we're terminating
    abnormally.
 
-   char * crypto_generate_html (void *crypto_closure)
+   char* CryptoGenerateHTML(void *crypto_closure)
 
-     This is called after `crypto_eof' but before `crypto_free'.  The crypto
+     This is called after `CryptoEOF' but before `CryptoFree'.  The crypto
    module should return a newly-allocated string of HTML code which
    explains the status of the decryption to the user (whether the signature
    checked out, etc.)
 
-   void crypto_free (void *crypto_closure)
+   void CryptoFree(void *crypto_closure)
 
-     This will be called when we're all done, after `crypto_eof' and
-   `crypto_emit_html'.  It is intended to free any data represented
+     This will be called when we're all done, after `CryptoEOF' and
+   `CryptoGenerateHTML'.  It is intended to free any data represented
    by the crypto_closure.  output_fn may not be called.
 
 
-   int (*ParseDecodedBuffer) (const char *buf, int32 size, Part *obj)
+   int ParseDecodedBuffer(const char *buf, int32 size, Part *obj)
 
      This method, of the same name as one in MimeLeaf, is a part of the
    afforementioned leaf/container hybridization.  This method is invoked
    with the content-transfer-decoded body of this part (without line
    buffering.)  The default behavior of this method is to simply invoke
-   `crypto_write' on the data with which it is called.  It's unlikely that
+   `CryptoWrite' on the data with which it is called.  It's unlikely that
    a subclass will need to specialize this.
  */
 
-typedef struct MimeEncryptedClass MimeEncryptedClass;
-typedef struct MimeEncrypted      MimeEncrypted;
+class MimeEncrypted : public Container {
+  typedef Container Super;
 
-struct MimeEncryptedClass {
-  MimeContainerClass container;
-
-  /* Duplicated from MimeLeaf, see comments above.
-     This is the callback that is handed to the decoder. */
-  int (*ParseDecodedBuffer) (const char *buf, int32_t size, Part *obj);
+public:
+  static int *ParseDecodedBuffer(const char *buf, int32_t size, Part *obj);
 
 
   /* Callbacks used by decryption module. */
-  void * (*crypto_init) (Part *obj,
-             int (*output_fn) (const char *data, int32_t data_size,
-                       void *output_closure),
-             void *output_closure);
-  int (*crypto_write) (const char *data, int32_t data_size,
-             void *crypto_closure);
-  int (*crypto_eof) (void *crypto_closure, bool abort_p);
-  char * (*crypto_generate_html) (void *crypto_closure);
-  void (*crypto_free) (void *crypto_closure);
-};
+  virtual void* CryptoInit(int (*output_fn) (const char *data, int32_t data_size, void *output_closure), void *output_closure);
+  virtual int CryptoWrite(const char *data, int32_t data_size, void *crypto_closure);
+  virtual int CryptoEOF(void *crypto_closure, bool abort_p);
+  virtual char* CryptoGenerateHTML(void *crypto_closure);
+  virtual void CryptoFree(void *crypto_closure);
 
-extern MimeEncryptedClass mimeEncryptedClass;
-
-struct MimeEncrypted {
-  MimeContainer container;     /* superclass variables */
+protected:
+  MimeEncrypted() {}
+  ~MimeEncrypted() {}
   void *crypto_closure;       /* Opaque data used by decryption module. */
   MimeDecoderData *decoder_data; /* Opaque data for the Transfer-Encoding
                   decoder. */
@@ -133,8 +120,5 @@ struct MimeEncrypted {
   MimePartBufferData *part_buffer;  /* The data of the decrypted enclosed
                      object (see mimepbuf.h) */
 };
-
-#define MimeEncryptedClassInitializer(ITYPE,CSUPER) \
-  { MimeContainerClassInitializer(ITYPE,CSUPER) }
 
 #endif /* _MIMECRYP_H_ */
