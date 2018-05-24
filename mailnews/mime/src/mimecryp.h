@@ -99,19 +99,30 @@ class MimeEncrypted : public Container {
   typedef Container Super;
 
 public:
-  static int *ParseDecodedBuffer(const char *buf, int32_t size, Part *obj);
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseBuffer(const char* buf, int32_t size) override;
+  virtual int ParseLine(const char* line, int32_t length) override = 0;
+  virtual int ParseEOF(bool abort_p) override;
 
+  // Container overrides
+  virtual int AddChild(Part*) override;
 
   /* Callbacks used by decryption module. */
-  virtual void* CryptoInit(int (*output_fn) (const char *data, int32_t data_size, void *output_closure), void *output_closure);
-  virtual int CryptoWrite(const char *data, int32_t data_size, void *crypto_closure);
-  virtual int CryptoEOF(void *crypto_closure, bool abort_p);
-  virtual char* CryptoGenerateHTML(void *crypto_closure);
-  virtual void CryptoFree(void *crypto_closure);
+  virtual void* CryptoInit(int (*output_fn) (const char *data, int32_t data_size, void *output_closure), void *output_closure) = 0;
+  virtual int CryptoWrite(const char *data, int32_t data_size, void *crypto_closure) = 0;
+  virtual int CryptoEOF(void *crypto_closure, bool abort_p) = 0;
+  virtual char* CryptoGenerateHTML(void *crypto_closure) = 0;
+  virtual void CryptoFree(void *crypto_closure) = 0;
 
 protected:
   MimeEncrypted() {}
-  ~MimeEncrypted() {}
+  virtual ~MimeEncrypted();
+  void Cleanup(bool finalizing_p);
+  int CloseHeaders();
+  int EmitBufferedChild();
+  static int *ParseDecodedBuffer(const char *buf, int32_t size, void *obj);
+
   void *crypto_closure;       /* Opaque data used by decryption module. */
   MimeDecoderData *decoder_data; /* Opaque data for the Transfer-Encoding
                   decoder. */
