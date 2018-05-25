@@ -32,8 +32,9 @@ extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 
 namespace mozilla::mime {
 
-typedef struct MimeCMSdata
+class CMSdata
 {
+public:
   int (*output_fn) (const char *buf, int32_t buf_size, void *output_closure);
   void *output_closure;
   nsCOMPtr<nsICMSDecoder> decoder_context;
@@ -42,12 +43,12 @@ typedef struct MimeCMSdata
   char *sender_addr;
   bool decoding_failed;
   uint32_t decoded_bytes;
-  Part *self;
+  Part* self;
   bool parent_is_encrypted_p;
   bool parent_holds_stamp_p;
   nsCOMPtr<nsIMsgSMIMEHeaderSink> smimeHeaderSink;
 
-  MimeCMSdata()
+  CMSdata()
   :output_fn(nullptr),
   output_closure(nullptr),
   ci_is_encrypted(false),
@@ -60,7 +61,7 @@ typedef struct MimeCMSdata
   {
   }
 
-  ~MimeCMSdata()
+  ~CMSdata()
   {
     if(sender_addr)
       PR_Free(sender_addr);
@@ -72,32 +73,13 @@ typedef struct MimeCMSdata
       decoder_context->Finish(getter_AddRefs(cinfo));
     }
   }
-} MimeCMSdata;
-
-class EncryptedCMS : public Encrypted {
-  typedef Encrypted Super;
-
-protected:
-  EncryptedCMS();
-  virtual ~EncryptedCMS();
-
-public:
-  // Part
-  virtual bool IsEncrypted() override;
-
-  // Encrypted
-  virtual void* CryptoInit(int (*output_fn) (const char *buf, int32_t bufSize, void *output_closure), void* output_closure) override;
-  virtual int CryptoWrite(const char* buf, int32_t bufSize, void *closure) override;
-  virtual int CryptoEOF(void *crypto_closure, bool abort_p) override;
-  virtual char* GenerateHTML(void *crypto_closure) override;
-  virtual int CryptoFree(void *crypto_closure) override;
 };
 
 /*   SEC_PKCS7DecoderContentCallback for SEC_PKCS7DecoderStart() */
 static void MimeCMS_content_callback (void *arg, const char *buf, unsigned long length)
 {
   int status;
-  MimeCMSdata *data = (MimeCMSdata *) arg;
+  CMSdata* data = (CMSdata*)arg;
   if (!data) return;
 
   if (!data->output_fn)
@@ -115,9 +97,10 @@ static void MimeCMS_content_callback (void *arg, const char *buf, unsigned long 
   data->decoded_bytes += length;
 }
 
-bool EncryptedCMS::IsEncrypted()
+bool
+EncryptedCMS::IsEncrypted()
 {
-  MimeCMSdata *data = (MimeCMSdata*)this->crypto_closure;
+  CMSdata* data = (CMSdata*)this->crypto_closure;
   if (!data || !data->content_info) return false;
   bool encrypted;
   data->content_info->ContentIsEncrypted(&encrypted);
@@ -404,14 +387,15 @@ int MIMEGetRelativeCryptoNestLevel(Part *obj)
   return aCryptoPartNestLevel - aTopMessageNestLevel;
 }
 
-void* EncryptedCMS::CryptoInit(int (*output_fn) (const char *buf, int32_t buf_size, void *output_closure), void *output_closure)
+void*
+EncryptedCMS::CryptoInit(int (*output_fn)(const char* buf, int32_t buf_size, void* output_closure), void* output_closure)
 {
-  MimeCMSdata *data;
+  CMSdata* data;
   nsresult rv;
 
   if (!(this->options && output_fn)) return nullptr;
 
-  data = new MimeCMSdata;
+  data = new CMSdata;
   if (!data) return 0;
 
   data->self = this;
@@ -500,10 +484,10 @@ void* EncryptedCMS::CryptoInit(int (*output_fn) (const char *buf, int32_t buf_si
   return data;
 }
 
-static int
-EncryptedCMS::CryptoWrite(const char *buf, int32_t buf_size, void *closure);
+int
+EncryptedCMS::CryptoWrite(const char* buf, int32_t buf_size, void* closure);
 {
-  MimeCMSdata *data = (MimeCMSdata *) closure;
+  CMSdata* data = (CMSdata*)closure;
   nsresult rv;
 
   if (!data || !data->output_fn || !data->decoder_context) return -1;
@@ -521,7 +505,7 @@ void MimeCMSGetFromSender(Part *obj,
                           nsCString &sender_addr,
                           nsCString &sender_name)
 {
-  MimeHeaders *msg_headers = 0;
+  Headers *msg_headers = 0;
 
   /* Find the headers of the MimeMessage which is the parent (or grandparent)
    of this object (remember, crypto objects nest.) */
@@ -543,12 +527,12 @@ void MimeCMSGetFromSender(Part *obj,
   nsCString s;
 
   /* Extract the name and address of the "From:" field. */
-  s.Adopt(MimeHeaders_get(msg_headers, HEADER_FROM, false, false));
+  s.Adopt(msg_headers->Get(HEADER_FROM, false, false));
   if (!s.IsEmpty())
     ExtractFirstAddress(EncodedHeader(s), from_name, from_addr);
 
   /* Extract the name and address of the "Sender:" field. */
-  s.Adopt(MimeHeaders_get(msg_headers, HEADER_SENDER, false, false));
+  s.Adopt(msg_headers->Get(HEADER_SENDER, false, false));
   if (!s.IsEmpty())
     ExtractFirstAddress(EncodedHeader(s), sender_name, sender_addr);
 }
@@ -575,9 +559,10 @@ void MimeCMSRequestAsyncSignatureVerification(nsICMSMessage *aCMSMsg,
     msg2->AsyncVerifySignature(listener);
 }
 
-int EncryptedCMS::CryptoEOF(void *crypto_closure, bool abort_p)
+int
+EncryptedCMS::CryptoEOF(void* crypto_closure, bool abort_p)
 {
-  MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
+  CMSdata* data = (CMSdata*)crypto_closure;
   nsresult rv;
   int32_t status = nsICMSMessageErrors::SUCCESS;
 
@@ -688,15 +673,16 @@ int EncryptedCMS::CryptoEOF(void *crypto_closure, bool abort_p)
   return 0;
 }
 
-void EncryptedCMS::CryptoFree(void *crypto_closure)
+void
+EncryptedCMS::CryptoFree(void* crypto_closure)
 {
-  MimeCMSdata *data = (MimeCMSdata *) crypto_closure;
+  CMSdata* data = (CMSdata*)crypto_closure;
   if (!data) return;
 
   delete data;
 }
 
-static char *
+char*
 EncryptedCMS::GenerateHTML(void *crypto_closure)
 {
   return nullptr;

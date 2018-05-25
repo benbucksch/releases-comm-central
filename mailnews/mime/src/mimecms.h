@@ -10,27 +10,34 @@
 
 class nsICMSMessage;
 
-/* The MimeEncryptedCMS class implements a type of MIME object where the
-   object is passed through a CMS decryption engine to decrypt or verify
-   signatures.  That module returns a new MIME object, which is then presented
-   to the user.  See mimecryp.h for details of the general mechanism on which
-   this is built.
+namespace mozilla::mime {
+
+/**
+ * The EncryptedCMS class implements a type of MIME object where the
+ * object is passed through a CMS decryption engine to decrypt or verify
+ * signatures.  That module returns a new MIME object, which is then presented
+ * to the user.  See mimecryp.h for details of the general mechanism on which
+ * this is built.
  */
+class EncryptedCMS : public Encrypted {
+  typedef Encrypted Super;
 
-typedef struct MimeEncryptedCMSClass MimeEncryptedCMSClass;
-typedef struct MimeEncryptedCMS      MimeEncryptedCMS;
+protected:
+  EncryptedCMS();
+  virtual ~EncryptedCMS();
 
-struct MimeEncryptedCMSClass {
-  MimeEncryptedClass encrypted;
+public:
+  // Part overrides
+  virtual bool IsEncrypted() override;
+
+  // Encrypted overrides
+  virtual void* CryptoInit(int (*output_fn)(const char* buf, int32_t bufSize, void* output_closure), void* output_closure) override;
+  virtual int CryptoWrite(const char* buf, int32_t bufSize, void* closure) override;
+  virtual int CryptoEOF(void* crypto_closure, bool abort_p) override;
+  virtual char* GenerateHTML(void* crypto_closure) override;
+  virtual int CryptoFree(void* crypto_closure) override;
 };
 
-extern MimeEncryptedCMSClass mimeEncryptedCMSClass;
+} // namespace mozilla::mime
 
-struct MimeEncryptedCMS {
-  MimeEncrypted encrypted;    /* superclass variables */
-};
-
-#define MimeEncryptedCMSClassInitializer(ITYPE,CSUPER) \
-  { MimeEncryptedClassInitializer(ITYPE,CSUPER) }
-
-#endif /* _MIMEPKCS_H_ */
+#endif // _MIMEPKCS_H_
