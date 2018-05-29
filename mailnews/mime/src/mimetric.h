@@ -8,26 +8,32 @@
 
 #include "mimetext.h"
 
-/* The MimeInlineTextRichtext class implements the (obsolete and deprecated)
-   text/richtext MIME content type, as defined in RFC 1341, and also the
-   text/enriched MIME content type, as defined in RFC 1563.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MimeInlineTextRichtext class implements the (obsolete and deprecated)
+ * text/richtext MIME content type, as defined in RFC 1341, and also the
+ * text/enriched MIME content type, as defined in RFC 1563.
  */
+class InlineTextRichtext : public InlineText {
+  typedef InlineText Super;
 
-typedef struct MimeInlineTextRichtextClass MimeInlineTextRichtextClass;
-typedef struct MimeInlineTextRichtext      MimeInlineTextRichtext;
+public:
+  InlineTextRichtext()
+    : encriched_p(0)
+    {}
+  virtual ~InlineTextRichtext() {}
 
-struct MimeInlineTextRichtextClass {
-  MimeInlineTextClass text;
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseLine(const char* line, int32_t length) override;
+
+protected:
   bool enriched_p;  /* Whether we should act like text/enriched instead. */
 };
 
-extern MimeInlineTextRichtextClass mimeInlineTextRichtextClass;
-
-struct MimeInlineTextRichtext {
-  MimeInlineText text;
-};
-
-#define MimeInlineTextRichtextClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMETRIC_H_ */

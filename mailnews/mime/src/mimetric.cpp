@@ -10,58 +10,36 @@
 #include "msgCore.h"
 #include <ctype.h>
 
-#define MIME_SUPERCLASS mimeInlineTextClass
-MimeDefClass(MimeInlineTextRichtext, MimeInlineTextRichtextClass,
-       mimeInlineTextRichtextClass, &MIME_SUPERCLASS);
+namespace mozilla {
+namespace mime {
 
-static int MimeInlineTextRichtext_ParseLine (const char *, int32_t, Part *);
-static int MimeInlineTextRichtext_ParseBegin (Part *);
-static int MimeInlineTextRichtext_ParseEOF (Part *, bool);
-
-static int
-MimeInlineTextRichtextClassInitialize(MimeInlineTextRichtextClass *clazz)
-{
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->ParseBegin = MimeInlineTextRichtext_parse_begin;
-  oclass->ParseLine  = MimeInlineTextRichtext_parse_line;
-  oclass->ParseEOF   = MimeInlineTextRichtext_parse_eof;
-  return 0;
-}
-
-/* This function has this clunky interface because it needs to be called
-   from outside this module (no Part, etc.)
+/**
+ * RFC 1341 (the original MIME spec) defined text/richtext.
+ * RFC 1563 superseded text/richtext with text/enriched.
+ * The changes from text/richtext to text/enriched are:
+ *  - CRLF semantics are different
+ *  - << maps to <
+ *  - These tags were added:
+ *     <VERBATIM>, <NOFILL>, <PARAM>, <FLUSHBOTH>
+ *  - These tags were removed:
+ *     <COMMENT>, <OUTDENT>, <OUTDENTRIGHT>, <SAMEPAGE>, <SUBSCRIPT>,
+ *       <SUPERSCRIPT>, <HEADING>, <FOOTING>, <PARAGRAPH>, <SIGNATURE>,
+ *     <LT>, <NL>, <NP>
+ * This method implements them both.
+ *
+ * draft-resnick-text-enriched-03.txt is a proposed update to 1563.
+ *  - These tags were added:
+ *    <FONTFAMILY>, <COLOR>, <PARAINDENT>, <LANG>.
+ *  However, all of these rely on the magic <PARAM> tag, which we
+ *  don't implement, so we're ignoring all of these.
+ * Interesting fact: it's by Peter W. Resnick from Qualcomm (Eudora).
+ * And it also says "It is fully expected that other text formatting
+ * standards like HTML and SGML will supplant text/enriched in
+ * Internet mail."
  */
 int
-MimeRichtextConvert (const char *line, int32_t length,
-           Part *obj,
-           char **obufferP,
-           int32_t *obuffer_sizeP,
-           bool enriched_p)
+InlineTextRichtext::ParseLine(const char* line, int32_t length)
 {
-  /* RFC 1341 (the original MIME spec) defined text/richtext.
-   RFC 1563 superseded text/richtext with text/enriched.
-   The changes from text/richtext to text/enriched are:
-    - CRLF semantics are different
-    - << maps to <
-    - These tags were added:
-       <VERBATIM>, <NOFILL>, <PARAM>, <FLUSHBOTH>
-    - These tags were removed:
-       <COMMENT>, <OUTDENT>, <OUTDENTRIGHT>, <SAMEPAGE>, <SUBSCRIPT>,
-         <SUPERSCRIPT>, <HEADING>, <FOOTING>, <PARAGRAPH>, <SIGNATURE>,
-       <LT>, <NL>, <NP>
-   This method implements them both.
-
-   draft-resnick-text-enriched-03.txt is a proposed update to 1563.
-    - These tags were added:
-      <FONTFAMILY>, <COLOR>, <PARAINDENT>, <LANG>.
-    However, all of these rely on the magic <PARAM> tag, which we
-    don't implement, so we're ignoring all of these.
-   Interesting fact: it's by Peter W. Resnick from Qualcomm (Eudora).
-   And it also says "It is fully expected that other text formatting
-   standards like HTML and SGML will supplant text/enriched in
-   Internet mail."
-   */
   int status = 0;
   char *out;
   const char *data_end;
@@ -77,9 +55,9 @@ MimeRichtextConvert (const char *line, int32_t length,
       return -1;
   desired_size = (length * BGROWTH) + 1;
 #undef BGROWTH
-  if (desired_size >= (uint32_t) *obuffer_sizeP)
+  if (desired_size >= (uint32_t) this->obuffer_size)
   status = mime_GrowBuffer (desired_size, sizeof(char), 1024,
-               obufferP, obuffer_sizeP);
+               &this->obuffer, &this->obuffer_size);
   if (status < 0) return status;
 
   if (enriched_p)
@@ -88,13 +66,13 @@ MimeRichtextConvert (const char *line, int32_t length,
     if (!IS_SPACE (*this_start)) break;
     if (this_start >= line + length) /* blank line */
     {
-      PL_strncpyz (*obufferP, "<BR>", *obuffer_sizeP);
-      return Part_write(obj, *obufferP, strlen(*obufferP), true);
+      PL_strncpyz (this->obuffer, "<BR>", this->obuffer_size);
+      return this->Write(this->obuffer, strlen(this->obuffer), true);
     }
   }
 
-  uint32_t outlen = (uint32_t) *obuffer_sizeP;
-  out = *obufferP;
+  uint32_t outlen = (uint32_t) this->obuffer_size;
+  out = this->obuffer;
   *out = 0;
 
   data_end = line + length;
@@ -309,42 +287,16 @@ MimeRichtextConvert (const char *line, int32_t length,
   }
   *out = 0;
 
-  return Part_write(obj, *obufferP, out - *obufferP, true);
+  return this->Write(this->obuffer, out - this->obuffer, true);
 }
 
-
-static int
-MimeInlineTextRichtext_ParseLine (const char *line, int32_t length, Part *obj)
+int
+InlineTextRichtext::ParseBegin()
 {
-  bool enriched_p = (((MimeInlineTextRichtextClass *) obj->clazz)
-            ->enriched_p);
-
-  return MimeRichtextConvert (line, length,
-                obj,
-                &obj->obuffer, &obj->obuffer_size,
-                enriched_p);
-}
-
-
-static int
-MimeInlineTextRichtext_ParseBegin (Part *obj)
-{
-  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
-  char s[] = "";
+  int status = Super::ParseBegin();
   if (status < 0) return status;
-  return Part_write(obj, s, 0, true); /* force out any separators... */
+  return Write("", 0, true); /* force out any separators... */
 }
 
-
-static int
-MimeInlineTextRichtext_ParseEOF (Part *obj, bool abort_p)
-{
-  int status;
-  if (obj->closed_p) return 0;
-
-  /* Run parent method first, to flush out any buffered data. */
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
-  if (status < 0) return status;
-
-  return 0;
-}
+} // namespace mime
+} // namespace mozilla
