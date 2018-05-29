@@ -12,89 +12,32 @@
 #include "nsMimeStringResources.h"
 #include <ctype.h>
 
-#define MIME_SUPERCLASS mimeContainerClass
-MimeDefClass(MimeUntypedText, MimeUntypedTextClass,
-       mimeUntypedTextClass, &MIME_SUPERCLASS);
+namespace mozilla {
+namespace mime {
 
-static int MimeUntypedText_initialize (Part *);
-static void MimeUntypedText_finalize (Part *);
-static int MimeUntypedText_ParseBegin (Part *);
-static int MimeUntypedText_ParseLine (const char *, int32_t, Part *);
-
-static int MimeUntypedText_open_subpart (Part *obj,
-                     MimeUntypedTextSubpartType ttype,
-                     const char *type,
-                     const char *enc,
-                     const char *name,
-                     const char *desc);
-static int MimeUntypedText_close_subpart (Part *obj);
-
-static bool MimeUntypedText_uu_begin_line_p(const char *line, int32_t length,
-                         MimeDisplayOptions *opt,
-                         char **type_ret,
-                         char **name_ret);
-static bool MimeUntypedText_uu_end_line_p(const char *line, int32_t length);
-
-static bool MimeUntypedText_yenc_begin_line_p(const char *line, int32_t length,
-                         MimeDisplayOptions *opt,
-                         char **type_ret,
-                         char **name_ret);
-static bool MimeUntypedText_yenc_end_line_p(const char *line, int32_t length);
-
-static bool MimeUntypedText_binhex_begin_line_p(const char *line,
-                           int32_t length,
-                           MimeDisplayOptions *opt);
-static bool MimeUntypedText_binhex_end_line_p(const char *line,
-                         int32_t length);
-
-static int
-MimeUntypedTextClassInitialize(MimeUntypedTextClass *clazz)
+UntypedText::UntypedText()
+  : open_subpart(nullptr)
+  , type(SubpartType::Text)
+  , open_hdrs(nullptr)
 {
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->initialize  = MimeUntypedText_initialize;
-  oclass->finalize    = MimeUntypedText_finalize;
-  oclass->ParseBegin = MimeUntypedText_parse_begin;
-  oclass->ParseLine  = MimeUntypedText_parse_line;
-  return 0;
 }
 
-
-static int
-MimeUntypedText_initialize (Part *object)
+UntypedText::~UntypedText()
 {
-  return ((PartClass*)&MIME_SUPERCLASS)->initialize(object);
-}
-
-static void
-MimeUntypedText_finalize (Part *object)
-{
-  MimeUntypedText *uty = (MimeUntypedText *) object;
-
-  if (uty->open_hdrs)
+  if (this->open_hdrs)
   {
     /* Oops, those shouldn't still be here... */
-    MimeHeaders_free(uty->open_hdrs);
-    uty->open_hdrs = 0;
+    delete this->open_hdrs;
   }
 
   /* What about the open_subpart?  We're gonna have to assume that it
    is also on the MimeContainer->children list, and will get cleaned
    up by that class. */
-
-  ((PartClass*)&MIME_SUPERCLASS)->finalize(object);
 }
 
-static int
-MimeUntypedText_ParseBegin (Part *obj)
+int
+UntypedText::ParseLine(const char* line, int32_t length)
 {
-  return ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
-}
-
-static int
-MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
-{
-  MimeUntypedText *uty = (MimeUntypedText *) obj;
   int status = 0;
   char *name = 0, *type = 0;
   bool begin_line_p = false;
@@ -104,22 +47,21 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (obj->output_p &&
-    obj->options &&
-    !obj->options->write_html_p &&
-    obj->options->output_fn)
-  return Part_write(obj, line, length, true);
+  if (this->output_p &&
+    this->options &&
+    !this->options->write_html_p &&
+    this->options->output_fn)
+  return this->Write(line, length, true);
 
 
   /* Open a new sub-part if this line demands it.
    */
   if (line[0] == 'b' &&
-    MimeUntypedText_uu_begin_line_p(line, length, obj->options,
+    LineBeginsUUE(line, length, this->options,
                     &type, &name))
   {
     /* Close the old part and open a new one. */
-    status = MimeUntypedText_open_subpart (obj,
-                       MimeUntypedTextSubpartTypeUUE,
+    status = OpenSubpart(SubpartType::UUE,
                        type, ENCODING_UUENCODE,
                        name, NULL);
     PR_FREEIF(name);
@@ -129,12 +71,10 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
   }
 
   else if (line[0] == '=' &&
-    MimeUntypedText_yenc_begin_line_p(line, length, obj->options,
-                    &type, &name))
+    LineBeginsYEnc(line, length, &type, &name))
   {
     /* Close the old part and open a new one. */
-    status = MimeUntypedText_open_subpart (obj,
-                       MimeUntypedTextSubpartTypeYEnc,
+    status = OpenSubpart(SubpartType::YEnc,
                        type, ENCODING_YENCODE,
                        name, NULL);
     PR_FREEIF(name);
@@ -144,11 +84,10 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
   }
 
   else if (line[0] == '(' && line[1] == 'T' &&
-       MimeUntypedText_binhex_begin_line_p(line, length, obj->options))
+       LineBeginsBinhex(line, length))
   {
     /* Close the old part and open a new one. */
-    status = MimeUntypedText_open_subpart (obj,
-                       MimeUntypedTextSubpartTypeBinhex,
+    status = OpenSubpart(SubpartType::Binhex,
                        APPLICATION_BINHEX, NULL,
                        NULL, NULL);
     if (status < 0) return status;
@@ -157,7 +96,7 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
 
   /* Open a text/plain sub-part if there is no sub-part open.
    */
-  if (!uty->open_subpart)
+  if (!this->open_subpart)
   {
     // rhp: If we get here and we are being fed a line ending, we should
     // just eat it and continue and if we really get more data, we'll open
@@ -167,18 +106,16 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
     if (line[0] == '\n') return 0;
 
     PR_ASSERT(!begin_line_p);
-    status = MimeUntypedText_open_subpart (obj,
-                       MimeUntypedTextSubpartTypeText,
+    status = OpenSubpart(SubpartType::Text,
                        TEXT_PLAIN, NULL, NULL, NULL);
-    PR_ASSERT(uty->open_subpart);
-    if (!uty->open_subpart) return -1;
+    PR_ASSERT(this->open_subpart);
+    if (!this->open_subpart) return -1;
     if (status < 0) return status;
   }
 
   /* Hand this line to the currently-open sub-part.
    */
-  status = uty->open_subpart->clazz->ParseBuffer(line, length,
-                          uty->open_subpart);
+  status = this->open_subpart->ParseBuffer(line, length);
   if (status < 0) return status;
 
   /* Close this sub-part if this line demands it.
@@ -186,74 +123,71 @@ MimeUntypedText_ParseLine (const char *line, int32_t length, Part *obj)
   if (begin_line_p)
   ;
   else if (line[0] == 'e' &&
-       uty->type == MimeUntypedTextSubpartTypeUUE &&
-       MimeUntypedText_uu_end_line_p(line, length))
+       this->type == SubpartType::UUE &&
+       LineEndsUUE(line, length))
   {
-    status = MimeUntypedText_close_subpart (obj);
+    status = CloseSubpart();
     if (status < 0) return status;
-    NS_ASSERTION(!uty->open_subpart, "no open subpart");
+    NS_ASSERTION(!this->open_subpart, "no open subpart");
   }
   else if (line[0] == '=' &&
-       uty->type == MimeUntypedTextSubpartTypeYEnc &&
-       MimeUntypedText_yenc_end_line_p(line, length))
+       this->type == SubpartType::YEnc &&
+       LineEndsYEnc(line, length))
   {
-    status = MimeUntypedText_close_subpart (obj);
+    status = CloseSubpart();
     if (status < 0) return status;
-    NS_ASSERTION(!uty->open_subpart, "no open subpart");
+    NS_ASSERTION(!this->open_subpart, "no open subpart");
   }
-  else if (uty->type == MimeUntypedTextSubpartTypeBinhex &&
-       MimeUntypedText_binhex_end_line_p(line, length))
+  else if (this->type == SubpartType::Binhex &&
+       LineEndsBinhex(line, length))
   {
-    status = MimeUntypedText_close_subpart (obj);
+    status = CloseSubpart();
     if (status < 0) return status;
-    NS_ASSERTION(!uty->open_subpart, "no open subpart");
+    NS_ASSERTION(!this->open_subpart, "no open subpart");
   }
 
   return 0;
 }
 
 
-static int
-MimeUntypedText_close_subpart (Part *obj)
+int
+UntypedText::CloseSubpart()
 {
-  MimeUntypedText *uty = (MimeUntypedText *) obj;
   int status;
 
-  if (uty->open_subpart)
+  if (this->open_subpart)
   {
-    status = uty->open_subpart->clazz->ParseEOF(uty->open_subpart, false);
-    uty->open_subpart = 0;
+    status = this->open_subpart->ParseEOF(false);
+    this->open_subpart = nullptr;
 
-    PR_ASSERT(uty->open_hdrs);
-    if (uty->open_hdrs)
+    PR_ASSERT(this->open_hdrs);
+    if (this->open_hdrs)
     {
-      MimeHeaders_free(uty->open_hdrs);
-      uty->open_hdrs = 0;
+      delete this->open_hdrs;
+      this->open_hdrs = nullptr;
     }
-    uty->type = MimeUntypedTextSubpartTypeText;
+    this->type = SubpartType::Text;
     if (status < 0) return status;
 
     /* Never put out a separator between sub-parts of UntypedText.
      (This bypasses the rule that text/plain subparts always
      have separators before and after them.)
      */
-    if (obj->options && obj->options->state)
-    obj->options->state->separator_suppressed_p = true;
+    if (this->options && this->options->state)
+      this->options->state->separator_suppressed_p = true;
   }
 
-  PR_ASSERT(!uty->open_hdrs);
+  PR_ASSERT(!this->open_hdrs);
   return 0;
 }
 
-static int
-MimeUntypedText_open_subpart (Part *obj,
-                MimeUntypedTextSubpartType ttype,
+int
+UntypedText::OpenSubpart(SubpartType ttype,
                 const char *type,
                 const char *enc,
                 const char *name,
                 const char *desc)
 {
-  MimeUntypedText *uty = (MimeUntypedText *) obj;
   int status = 0;
   char *h = 0;
 
@@ -266,18 +200,18 @@ MimeUntypedText_open_subpart (Part *obj,
   if (name && !*name)
   name = 0;
 
-  if (uty->open_subpart)
+  if (this->open_subpart)
   {
-    status = MimeUntypedText_close_subpart (obj);
+    status = CloseSubpart();
     if (status < 0) return status;
   }
-  NS_ASSERTION(!uty->open_subpart, "no open subpart");
-  NS_ASSERTION(!uty->open_hdrs, "no open headers");
+  NS_ASSERTION(!this->open_subpart, "no open subpart");
+  NS_ASSERTION(!this->open_hdrs, "no open headers");
 
   /* To make one of these implicitly-typed sub-objects, we make up a fake
    header block, containing only the minimum number of MIME headers needed.
    We could do most of this (Type and Encoding) by making a null header
-   block, and simply setting obj->content_type and obj->encoding; but making
+   block, and simply setting this->content_type and this->encoding; but making
    a fake header block is better for two reasons: first, it means that
    something will actually be displayed when in `Show All Headers' mode;
    and second, it's the only way to communicate the filename parameter,
@@ -285,8 +219,8 @@ MimeUntypedText_open_subpart (Part *obj,
    avoided when possible.)
    */
 
-  uty->open_hdrs = MimeHeaders_new();
-  if (!uty->open_hdrs) return MIME_OUT_OF_MEMORY;
+  this->open_hdrs = new Headers();
+  if (!this->open_hdrs) return MIME_OUT_OF_MEMORY;
 
   uint32_t hlen = strlen(type) +
                 (enc ? strlen(enc) : 0) +
@@ -299,7 +233,7 @@ MimeUntypedText_open_subpart (Part *obj,
   PL_strncpyz(h, HEADER_CONTENT_TYPE ": ", hlen);
   PL_strcatn(h, hlen, type);
   PL_strcatn(h, hlen, MSG_LINEBREAK);
-  status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
+  status = this->open_hdrs->ParseLine(h, strlen(h));
   if (status < 0) goto FAIL;
 
   if (enc)
@@ -307,7 +241,7 @@ MimeUntypedText_open_subpart (Part *obj,
     PL_strncpyz(h, HEADER_CONTENT_TRANSFER_ENCODING ": ", hlen);
     PL_strcatn(h, hlen, enc);
     PL_strcatn(h, hlen, MSG_LINEBREAK);
-    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
+    status = this->open_hdrs->ParseLine(h, strlen(h));
     if (status < 0) goto FAIL;
   }
 
@@ -316,7 +250,7 @@ MimeUntypedText_open_subpart (Part *obj,
     PL_strncpyz(h, HEADER_CONTENT_DESCRIPTION ": ", hlen);
     PL_strcatn(h, hlen, desc);
     PL_strcatn(h, hlen, MSG_LINEBREAK);
-    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
+    status = this->open_hdrs->ParseLine(h, strlen(h));
     if (status < 0) goto FAIL;
   }
   if (name)
@@ -324,29 +258,29 @@ MimeUntypedText_open_subpart (Part *obj,
     PL_strncpyz(h, HEADER_CONTENT_DISPOSITION ": inline; filename=\"", hlen);
     PL_strcatn(h, hlen, name);
     PL_strcatn(h, hlen, "\"" MSG_LINEBREAK);
-    status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
+    status = this->open_hdrs->ParseLine(h, strlen(h));
     if (status < 0) goto FAIL;
   }
 
   /* push out a blank line. */
   PL_strncpyz(h, MSG_LINEBREAK, hlen);
-  status = MimeHeaders_ParseLine(h, strlen(h), uty->open_hdrs);
+  status = this->open_hdrs->ParseLine(h, strlen(h));
   if (status < 0) goto FAIL;
 
 
   /* Create a child... */
   {
-  bool horrid_kludge = (obj->options && obj->options->state &&
-               obj->options->state->first_part_written_p);
+  bool horrid_kludge = (this->options && this->options->state &&
+               this->options->state->first_part_written_p);
   if (horrid_kludge)
-    obj->options->state->first_part_written_p = false;
+    this->options->state->first_part_written_p = false;
 
-  uty->open_subpart = mime_create(type, uty->open_hdrs, obj->options);
+  this->open_subpart = mime_create(type, this->open_hdrs, this->options);
 
   if (horrid_kludge)
-    obj->options->state->first_part_written_p = true;
+    this->options->state->first_part_written_p = true;
 
-  if (!uty->open_subpart)
+  if (!this->open_subpart)
     {
     status = MIME_OUT_OF_MEMORY;
     goto FAIL;
@@ -354,42 +288,39 @@ MimeUntypedText_open_subpart (Part *obj,
   }
 
   /* Add it to the list... */
-  status = ((MimeContainerClass *) obj->clazz)->add_child(obj,
-                              uty->open_subpart);
+  status = AddChild(this->open_subpart);
   if (status < 0)
   {
-    mime_free(uty->open_subpart);
-    uty->open_subpart = 0;
+    delete this->open_subpart;
+    this->open_subpart = nullptr;
     goto FAIL;
   }
 
   /* And start its parser going. */
-  status = uty->open_subpart->clazz->ParseBegin(uty->open_subpart);
+  status = this->open_subpart->ParseBegin();
   if (status < 0)
   {
     /* MimeContainer->finalize will take care of shutting it down now. */
-    uty->open_subpart = 0;
+    this->open_subpart = nullptr;
     goto FAIL;
   }
 
-  uty->type = ttype;
+  this->type = ttype;
 
  FAIL:
   PR_FREEIF(h);
 
-  if (status < 0 && uty->open_hdrs)
+  if (status < 0 && this->open_hdrs)
   {
-    MimeHeaders_free(uty->open_hdrs);
-    uty->open_hdrs = 0;
+    delete this->open_hdrs;
+    this->open_hdrs = nullptr;
   }
 
   return status;
 }
 
-static bool
-MimeUntypedText_uu_begin_line_p(const char *line, int32_t length,
-                MimeDisplayOptions *opt,
-                char **type_ret, char **name_ret)
+bool
+LineBeginsUUE(const char* line, int32_t length, char** type_ret, char** name_ret)
 {
   const char *s;
   char *name = 0;
@@ -430,8 +361,8 @@ MimeUntypedText_uu_begin_line_p(const char *line, int32_t length,
 
   /* Now try and figure out a type.
    */
-  if (opt && opt->file_type_fn)
-  type = opt->file_type_fn(name, opt->stream_closure);
+  if (this->options && this->options->file_type_fn)
+  type = this->options->file_type_fn(name, this->options->stream_closure);
   else
   type = 0;
 
@@ -448,8 +379,8 @@ MimeUntypedText_uu_begin_line_p(const char *line, int32_t length,
   return true;
 }
 
-static bool
-MimeUntypedText_uu_end_line_p(const char *line, int32_t length)
+bool
+LineEndsUUE(const char *line, int32_t length)
 {
 #if 0
   /* A strictly conforming uuencode end line. */
@@ -480,10 +411,8 @@ MimeUntypedText_uu_end_line_p(const char *line, int32_t length)
 #endif
 }
 
-static bool
-MimeUntypedText_yenc_begin_line_p(const char *line, int32_t length,
-                MimeDisplayOptions *opt,
-                char **type_ret, char **name_ret)
+bool
+LineBeginsYEnc(const char* line, int32_t length, char** type_ret, char** name_ret)
 {
   const char *s;
   const char *endofline = line + length;
@@ -526,8 +455,8 @@ MimeUntypedText_yenc_begin_line_p(const char *line, int32_t length,
 
   /* Now try and figure out a type.
    */
-  if (opt && opt->file_type_fn)
-  type = opt->file_type_fn(name, opt->stream_closure);
+  if (this->options && this->options->file_type_fn)
+  type = this->options->file_type_fn(name, this->options->stream_closure);
   else
   type = 0;
 
@@ -544,8 +473,8 @@ MimeUntypedText_yenc_begin_line_p(const char *line, int32_t length,
   return true;
 }
 
-static bool
-MimeUntypedText_yenc_end_line_p(const char *line, int32_t length)
+bool
+LineEndsYEnc(const char *line, int32_t length)
 {
   if (length < 11 || strncmp (line, "=yend size=", 11)) return false;
 
@@ -556,9 +485,8 @@ MimeUntypedText_yenc_end_line_p(const char *line, int32_t length)
 #define BINHEX_MAGIC "(This file must be converted with BinHex 4.0)"
 #define BINHEX_MAGIC_LEN 45
 
-static bool
-MimeUntypedText_binhex_begin_line_p(const char *line, int32_t length,
-                  MimeDisplayOptions *opt)
+bool
+LineBeginsBinhex(const char *line, int32_t length)
 {
   if (length <= BINHEX_MAGIC_LEN)
   return false;
@@ -575,8 +503,8 @@ MimeUntypedText_binhex_begin_line_p(const char *line, int32_t length,
   return false;
 }
 
-static bool
-MimeUntypedText_binhex_end_line_p(const char *line, int32_t length)
+bool
+LineEndsBinhex(const char *line, int32_t length)
 {
   if (length > 0 && line[length-1] == '\n') length--;
   if (length > 0 && line[length-1] == '\r') length--;
@@ -586,3 +514,6 @@ MimeUntypedText_binhex_end_line_p(const char *line, int32_t length)
   else
   return false;
 }
+
+} // namespace mime
+} // namespace mozilla
