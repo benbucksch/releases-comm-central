@@ -8,7 +8,8 @@
 
 #include "mimeleaf.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /** The InlineImage class implements those MIME image types which can be
  * displayed inline.
@@ -31,5 +32,6 @@ protected:
 class InlineImageClass : LeafClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEIIMG_H_

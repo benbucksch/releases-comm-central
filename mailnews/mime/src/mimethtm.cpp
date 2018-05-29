@@ -12,7 +12,8 @@
 #include "mimemoz2.h"
 #include <ctype.h>
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Text
 
@@ -179,4 +180,5 @@ HTML::ParseEOF(bool abort_p)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

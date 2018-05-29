@@ -16,7 +16,8 @@
 #include "nsINetUtil.h"
 #include <ctype.h>
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Part
 
@@ -451,4 +452,5 @@ ExternalBodyClass::DisplayableInline(Headers* hdrs)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

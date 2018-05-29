@@ -45,9 +45,8 @@ extern char *MimeCMS_MakeSAURL(Part* obj);
 extern char *IMAP_CreateReloadAllPartsUrl(const char *url);
 extern int MIMEGetRelativeCryptoNestLevel(Part* obj);
 
-namespace mozilla::mime {
-
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 class MultCMSdata
 {
@@ -426,4 +425,5 @@ MultipartSignedCMS::CryptoGenerateHTML(void* crypto_closure)
   return nullptr;
 }
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla

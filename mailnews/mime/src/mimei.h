@@ -101,7 +101,8 @@
 #include "nsTArray.h"
 #include "mimeobj.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #ifdef ENABLE_SMIME
 class nsICMSMessage;
@@ -244,5 +245,6 @@ public:
 };
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEI_H_

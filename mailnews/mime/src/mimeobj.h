@@ -9,7 +9,8 @@
 #include "mimei.h"
 #include "prio.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * This is the base-class for the objects representing all other MIME types.
@@ -316,5 +317,6 @@ public:
 };
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEOBJ_H_

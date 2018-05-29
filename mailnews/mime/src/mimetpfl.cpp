@@ -15,7 +15,8 @@
 #include "prprf.h"
 #include "nsMsgI18N.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Text
 
@@ -606,4 +607,5 @@ nsresult Line_convert_whitespace(const nsString& a_line,
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

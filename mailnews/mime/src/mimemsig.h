@@ -10,7 +10,8 @@
 #include "mimepbuf.h"
 #include "modmimee.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The MimeMultipartSigned class implements the multipart/signed MIME
@@ -123,6 +124,7 @@ protected:
   MimeDecoderData* sig_decoder_data;
 };
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla
 
 #endif // _MIMEMSIG_H_

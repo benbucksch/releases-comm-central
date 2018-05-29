@@ -27,7 +27,8 @@
 #include "nsMimeTypes.h"
 #include "nsServiceManagerUtils.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Leaf
 
@@ -437,4 +438,5 @@ Text::RotateConvertAndParseLine(char* line, int32_t length)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

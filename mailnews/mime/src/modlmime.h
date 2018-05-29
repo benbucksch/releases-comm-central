@@ -19,7 +19,8 @@
 #include "nsCOMPtr.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define MIME_DRAFTS
 
@@ -329,5 +330,6 @@ public:
   bool metadata_only;
 };
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MODLMIME_H_

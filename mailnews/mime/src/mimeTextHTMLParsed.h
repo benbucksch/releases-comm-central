@@ -8,7 +8,8 @@
 
 #include "mimethtm.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * This runs the entire HTML document through the Mozilla HTML parser, and
@@ -42,5 +43,6 @@ protected:
 class HTMLParsedClass : HTMLClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEHTMLPARSED_H_

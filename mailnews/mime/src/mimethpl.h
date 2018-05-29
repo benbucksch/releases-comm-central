@@ -9,7 +9,8 @@
 #include "mimetpla.h"
 #include "nsString.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The MimeInlineTextHTMLAsPlaintext class converts HTML->TXT->HTML,
@@ -36,5 +37,6 @@ protected:
 class HTMLAsPlaintextClass : TextPlainClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEHTMLASPLAINTEXT_H_

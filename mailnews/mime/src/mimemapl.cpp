@@ -11,7 +11,8 @@
 #include "mimemoz2.h"
 #include "nsMimeTypes.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS MultipartClass
 
@@ -168,4 +169,5 @@ MultipartAppleDouble::OutputChild(Part* child)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

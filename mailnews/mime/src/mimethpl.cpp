@@ -17,7 +17,8 @@
   - Print is untested (crashes in all modes).
 */
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /* I should use the Flowed class as base (because our HTML->TXT converter
    can generate flowed, and we tell it to) - this would get a bit nicer
@@ -126,3 +127,6 @@ printf("Can't output: %s\n", line);
 
   return 0;
 }
+
+} // namespace mime
+} // namespace mozilla

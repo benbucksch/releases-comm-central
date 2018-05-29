@@ -16,7 +16,8 @@
 #include "prprf.h"
 #include "nsMsgI18N.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Text
 
@@ -428,3 +429,5 @@ TextPlain::ParseLine(const char* line, int32_t length)
   return status;
 }
 
+} // namespace mime
+} // namespace mozilla

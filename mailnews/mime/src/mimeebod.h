@@ -8,7 +8,8 @@
 
 #include "mimeobj.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The ExternalBody class implements the message/external-body MIME type
@@ -44,5 +45,6 @@ class ExternalBodyClass : PartClass {
   override bool DisplayableInline(Headers* hdrs);
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEEXTBOD_H_

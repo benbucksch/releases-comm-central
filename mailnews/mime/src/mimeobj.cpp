@@ -22,7 +22,8 @@
 #include "nsMsgUtils.h"
 #include "mimemsg.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 Part::Part(Headers* hdrs, const char* contentTypeOverride)
 {
@@ -284,4 +285,5 @@ int Part::DebugPrint(PRFileDesc* stream, int32_t depth)
 }
 #endif
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

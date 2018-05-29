@@ -10,7 +10,8 @@
 
 class nsICMSMessage;
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The EncryptedCMS class implements a type of MIME object where the
@@ -38,6 +39,7 @@ public:
   virtual int CryptoFree(void* crypto_closure) override;
 };
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla
 
 #endif // _MIMEPKCS_H_

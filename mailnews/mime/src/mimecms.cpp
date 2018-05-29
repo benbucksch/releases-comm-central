@@ -30,7 +30,8 @@ using namespace mozilla::mailnews;
 
 extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 class CMSdata
 {
@@ -107,7 +108,8 @@ EncryptedCMS::IsEncrypted()
   return encrypted;
 }
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla
 
 bool MimeCMSHeadersAndCertsMatch(nsICMSMessage *content_info,
                                    nsIX509Cert *signerCert,
@@ -317,7 +319,8 @@ NS_IMETHODIMP nsSMimeVerificationListener::Notify(nsICMSMessage2 *aVerifiedMessa
   return NS_OK;
 }
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 int MIMEGetRelativeCryptoNestLevel(Part *obj)
 {
@@ -688,4 +691,5 @@ EncryptedCMS::GenerateHTML(void *crypto_closure)
   return nullptr;
 }
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla

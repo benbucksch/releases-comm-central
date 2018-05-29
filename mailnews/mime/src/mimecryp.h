@@ -11,7 +11,8 @@
 #include "modmimee.h"
 #include "mimepbuf.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /*
  * The Encrypted class implements a type of MIME object where the object
@@ -125,6 +126,7 @@ protected:
                      object (see mimepbuf.h) */
 };
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla
 
 #endif // _MIMECRYP_H_

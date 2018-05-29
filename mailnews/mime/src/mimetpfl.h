@@ -8,7 +8,8 @@
 
 #include "mimetext.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The TextPlainFlowed class implements the text/plain MIME content type
@@ -47,5 +48,6 @@ class TextFlowedExData {
   TextFlowedExData* next;
 };
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMETEXTFLOWED_H_

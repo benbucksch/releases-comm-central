@@ -8,7 +8,8 @@
 
 #include "mimemult.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The MimeMultipartAppleDouble class implements the multipart/appledouble
@@ -24,5 +25,6 @@ public:
 class MultipartAppleDoubleClass : MultipartClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEMAPL_H_

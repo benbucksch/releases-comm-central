@@ -14,7 +14,8 @@
 #include "nsMimeTypes.h"
 
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Leaf
 
@@ -192,4 +193,5 @@ ExternalObjectClass::DisplayableInline(Headers* hdrs)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

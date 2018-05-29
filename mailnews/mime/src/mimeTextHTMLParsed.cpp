@@ -16,7 +16,8 @@
 /* See header file for description */
 /* Most of this code is copied from mimethsa. If you find a bug here, check that class, too. */
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS HTML
 
@@ -103,4 +104,5 @@ HTMLParsed::ParseLine(const char *line, int32_t length)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

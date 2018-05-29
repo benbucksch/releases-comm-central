@@ -12,7 +12,8 @@
 
 #include "mimetext.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 class TextPlain : public Text {
 public:
@@ -34,5 +35,6 @@ protected:
 class TextPlainClass : TextClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMETEXTPLAIN_H_

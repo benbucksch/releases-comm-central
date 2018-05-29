@@ -13,7 +13,8 @@
 #include "nsINetUtil.h"
 #include "nsMsgUtils.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Leaf
 
@@ -206,4 +207,5 @@ InlineImage::ParseLine(const char *line, int32_t length)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

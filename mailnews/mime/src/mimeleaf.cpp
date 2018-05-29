@@ -12,7 +12,8 @@
 #include "nsMimeStringResources.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 #define SUPERCLASS Part
 
@@ -162,4 +163,5 @@ Leaf::~Leaf()
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

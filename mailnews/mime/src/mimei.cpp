@@ -72,7 +72,8 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsIMsgHdr.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 // forward declaration
 void getMsgHdrForCurrentURL(DisplayOptions* opts, nsIMsgDBHdr** aMsgHdr);
@@ -1719,4 +1720,5 @@ char* getBaseURL(const char *url)
 }
 
 
-} // namespace
+} // namespace mime
+} // namespace mozilla

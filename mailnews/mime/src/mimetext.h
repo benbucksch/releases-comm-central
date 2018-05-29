@@ -8,7 +8,8 @@
 
 #include "mimeleaf.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /* The |Text| class is the superclass of all handlers for the MIME
    text/ content types, which convert various text formats
@@ -83,5 +84,6 @@ class TextClass : LeafClass {
 #define DAM_MAX_BUFFER_SIZE 8*1024
 #define DAM_MAX_LINES  1024
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMETEXT_H_

@@ -8,7 +8,8 @@
 
 #include "mimeleaf.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The ExternalObject class represents MIME parts which contain data
@@ -30,5 +31,6 @@ class ExternalObjectClass : LeafClass {
   override bool DisplayableInline(Headers* hdrs);
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEEXTOBJ_H_

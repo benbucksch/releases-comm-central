@@ -9,7 +9,8 @@
 #include "mimethtm.h"
 #include "nsString.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The MimeInlineTextHTMLSanitized class cleans up HTML
@@ -50,5 +51,8 @@ protected:
 
 class HTMLSanitizedClass : HTMLClass {
 }
+
+} // namespace mime
+} // namespace mozilla
 
 #endif // _MIMEHTMLSANITIZED_H_

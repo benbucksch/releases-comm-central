@@ -8,7 +8,8 @@
 
 #include "mimetext.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * The HTML class implements the text/html MIME content type.
@@ -29,5 +30,6 @@ protected:
 class HTMLClass : TextClass {
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEHTML_H_

@@ -9,7 +9,8 @@
 #include "mimeobj.h"
 #include "modmimee.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /**
  * MimeLeaf is the class for the objects representing all MIME types which
@@ -63,5 +64,6 @@ class LeafClass : PartClass {
   override bool DisplayableInline(Headers* hdrs);
 }
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMELEAF_H_

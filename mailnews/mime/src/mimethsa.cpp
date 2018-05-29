@@ -10,7 +10,8 @@
 #include "mimemoz2.h"
 #include "nsString.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 /* See header file for description */
 /* Most of this code is copied from mimethsa. If you find a bug here, check that class, too. */
@@ -80,3 +81,6 @@ HTMLSanitized::ParseLine(const char* line, int32_t length)
 
   return 0;
 }
+
+} // namespace mime
+} // namespace mozilla

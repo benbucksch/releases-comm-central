@@ -8,7 +8,8 @@
 
 #include "mimecont.h"
 
-namespace mozilla::mime {
+namespace mozilla {
+namespace mime {
 
 enum class MultipartParseState{
   Preamble,
@@ -109,5 +110,6 @@ class MultipartClass : ContainerClass {
 
 extern void MimeMultipart_notify_emitter(Part *);
 
-} // namespace
+} // namespace mime
+} // namespace mozilla
 #endif // _MIMEMULT_H_
