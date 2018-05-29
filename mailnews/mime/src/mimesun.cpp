@@ -12,57 +12,29 @@
 #include "nsMimeStringResources.h"
 #include <ctype.h>
 
-#define MIME_SUPERCLASS mimeMultipartClass
-MimeDefClass(MimeSunAttachment, MimeSunAttachmentClass,
-       mimeSunAttachmentClass, &MIME_SUPERCLASS);
+namespace mozilla {
+namespace mime {
 
-static MimeMultipartBoundaryType MimeSunAttachment_check_boundary(Part *,
-                                  const char *,
-                                  int32_t);
-static int MimeSunAttachment_create_child(Part *);
-static int MimeSunAttachment_parse_child_line (Part *, const char *, int32_t,
-                         bool);
-static int MimeSunAttachment_ParseBegin (Part *);
-static int MimeSunAttachment_ParseEOF (Part *, bool);
-
-static int
-MimeSunAttachmentClassInitialize(MimeSunAttachmentClass *clazz)
+int
+SunAttachment::ParseBegin()
 {
-  PartClass    *oclass = (MimeObjectClass *)    clazz;
-  MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
-
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->ParseBegin      = MimeSunAttachment_parse_begin;
-  oclass->ParseEOF        = MimeSunAttachment_parse_eof;
-  mclass->check_boundary   = MimeSunAttachment_check_boundary;
-  mclass->create_child     = MimeSunAttachment_create_child;
-  mclass->parse_child_line = MimeSunAttachment_parse_child_line;
-  return 0;
-}
-
-
-static int
-MimeSunAttachment_ParseBegin (Part *obj)
-{
-  int status = ((PartClass*)&MIME_SUPERCLASS)->ParseBegin(obj);
+  int status = Super::ParseBegin();
   if (status < 0) return status;
 
   /* Sun messages always have separators at the beginning. */
-  return Part_write_separator(obj);
+  return WriteSeparator();
 }
 
-static int
-MimeSunAttachment_ParseEOF (Part *obj, bool abort_p)
+int
+SunAttachment::ParseEOF(bool abort_p)
 {
-  int status = 0;
-
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
+  int status = Super::ParseEOF(abort_p);
   if (status < 0) return status;
 
   /* Sun messages always have separators at the end. */
   if (!abort_p)
   {
-    status = Part_write_separator(obj);
+    status = WriteSeparator();
     if (status < 0) return status;
   }
 
@@ -70,9 +42,8 @@ MimeSunAttachment_ParseEOF (Part *obj, bool abort_p)
 }
 
 
-static MimeMultipartBoundaryType
-MimeSunAttachment_check_boundary(Part *obj, const char *line,
-                 int32_t length)
+MimeMultipartBoundaryType
+SunAttachment::CheckBoundary(const char* line, int32_t length)
 {
   /* ten dashes */
 
@@ -87,10 +58,9 @@ MimeSunAttachment_check_boundary(Part *obj, const char *line,
 }
 
 
-static int
-MimeSunAttachment_create_child(Part *obj)
+int
+SunAttachment::CreateChild()
 {
-  MimeMultipart *mult = (MimeMultipart *) obj;
   int status = 0;
 
   char *sun_data_type = 0;
@@ -98,10 +68,10 @@ MimeSunAttachment_create_child(Part *obj)
   char *mime_ct2 = 0;    /* sometimes we need to copy; this is for freeing. */
   Part *child = 0;
 
-  mult->state = MimeMultipartPartLine;
+  this->state = MimeMultipartPartLine;
 
-  sun_data_type = (mult->hdrs
-           ? MimeHeaders_get (mult->hdrs, HEADER_X_SUN_DATA_TYPE,
+  sun_data_type = (this->hdrs
+           ? this->hdrs->Get(HEADER_X_SUN_DATA_TYPE,
                     true, false)
            : 0);
   if (sun_data_type)
@@ -171,14 +141,14 @@ MimeSunAttachment_create_child(Part *obj)
   /* If we didn't find a type, look at the extension on the file name.
    */
   if (!mime_ct &&
-    obj->options &&
-    obj->options->file_type_fn)
+    this->options &&
+    this->options->file_type_fn)
   {
-    char *name = MimeHeaders_get_name(mult->hdrs, obj->options);
+    char *name = this->hdrs->GetName(this->options);
     if (name)
     {
-      mime_ct2 = obj->options->file_type_fn(name,
-                          obj->options->stream_closure);
+      mime_ct2 = this->options->file_type_fn(name,
+                          this->options->stream_closure);
       mime_ct = mime_ct2;
       PR_Free(name);
       if (!mime_ct2 || !PL_strcasecmp (mime_ct2, UNKNOWN_CONTENT_TYPE))
@@ -212,8 +182,8 @@ MimeSunAttachment_create_child(Part *obj)
         encoding: UNKNOWN,UUENCODE    encoding: x-uuencode
    */
 
-  sun_data_type = (mult->hdrs
-           ? MimeHeaders_get (mult->hdrs, HEADER_X_SUN_ENCODING_INFO,
+  sun_data_type = (this->hdrs
+           ? this->hdrs->Get(HEADER_X_SUN_ENCODING_INFO,
                     false,false)
            : 0);
   sun_enc_info = sun_data_type;
@@ -278,7 +248,7 @@ MimeSunAttachment_create_child(Part *obj)
   /* Now that we know its type and encoding, create a Part to represent
    this part.
    */
-  child = mime_create(mime_ct, mult->hdrs, obj->options);
+  child = mime_create(mime_ct, this->hdrs, this->options);
   if (!child)
   {
     status = MIME_OUT_OF_MEMORY;
@@ -295,7 +265,7 @@ MimeSunAttachment_create_child(Part *obj)
   child->content_type = (mime_ct  ? strdup(mime_ct)  : 0);
   child->encoding     = (mime_cte ? strdup(mime_cte) : 0);
 
-  status = ((MimeContainerClass *) obj->clazz)->add_child(obj, child);
+  status = Super::AddChild(child);
   if (status < 0)
   {
     mime_free(child);
@@ -304,12 +274,12 @@ MimeSunAttachment_create_child(Part *obj)
   }
 
   /* Sun attachments always have separators between parts. */
-  status = Part_write_separator(obj);
+  status = WriteSeparator();
   if (status < 0) goto FAIL;
 
   /* And now that we've added this new object to our list of
    children, start its parser going. */
-  status = child->clazz->ParseBegin(child);
+  status = child->ParseBegin(child);
   if (status < 0) goto FAIL;
 
  FAIL:
@@ -319,24 +289,25 @@ MimeSunAttachment_create_child(Part *obj)
 }
 
 
-static int
-MimeSunAttachment_parse_child_line (Part *obj, const char *line, int32_t length,
-                  bool first_line_p)
+int
+SunAttachment::ParseChildLine(const char* line, int32_t length, bool first_line_p)
 {
-  MimeContainer *cont = (MimeContainer *) obj;
   Part *kid;
 
-  /* This is simpler than MimeMultipart->parse_child_line in that it doesn't
+  /* This is simpler than Multipart::ParseChildLine in that it doesn't
    play games about body parts without trailing newlines.
    */
 
-  PR_ASSERT(cont->nchildren > 0);
-  if (cont->nchildren <= 0)
+  PR_ASSERT(this->nchildren > 0);
+  if (this->nchildren <= 0)
   return -1;
 
-  kid = cont->children[cont->nchildren-1];
+  kid = this->children[this->nchildren-1];
   PR_ASSERT(kid);
   if (!kid) return -1;
 
-  return kid->clazz->ParseBuffer (line, length, kid);
+  return kid->ParseBuffer(line, length, kid);
 }
+
+} // namespace mime
+} // namespace mozilla

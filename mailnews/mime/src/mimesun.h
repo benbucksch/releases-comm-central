@@ -8,52 +8,59 @@
 
 #include "mimemult.h"
 
-/* MimeSunAttachment is the class for X-Sun-Attachment message contents, which
-   is the Content-Type assigned by that pile of garbage called MailTool.  This
-   is not a MIME type per se, but it's very similar to multipart/mixed, so it's
-   easy to parse.  Lots of people use MailTool, so what the hell.
+namespace mozilla {
+namespace mime {
 
-   The format is this:
-
-    = Content-Type is X-Sun-Attachment
-  = parts are separated by lines of exactly ten dashes
-  = just after the dashes comes a block of headers, including:
-
-      X-Sun-Data-Type: (manditory)
-      Values are Text, Postscript, Scribe, SGML, TeX, Troff, DVI,
-      and Message.
-
-      X-Sun-Encoding-Info: (optional)
-        Ordered, comma-separated values, including Compress and Uuencode.
-
-      X-Sun-Data-Name: (optional)
-        File name, maybe.
-
-      X-Sun-Data-Description: (optional)
-      Longer text.
-
-      X-Sun-Content-Lines: (manditory, unless Length is present)
-      Number of lines in the body, not counting headers and the blank
-      line that follows them.
-
-      X-Sun-Content-Length: (manditory, unless Lines is present)
-        Bytes, presumably using Unix line terminators.
+/**
+ * SunAttachment is the class for X-Sun-Attachment message contents, which
+ * is the Content-Type assigned by that pile of garbage called MailTool.  This
+ * is not a MIME type per se, but it's very similar to multipart/mixed, so it's
+ * easy to parse.  Lots of people use MailTool, so what the hell.
+ *
+ * The format is this:
+ *
+ *  = Content-Type is X-Sun-Attachment
+ *  = parts are separated by lines of exactly ten dashes
+ *  = just after the dashes comes a block of headers, including:
+ *
+ *    X-Sun-Data-Type: (manditory)
+ *    Values are Text, Postscript, Scribe, SGML, TeX, Troff, DVI,
+ *    and Message.
+ *
+ *    X-Sun-Encoding-Info: (optional)
+ *      Ordered, comma-separated values, including Compress and Uuencode.
+ *
+ *    X-Sun-Data-Name: (optional)
+ *      File name, maybe.
+ *
+ *    X-Sun-Data-Description: (optional)
+ *    Longer text.
+ *
+ *    X-Sun-Content-Lines: (manditory, unless Length is present)
+ *    Number of lines in the body, not counting headers and the blank
+ *    line that follows them.
+ *
+ *    X-Sun-Content-Length: (manditory, unless Lines is present)
+ *      Bytes, presumably using Unix line terminators.
  */
+class SunAttachment : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeSunAttachmentClass MimeSunAttachmentClass;
-typedef struct MimeSunAttachment      MimeSunAttachment;
+public:
+  SunAttachment() {}
+  virtual ~SunAttachment() {}
 
-struct MimeSunAttachmentClass {
-  MimeMultipartClass multipart;
-};
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseEOF(bool abort_p) override;
 
-extern MimeSunAttachmentClass mimeSunAttachmentClass;
+  // Multipart overrides
+  virtual MimeMultipartBoundaryType CheckBoundery(const char* line, int32_t length) override;
+  virtual int CreateChild() override;
+  virtual int ParseChildLine(const char* line, int32_t length, bool first_line_p) override;
+}
 
-struct MimeSunAttachment {
-  MimeMultipart multipart;
-};
-
-#define MimeSunAttachmentClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMESUN_H_ */
