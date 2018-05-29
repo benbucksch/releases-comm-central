@@ -8,25 +8,20 @@
 
 #include "mimetric.h"
 
-/* The MimeInlineTextEnriched class implements the text/enriched MIME content
-   type, as defined in RFC 1563.  It does this largely by virtue of being a
-   subclass of the MimeInlineTextRichtext class.
+/**
+ * The MimeInlineTextEnriched class implements the text/enriched MIME content
+ * type, as defined in RFC 1563.  It does this largely by virtue of being a
+ * subclass of the MimeInlineTextRichtext class.
  */
+class InlineTextEnriched : public InlineTextRichtext {
+  typedef InlineTextRichtext Super;
 
-typedef struct MimeInlineTextEnrichedClass MimeInlineTextEnrichedClass;
-typedef struct MimeInlineTextEnriched      MimeInlineTextEnriched;
-
-struct MimeInlineTextEnrichedClass {
-  MimeInlineTextRichtextClass text;
+public:
+  InlineTextEnriched();
+  virtual ~InlineTextEnriched() {}
 };
 
-extern MimeInlineTextEnrichedClass mimeInlineTextEnrichedClass;
-
-struct MimeInlineTextEnriched {
-  MimeInlineTextRichtext richtext;
-};
-
-#define MimeInlineTextEnrichedClassInitializer(ITYPE,CSUPER) \
-  { MimeInlineTextRichtextClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMETENR_H_ */

@@ -11,18 +11,13 @@
    same method (but this is a subclass anyway just for general goodness.)
  */
 
-#define MIME_SUPERCLASS mimeInlineTextRichtextClass
-MimeDefClass(MimeInlineTextEnriched, MimeInlineTextEnrichedClass,
-       mimeInlineTextEnrichedClass, &MIME_SUPERCLASS);
+namespace mozilla {
+namespace mime {
 
-static int
-MimeInlineTextEnrichedClassInitialize(MimeInlineTextEnrichedClass *clazz)
+InlineTextEnriched::InlineTextEnriched()
 {
-#ifdef DEBUG
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-#endif
-  MimeInlineTextRichtextClass *rclass = (MimeInlineTextRichtextClass *) clazz;
-  rclass->enriched_p = true;
-  return 0;
+  this->enriched_p = true;
 }
+
+} // namespace mime
+} // namespace mozilla
