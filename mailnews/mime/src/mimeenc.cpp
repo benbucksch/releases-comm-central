@@ -10,36 +10,11 @@
 #include "mozilla/mailnews/MimeEncoder.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-typedef enum mime_encoding {
-  mime_Base64, mime_QuotedPrintable, mime_uuencode, mime_yencode
-} mime_encoding;
+namespace mozilla {
+namespace mime {
 
-typedef enum mime_decoder_state {
-  DS_BEGIN, DS_BODY, DS_END
-} mime_decoder_state;
-
-struct MimeDecoderData {
-  mime_encoding encoding;    /* Which encoding to use */
-
-  /* A read-buffer used for QP and B64. */
-  char token[4];
-  int token_size;
-
-  /* State and read-buffer used for uudecode and yencode. */
-  mime_decoder_state ds_state;
-  char *line_buffer;
-  int line_buffer_size;
-
-  Part *objectToDecode; // might be null, only used for QP currently
-  /* Where to write the decoded data */
-  MimeConverterOutputCallback write_buffer;
-  void *closure;
-};
-
-
-static int
-mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer,
-          int32_t length, int32_t *outSize)
+int
+Decoder::DecodeQPBuffer(const char* buffer, int32_t length, int32_t* outSize)
 {
   /* Warning, we are overwriting the buffer which was passed in.
    This is ok, because decoding these formats will never result
@@ -49,15 +24,15 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer,
   char token [3];
   int i;
 
-  NS_ASSERTION(data->encoding == mime_QuotedPrintable, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (data->encoding != mime_QuotedPrintable) return -1;
+  NS_ASSERTION(this->encoding == Encoding::QuotedPrintable, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+  if (this->encoding != Encoding::QuotedPrintable) return -1;
 
   /* For the first pass, initialize the token from the unread-buffer. */
   i = 0;
-  while (i < 3 && data->token_size > 0)
+  while (i < 3 && this->token_size > 0)
   {
-    token [i] = data->token[i];
-    data->token_size--;
+    token [i] = this->token[i];
+    this->token_size--;
     i++;
   }
 
@@ -69,8 +44,8 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer,
 
   /* Treat null bytes as spaces when format_out is
    nsMimeOutput::nsMimeMessageBodyDisplay (see bug 243199 comment 7) */
-  bool treatNullAsSpace = data->objectToDecode &&
-                            data->objectToDecode->options->format_out == nsMimeOutput::nsMimeMessageBodyDisplay;
+  bool treatNullAsSpace = this->objectToDecode &&
+                            this->objectToDecode->options->format_out == nsMimeOutput::nsMimeMessageBodyDisplay;
 
   while (length > 0 || i != 0)
   {
@@ -87,8 +62,8 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer,
        If it might be a token, unread it.
        Otherwise, just dump it.
        */
-      memcpy (data->token, token, i);
-      data->token_size = i;
+      memcpy (this->token, token, i);
+      this->token_size = i;
       i = 0;
       length = 0;
       break;
@@ -168,14 +143,14 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer,
 
   /* Now that we've altered the data in place, write it. */
   if (out > buffer)
-  return data->write_buffer (buffer, (out - buffer), data->closure);
+    return this->write_buffer(buffer, (out - buffer), this->closure);
   else
   return 1;
 }
 
 
-static int
-mime_decode_base64_token (const char *in, char *out)
+int
+Decoder::DecodeBase64Token(const char* in, char* out)
 {
   /* reads 4, writes 0-3.  Returns bytes written.
    (Writes less than 3 only at EOF.) */
@@ -217,9 +192,8 @@ mime_decode_base64_token (const char *in, char *out)
 }
 
 
-static int
-mime_decode_base64_buffer (MimeDecoderData *data,
-               const char *buffer, int32_t length, int32_t *outSize)
+int
+Decoder::DecodeBase64Buffer(const char* buffer, int32_t length, int32_t* outSize)
 {
   /* Warning, we are overwriting the buffer which was passed in.
    This is ok, because decoding these formats will never result
@@ -228,16 +202,16 @@ mime_decode_base64_buffer (MimeDecoderData *data,
   char *out = (char *) buffer;
   char token [4];
   int i;
-  bool leftover = (data->token_size > 0);
+  bool leftover = (this->token_size > 0);
 
-  NS_ASSERTION(data->encoding == mime_Base64, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+  NS_ASSERTION(this->encoding == Encoding::Base64, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
 
   /* For the first pass, initialize the token from the unread-buffer. */
   i = 0;
-  while (i < 4 && data->token_size > 0)
+  while (i < 4 && this->token_size > 0)
   {
-    token [i] = data->token[i];
-    data->token_size--;
+    token [i] = this->token[i];
+    this->token_size--;
     i++;
   }
 
@@ -257,8 +231,8 @@ mime_decode_base64_buffer (MimeDecoderData *data,
     if (i < 4)
     {
       /* Didn't get enough for a complete token. */
-      memcpy (data->token, token, i);
-      data->token_size = i;
+      memcpy (this->token, token, i);
+      this->token_size = i;
       length = 0;
       break;
     }
@@ -274,7 +248,7 @@ mime_decode_base64_buffer (MimeDecoderData *data,
        case, just write prematurely. */
       int n;
       n = mime_decode_base64_token (token, token);
-      n = data->write_buffer (token, n, data->closure);
+      n = this->write_buffer(token, n, this->closure);
       if (n < 0) /* abort */
       return n;
 
@@ -297,15 +271,14 @@ mime_decode_base64_buffer (MimeDecoderData *data,
     *outSize = out - buffer;
   /* Now that we've altered the data in place, write it. */
   if (out > buffer)
-  return data->write_buffer (buffer, (out - buffer), data->closure);
+    return this->write_buffer(buffer, (out - buffer), this->closure);
   else
   return 1;
 }
 
 
-static int
-mime_decode_uue_buffer (MimeDecoderData *data,
-            const char *input_buffer, int32_t input_length, int32_t *outSize)
+int
+Decoder::DecodeUUEBuffer(const char* input_buffer, int32_t input_length, int32_t* outSize)
 {
   /* First, copy input_buffer into state->line_buffer until we have
    a complete line.
@@ -315,23 +288,23 @@ mime_decode_uue_buffer (MimeDecoderData *data,
 
    Then pull the next line into line_buffer and continue.
    */
-  if (!data->line_buffer)
+  if (!this->line_buffer)
   {
-    data->line_buffer_size = 128;
-    data->line_buffer = (char *)PR_MALLOC(data->line_buffer_size);
-    if (!data->line_buffer)
+    this->line_buffer_size = 128;
+    this->line_buffer = (char *)PR_MALLOC(this->line_buffer_size);
+    if (!this->line_buffer)
       return -1;
-    data->line_buffer[0] = 0;
+    this->line_buffer[0] = 0;
   }
 
   int status = 0;
-  char *line = data->line_buffer;
-  char *line_end = data->line_buffer + data->line_buffer_size - 1;
+  char *line = this->line_buffer;
+  char *line_end = this->line_buffer + this->line_buffer_size - 1;
 
-  NS_ASSERTION(data->encoding == mime_uuencode, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (data->encoding != mime_uuencode) return -1;
+  NS_ASSERTION(this->encoding == Encoding::UUEncode, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+  if (this->encoding != Encoding::UUEncode) return -1;
 
-  if (data->ds_state == DS_END)
+  if (this->ds_state == DS_END)
   {
     status = 0;
     goto DONE;
@@ -404,7 +377,7 @@ mime_decode_uue_buffer (MimeDecoderData *data,
      */
 
 
-    if (data->ds_state == DS_BODY &&
+    if (this->ds_state == DS_BODY &&
       line[0] == 'e' &&
       line[1] == 'n' &&
       line[2] == 'd' &&
@@ -412,14 +385,14 @@ mime_decode_uue_buffer (MimeDecoderData *data,
        line[3] == '\n'))
     {
       /* done! */
-      data->ds_state = DS_END;
+      this->ds_state = DS_END;
       *line = 0;
       break;
     }
-    else if (data->ds_state == DS_BEGIN)
+    else if (this->ds_state == DS_BEGIN)
     {
       if (!strncmp (line, "begin ", 6))
-      data->ds_state = DS_BODY;
+      this->ds_state = DS_BODY;
       *line = 0;
       continue;
     }
@@ -430,7 +403,7 @@ mime_decode_uue_buffer (MimeDecoderData *data,
       int32_t i;
       long lost;
 
-      NS_ASSERTION (data->ds_state == DS_BODY, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+      NS_ASSERTION (this->ds_state == DS_BODY, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
 
       /* We map down `line', reading four bytes and writing three.
        That means that `out' always stays safely behind `in'.
@@ -521,7 +494,7 @@ mime_decode_uue_buffer (MimeDecoderData *data,
        */
       NS_ASSERTION(out >= line && out < in, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
       if (out > line)
-      status = data->write_buffer (line, (out - line), data->closure);
+        status = this->write_buffer(line, (out - line), this->closure);
 
       // The assertion above tells us this is >= 0
       if (outSize)
@@ -542,9 +515,8 @@ mime_decode_uue_buffer (MimeDecoderData *data,
   return status;
 }
 
-static int
-mime_decode_yenc_buffer (MimeDecoderData *data,
-            const char *input_buffer, int32_t input_length, int32_t *outSize)
+int
+Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_t* outSize)
 {
   /* First, copy input_buffer into state->line_buffer until we have
    a complete line.
@@ -554,23 +526,23 @@ mime_decode_yenc_buffer (MimeDecoderData *data,
 
    Then pull the next line into line_buffer and continue.
    */
-  if (!data->line_buffer)
+  if (!this->line_buffer)
   {
-    data->line_buffer_size = 1000; // let make sure we have plenty of space for the header line
-    data->line_buffer = (char *)PR_MALLOC(data->line_buffer_size);
-    if (!data->line_buffer)
+    this->line_buffer_size = 1000; // let make sure we have plenty of space for the header line
+    this->line_buffer = (char *)PR_MALLOC(this->line_buffer_size);
+    if (!this->line_buffer)
       return -1;
-    data->line_buffer[0] = 0;
+    this->line_buffer[0] = 0;
   }
 
   int status = 0;
-  char *line = data->line_buffer;
-  char *line_end = data->line_buffer + data->line_buffer_size - 1;
+  char *line = this->line_buffer;
+  char *line_end = this->line_buffer + this->line_buffer_size - 1;
 
-  NS_ASSERTION(data->encoding == mime_yencode, "wrong decoder!");
-  if (data->encoding != mime_yencode) return -1;
+  NS_ASSERTION(this->encoding == Encoding::YEncode, "wrong decoder!");
+  if (this->encoding != Encoding::YEncode) return -1;
 
-  if (data->ds_state == DS_END)
+  if (this->ds_state == DS_END)
     return 0;
 
   while (input_length > 0)
@@ -637,7 +609,7 @@ mime_decode_yenc_buffer (MimeDecoderData *data,
      */
     const char * endOfLine = line + strlen(line);
 
-    if (data->ds_state == DS_BEGIN)
+    if (this->ds_state == DS_BEGIN)
     {
       int new_line_size = 0;
       /* this yenc decoder does not support yenc v2 or multipart yenc.
@@ -667,30 +639,30 @@ mime_decode_yenc_buffer (MimeDecoderData *data,
             /* we have found the yenc header line.
                Now check if we need to grow our buffer line
             */
-            data->ds_state = DS_BODY;
-            if (new_line_size > data->line_buffer_size && new_line_size <= 997) /* don't let bad value hurt us! */
+            this->ds_state = DS_BODY;
+            if (new_line_size > this->line_buffer_size && new_line_size <= 997) /* don't let bad value hurt us! */
             {
-              PR_Free(data->line_buffer);
-              data->line_buffer_size = new_line_size + 4; //extra chars for line ending and potential escape char
-              data->line_buffer = (char *)PR_MALLOC(data->line_buffer_size);
-              if (!data->line_buffer)
+              PR_Free(this->line_buffer);
+              this->line_buffer_size = new_line_size + 4; //extra chars for line ending and potential escape char
+              this->line_buffer = (char *)PR_MALLOC(this->line_buffer_size);
+              if (!this->line_buffer)
                 return -1;
             }
           }
         }
 
       }
-      *data->line_buffer = 0;
+      *this->line_buffer = 0;
       continue;
     }
 
-    if (data->ds_state == DS_BODY && line[0] == '=')
+    if (this->ds_state == DS_BODY && line[0] == '=')
     {
       /* look if this this the final line */
       if (!strncmp (line, "=yend size=", 11))
       {
         /* done! */
-        data->ds_state = DS_END;
+        this->ds_state = DS_END;
         *line = 0;
         break;
       }
@@ -728,7 +700,7 @@ mime_decode_yenc_buffer (MimeDecoderData *data,
       NS_ASSERTION(dest >= line && dest <= src, "nothing to write!");
       if (dest > line)
       {
-        status = data->write_buffer (line, dest - line, data->closure);
+        status = this->write_buffer(line, dest - line, this->closure);
         if (status < 0) /* abort */
           return status;
       }
@@ -742,100 +714,64 @@ mime_decode_yenc_buffer (MimeDecoderData *data,
 }
 
 int
-MimeDecoderDestroy (MimeDecoderData *data, bool abort_p)
+Decoder::Flush()
 {
   int status = 0;
   /* Flush out the last few buffered characters. */
-  if (!abort_p &&
-    data->token_size > 0 &&
-    data->token[0] != '=')
+  if (this->token_size > 0 && this->token[0] != '=')
   {
-    if (data->encoding == mime_Base64)
-    while ((unsigned int)data->token_size < sizeof (data->token))
-      data->token [data->token_size++] = '=';
+    if (this->encoding == Encoding::Base64)
+      while ((unsigned int)this->token_size < sizeof(this->token))
+        this->token [this->token_size++] = '=';
 
-    status = data->write_buffer (data->token, data->token_size,
-                   data->closure);
+    status = this->write_buffer(this->token, this->token_size, this->closure);
   }
-
-  if (data->line_buffer)
-    PR_Free(data->line_buffer);
-  PR_Free (data);
   return status;
 }
 
+Decoder::~Decoder()
+{
+  if (this->line_buffer)
+    PR_Free(this->line_buffer);
+}
 
-static MimeDecoderData *
-mime_decoder_init (mime_encoding which,
+
+Decoder::Decoder(Encoding which,
            MimeConverterOutputCallback output_fn,
-           void *closure)
+           void *closure,
+           Part *object)
+  : encoding(which)
+  , token_size(0)
+  , ds_state(DS_BEGIN)
+  , line_buffer(nullptr)
+  , line_buffer_size(0)
+  , objectToDecode(object)
+  , write_buffer(output_fn)
+  , closure(closure)
 {
-  MimeDecoderData *data = PR_NEW(MimeDecoderData);
-  if (!data) return 0;
-  memset(data, 0, sizeof(*data));
-  data->encoding = which;
-  data->write_buffer = output_fn;
-  data->closure = closure;
-  data->line_buffer_size = 0;
-  data->line_buffer = nullptr;
-
-  return data;
-}
-
-MimeDecoderData *
-MimeB64DecoderInit (MimeConverterOutputCallback output_fn, void *closure)
-{
-  return mime_decoder_init (mime_Base64, output_fn, closure);
-}
-
-MimeDecoderData *
-MimeQPDecoderInit (MimeConverterOutputCallback output_fn,
-           void *closure, Part *object)
-{
-  MimeDecoderData *retData = mime_decoder_init (mime_QuotedPrintable, output_fn, closure);
-  if (retData)
-    retData->objectToDecode = object;
-  return retData;
-}
-
-MimeDecoderData *
-MimeUUDecoderInit (MimeConverterOutputCallback output_fn,
-           void *closure)
-{
-  return mime_decoder_init (mime_uuencode, output_fn, closure);
-}
-
-MimeDecoderData *
-MimeYDecoderInit (MimeConverterOutputCallback output_fn,
-           void *closure)
-{
-  return mime_decoder_init (mime_yencode, output_fn, closure);
 }
 
 int
-MimeDecoderWrite (MimeDecoderData *data, const char *buffer, int32_t size,
-          int32_t *outSize)
+Decoder::Write(const char* buffer, int32_t size, int32_t* outSize)
 {
   NS_ASSERTION(data, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
-  if (!data) return -1;
-  switch(data->encoding)
+  switch (this->encoding)
   {
-  case mime_Base64:
-    return mime_decode_base64_buffer (data, buffer, size, outSize);
-  case mime_QuotedPrintable:
-    return mime_decode_qp_buffer (data, buffer, size, outSize);
-  case mime_uuencode:
-    return mime_decode_uue_buffer (data, buffer, size, outSize);
-  case mime_yencode:
-    return mime_decode_yenc_buffer (data, buffer, size, outSize);
+  case Encoding::Base64:
+    return DecodeBase64Buffer(data, buffer, size, outSize);
+  case Encoding::QuotedPrintable:
+    return DecodeQPBuffer(data, buffer, size, outSize);
+  case Encoding::UUEncode:
+    return DecodeUUEBuffer(data, buffer, size, outSize);
+  case Encoding::YEncode:
+    return DecodeYEncBuffer(data, buffer, size, outSize);
   default:
     NS_ERROR("Invalid decoding");
     return -1;
   }
 }
 
-
-namespace mozilla {
+} // namespace mime
 namespace mailnews {
 
 MimeEncoder::MimeEncoder(OutputCallback callback, void *closure)

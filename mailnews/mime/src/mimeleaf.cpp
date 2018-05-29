@@ -19,7 +19,7 @@ namespace mime {
 
 int Leaf::ParseBegin()
 {
-  MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
+  Decoder::Encoding which = Decoder::Encoding::None;
 
   /* Initialize a decoder if necessary.
    */
@@ -34,26 +34,24 @@ int Leaf::ParseBegin()
        !PL_strncasecmp(this->content_type, "text/", 5)))
     /* no-op */ ;
   else if (!PL_strcasecmp(this->encoding, ENCODING_BASE64))
-  fn = &MimeB64DecoderInit;
+    which = Decoder::Encoding::Base64;
   else if (!PL_strcasecmp(this->encoding, ENCODING_QUOTED_PRINTABLE))
-  this->decoder_data =
-          MimeQPDecoderInit(((MimeConverterOutputCallback)
-                        &this->ParseDecodedBuffer,  // TODO virtual function pointer
-                        this, this);
+    which = Decoder::Encoding::QuotedPrintable;
   else if (!PL_strcasecmp(this->encoding, ENCODING_UUENCODE) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE2) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE3) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE4))
-  fn = &MimeUUDecoderInit;
+    which = Decoder::Encoding::UUEncode;
   else if (!PL_strcasecmp(this->encoding, ENCODING_YENCODE))
-    fn = &MimeYDecoderInit;
+    which = Decoder::Encoding::YEncode;
 
-  if (fn)
+  if (which)
   {
-    this->decoder_data =
-    fn (/* The MimeConverterOutputCallback cast is to turn the void argument
+    this->decoder_data = new Decoder(which,
+        /* The MimeConverterOutputCallback cast is to turn the void argument
            into |Part|. */ ((MimeConverterOutputCallback)
         &this->ParseDecodedBuffer,  // TODO virtual function pointer
+        this,
         this)
 
     if (!this->decoder_data)
@@ -125,7 +123,7 @@ Leaf::ParseEOF(bool abort_p)
    */
   if (this->decoder_data)
   {
-      int status = this->decoder_data->Destroy();
+      int status = this->decoder_data->Flush();
       this->decoder_data = nullptr;
       if (status < 0) return status;
   }
@@ -141,7 +139,7 @@ Leaf::CloseDecoder()
 {
   if (this->decoder_data)
   {
-      int status = this->decoder_data->Destroy(false);
+      int status = this->decoder_data->Flush();
       this->decoder_data = nullptr;
       return status;
   }
@@ -157,7 +155,7 @@ Leaf::~Leaf()
   /* Should have been freed by ParseEOF(), but just in case... */
   if (this->decoder_data)
   {
-    this->decoder_data->Destroy(true);
+    delete this->decoder_data;
     this->decoder_data = nullptr;
   }
 }

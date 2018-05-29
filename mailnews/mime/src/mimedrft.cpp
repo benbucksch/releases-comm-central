@@ -2075,32 +2075,27 @@ mime_decompose_file_init_fn(void *stream_closure, MimeHeaders *headers)
   // for the message. This way, we have native data
   if (creatingMsgBody)
   {
-    MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
+    Decoder::Encoding which = Decoder::Encoding::None;
 
     //
     // Initialize a decoder if necessary.
     //
     if (newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_BASE64))
-      fn = &MimeB64DecoderInit;
+      which = Decoder::Encoding::Base64;
     else if (newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_QUOTED_PRINTABLE))
-    {
-      mdd->decoder_data = MimeQPDecoderInit (/* The (MimeConverterOutputCallback) cast is to turn the `void' argument into `Part'. */
-                              ((MimeConverterOutputCallback) dummy_file_write),
-                              mdd->tmpFileStream);
-      if (!mdd->decoder_data)
-        return MIME_OUT_OF_MEMORY;
-    }
+      which = Decoder::Encoding::QuotedPrintable;
     else if (newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_UUENCODE) ||
              newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_UUENCODE2) ||
              newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_UUENCODE3) ||
              newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_UUENCODE4))
-      fn = &MimeUUDecoderInit;
+      which = Decoder::Encoding::UUEncode;
     else if (newAttachment->m_encoding.LowerCaseEqualsLiteral(ENCODING_YENCODE))
-      fn = &MimeYDecoderInit;
+      which = Decoder::Encoding::YEncode;
 
-    if (fn)
+    if (which)
     {
-      mdd->decoder_data = fn (/* The (MimeConverterOutputCallback) cast is to
+      mdd->decoder_data = new Decoder(which,
+                              /* The (MimeConverterOutputCallback) cast is to
                                  turn the `void' argument into `Part'. */
                               ((MimeConverterOutputCallback)dummy_file_write),
                               mdd->tmpFileStream);
@@ -2157,7 +2152,8 @@ mime_decompose_file_close_fn(void *stream_closure)
       return 0;
 
   if (mdd->decoder_data) {
-    MimeDecoderDestroy(mdd->decoder_data, false);
+    mdd->decoder_data->Flush();
+    delete mdd->decoder_data;
     mdd->decoder_data = 0;
   }
 

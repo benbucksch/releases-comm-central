@@ -14,43 +14,74 @@
 #include "nsError.h"
 #include "nscore.h" // for nullptr
 
+namespace mozilla {
+namespace mime {
+
 typedef int (*MimeConverterOutputCallback)
   (const char *buf, int32_t size, void *closure);
+
+class Part;
 
 /* This file defines interfaces to generic implementations of Base64,
    Quoted-Printable, and UU decoders; and of Base64 and Quoted-Printable
    encoders.
  */
 
+class Decoder {
+public:
+  enum class Encoding {
+    None,
+    Base64,
+    QuotedPrintable,
+    UUEncode,
+    YEncode
+  };
 
-/* Opaque objects used by the encoder/decoder to store state. */
-typedef struct MimeDecoderData MimeDecoderData;
+  Decoder(Encoding which, MimeConverterOutputCallback output_fn, void* closure, Part* object = nullptr);
+  /**
+   * Push data through the encoder/decoder, causing the above-provided output_fn
+   * to be called with encoded/decoded data.
+   */
+  int Write(const char* buffer, int32_t size, int32_t* outSize);
+  /*
+   * When you're done encoding/decoding, call this to free the data.
+   * If you're aborting, then just delete without calling Flush() first.
+   */
+  int Flush();
+  ~Decoder();
 
-struct Part;
+private:
+  int DecodeQPBuffer(const char* buffer, int32_t length, int32_t* outSize);
+  int DecodeBase64Token(const char* in, char* out);
+  int DecodeBase64Buffer(const char* buffer, int32_t length, int32_t* outSize);
+  int DecodeUUEBuffer(const char* buffer, int32_t length, int32_t* outSize);
+  int DecodeYEncBuffer(const char* buffer, int32_t length, int32_t* outSize);
 
+  enum class State {
+    DS_BEGIN, DS_BODY, DS_END
+  };
 
-/* functions for creating that opaque data.
- */
-MimeDecoderData *MimeB64DecoderInit(MimeConverterOutputCallback output_fn,
-                  void *closure);
+  /**
+   * Which encoding to use.
+   */
+  Encoding encoding;
 
-MimeDecoderData *MimeQPDecoderInit (MimeConverterOutputCallback output_fn,
-                  void *closure, Part *object = nullptr);
+  /* A read-buffer used for QP and B64. */
+  char token[4];
+  int token_size;
 
-MimeDecoderData *MimeUUDecoderInit (MimeConverterOutputCallback output_fn,
-                  void *closure);
-MimeDecoderData *MimeYDecoderInit (MimeConverterOutputCallback output_fn,
-                  void *closure);
+  /* State and read-buffer used for uudecode and yencode. */
+  State ds_state;
+  char* line_buffer;
+  int line_buffer_size;
 
-/* Push data through the encoder/decoder, causing the above-provided write_fn
-   to be called with encoded/decoded data. */
-int MimeDecoderWrite (MimeDecoderData *data, const char *buffer, int32_t size,
-                  int32_t *outSize);
+  Part* objectToDecode; // might be null, only used for QP currently
+  /* Where to write the decoded data */
+  MimeConverterOutputCallback write_buffer;
+  void* closure;
+};
 
-/* When you're done encoding/decoding, call this to free the data.  If
-   abort_p is false, then calling this may cause the write_fn to be called
-   one last time (as the last buffered data is flushed out.)
- */
-int MimeDecoderDestroy(MimeDecoderData *data, bool abort_p);
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MODMIMEE_H_ */

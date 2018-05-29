@@ -97,7 +97,7 @@ MimeMultipartSigned_cleanup (Part *obj, bool finalizing_p)
 
   if (sig->sig_decoder_data)
   {
-    MimeDecoderDestroy(sig->sig_decoder_data, true);
+    delete sig->sig_decoder_data;
     sig->sig_decoder_data = 0;
   }
 }
@@ -355,7 +355,7 @@ MimeMultipartSigned_ParseLine (const char *line, int32_t length, Part *obj)
      (Similar logic is in MimeLeafClass->ParseBegin.)
      */
     {
-    MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
+    Decoder::Encoding which = Decoder::Encoding::None;
     nsCString encoding;
     encoding.Adopt(MimeHeaders_get (sig->sig_hdrs,
                    HEADER_CONTENT_TRANSFER_ENCODING,
@@ -363,28 +363,20 @@ MimeMultipartSigned_ParseLine (const char *line, int32_t length, Part *obj)
     if (encoding.IsEmpty())
       ;
     else if (!PL_strcasecmp(encoding.get(), ENCODING_BASE64))
-      fn = &MimeB64DecoderInit;
+      which = Decoder::Encoding::Base64;
     else if (!PL_strcasecmp(encoding.get(), ENCODING_QUOTED_PRINTABLE))
-    {
-      sig->sig_decoder_data =
-  MimeQPDecoderInit (((MimeConverterOutputCallback)
-     (((MimeMultipartSignedClass *) obj->clazz)
-          ->crypto_signature_hash)),
-    sig->crypto_closure);
-      if (!sig->sig_decoder_data)
-  return MIME_OUT_OF_MEMORY;
-    }
+      which = Decoder::Encoding::QuotedPrintable;
     else if (!PL_strcasecmp(encoding.get(), ENCODING_UUENCODE) ||
              !PL_strcasecmp(encoding.get(), ENCODING_UUENCODE2) ||
              !PL_strcasecmp(encoding.get(), ENCODING_UUENCODE3) ||
              !PL_strcasecmp(encoding.get(), ENCODING_UUENCODE4))
-      fn = &MimeUUDecoderInit;
+      which = Decoder::Encoding::UUEncode;
     else if (!PL_strcasecmp(encoding.get(), ENCODING_YENCODE))
-      fn = &MimeYDecoderInit;
-    if (fn)
+      which = Decoder::Encoding::YEncode;
+    if (which)
       {
-      sig->sig_decoder_data =
-        fn (((MimeConverterOutputCallback)
+      sig->sig_decoder_data = new Decoder(which,
+            ((MimeConverterOutputCallback)
            (((MimeMultipartSignedClass *) obj->clazz)
           ->crypto_signature_hash)),
           sig->crypto_closure);

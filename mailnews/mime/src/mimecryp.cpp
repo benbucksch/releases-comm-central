@@ -20,7 +20,7 @@ static int MimeHandleDecryptedOutputLine (char *, int32_t, Part *);
 int
 Encrypted::ParseBegin()
 {
-  MimeDecoderData *(*fn) (MimeConverterOutputCallback, void*) = 0;
+  Decoder::Encoding which = Decoder::Encoding::None;
 
   if (this->crypto_closure)
   return -1;
@@ -36,24 +36,19 @@ Encrypted::ParseBegin()
   if (!this->encoding)
   ;
   else if (!PL_strcasecmp(this->encoding, ENCODING_BASE64))
-  fn = &MimeB64DecoderInit;
+    which = Decoder::Encoding::Base64;
   else if (!PL_strcasecmp(this->encoding, ENCODING_QUOTED_PRINTABLE))
-  {
-    this->decoder_data = MimeQPDecoderInit(ParseDecodedBuffer, this);
-
-    if (!this->decoder_data)
-    return MIME_OUT_OF_MEMORY;
-  }
+    which = Decoder::Encoding::QuotedPrintable;
   else if (!PL_strcasecmp(this->encoding, ENCODING_UUENCODE) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE2) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE3) ||
        !PL_strcasecmp(this->encoding, ENCODING_UUENCODE4))
-  fn = &MimeUUDecoderInit;
+    which = Decoder::Encoding::UUEncode;
   else if (!PL_strcasecmp(this->encoding, ENCODING_YENCODE))
-    fn = &MimeYDecoderInit;
-  if (fn)
+    which = Decoder::Encoding::YEncode;
+  if (which)
   {
-    this->decoder_data = fn(ParseDecodedBuffer, this);
+    this->decoder_data = new Decoder(which, ParseDecodedBuffer, this, this);
 
     if (!this->decoder_data)
     return MIME_OUT_OF_MEMORY;
@@ -101,7 +96,8 @@ Encrypted::ParseEOF(bool abort_p)
    */
   if (this->decoder_data)
   {
-    int status = MimeDecoderDestroy(this->decoder_data, false);
+    int status = this->decoder_data->Flush();
+    delete this->decoder_data;
     this->decoder_data = 0;
     if (status < 0) return status;
   }
@@ -176,7 +172,7 @@ Encrypted::Cleanup(bool finalizing_p)
    Free the decoder data, if it's still around. */
   if (this->decoder_data)
   {
-    MimeDecoderDestroy(this->decoder_data, true);
+    delete this->decoder_data;
     this->decoder_data = 0;
   }
 
