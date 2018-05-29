@@ -8,26 +8,24 @@
 
 #include "mimemult.h"
 
-/* The MimeMultipartDigest class implements the multipart/digest MIME
-   container, which is just like multipart/mixed, except that the default
-   type (for parts with no type explicitly specified) is message/rfc822
-   instead of text/plain.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MultipartDigest class implements the multipart/digest MIME
+ * container, which is just like multipart/mixed, except that the default
+ * type (for parts with no type explicitly specified) is message/rfc822
+ * instead of text/plain.
  */
+class MultipartDigest : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeMultipartDigestClass MimeMultipartDigestClass;
-typedef struct MimeMultipartDigest      MimeMultipartDigest;
-
-struct MimeMultipartDigestClass {
-  MimeMultipartClass multipart;
+public:
+  MultipartDigest();
+  virtual ~MultipartDigest() {}
 };
 
-extern MimeMultipartDigestClass mimeMultipartDigestClass;
-
-struct MimeMultipartDigest {
-  MimeMultipart multipart;
-};
-
-#define MimeMultipartDigestClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMDIG_H_ */

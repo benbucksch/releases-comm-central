@@ -7,18 +7,13 @@
 #include "prlog.h"
 #include "nsMimeTypes.h"
 
-#define MIME_SUPERCLASS mimeMultipartClass
-MimeDefClass(MimeMultipartDigest, MimeMultipartDigestClass,
-       mimeMultipartDigestClass, &MIME_SUPERCLASS);
+namespace mozilla {
+namespace mime {
 
-static int
-MimeMultipartDigestClassInitialize(MimeMultipartDigestClass *clazz)
+MultipartDigest::MultipartDigest()
 {
-#ifdef DEBUG
-  PartClass    *oclass = (MimeObjectClass *)    clazz;
-  PR_ASSERT(!oclass->class_initialized);
-#endif
-  MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
-  mclass->default_part_type = MESSAGE_RFC822;
-  return 0;
+  this->default_part_type = MESSAGE_RFC822;
 }
+
+} // namespace mime
+} // namespace mozilla
