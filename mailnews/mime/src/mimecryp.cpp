@@ -70,7 +70,7 @@ Encrypted::ParseBuffer(const char* buffer, int32_t size)
    the child of this object. */
 
   if (this->decoder_data)
-  return MimeDecoderWrite(this->decoder_data, buffer, size, nullptr);
+    return this->decoder_data->Write(buffer, size, nullptr);
   else
   return ParseDecodedBuffer(buffer, size, this);
 }

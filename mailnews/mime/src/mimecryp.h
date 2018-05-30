@@ -118,7 +118,7 @@ protected:
   int EmitBufferedChild();
 
   void* crypto_closure;       /* Opaque data used by decryption module. */
-  MimeDecoderData* decoder_data; /* Opaque data for the Transfer-Encoding
+  Decoder* decoder_data; /* Opaque data for the Transfer-Encoding
                   decoder. */
   Headers* hdrs;       /* Headers of the enclosed object (including
                   the type of the *decrypted* data.) */

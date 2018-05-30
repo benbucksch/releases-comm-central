@@ -119,7 +119,7 @@ public:
   nsCOMPtr <nsIFile> tmpFile;
   nsCOMPtr <nsIOutputStream> tmpFileStream;      // output file handle
 
-  MimeDecoderData     *decoder_data;
+  Decoder             *decoder_data;
   char                *mailcharset;        // get it from CHARSET of Content-Type
   bool                forwardInline;
   bool                forwardInlineFilter;

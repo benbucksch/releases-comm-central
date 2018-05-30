@@ -750,7 +750,7 @@ real_write(MimeMultipartRelated* relobj, const char* buf, int32_t size)
     // permanently though.
 
     mime_draft_data *mdd = (mime_draft_data *) obj->options->stream_closure;
-    MimeDecoderData* old_decoder_data = mdd->decoder_data;
+    Decoder* old_decoder_data = mdd->decoder_data;
     mdd->decoder_data = nullptr;
     int status = obj->options->decompose_file_output_fn
                  (buf, size, (void *)mdd);

@@ -2124,7 +2124,7 @@ mime_decompose_file_output_fn(const char *buf,
 
   if (mdd->decoder_data) {
     int32_t outsize;
-    ret = MimeDecoderWrite(mdd->decoder_data, buf, size, &outsize);
+    ret = mdd->decoder_data->Write(buf, size, &outsize);
     if (ret == -1) return -1;
     mdd->curAttachment->m_size += outsize;
   }

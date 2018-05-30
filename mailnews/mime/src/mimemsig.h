@@ -121,7 +121,7 @@ protected:
    * The signature is probably base64 encoded;
    * this is the decoder used to get raw bits out of it.
    */
-  MimeDecoderData* sig_decoder_data;
+  Decoder* sig_decoder_data;
 };
 
 } // namespace mime
