@@ -90,6 +90,38 @@
 
   =========================================================================
 
+  CLASS DEFINITION:
+  First we pull in the appropriate include file (which includes all necessary
+  include files for the parent classes) and then we define the class object
+  using the MimeDefClass macro:
+
+  class PlainText : public Text {
+    typedef Text Super;
+    DECLARE_MIME_CLASS(PlainText);
+  }
+  DEFINE_MIME_CLASS_VARIABLE(PlainText);
+
+  expands to:
+
+  class PlainText : public Text {
+    typedef Text Super;
+    void* Clazz() { return &PlainText::Instantiate; }
+    bool IsInstance(void* clazz) override { return clazz == Clazz() || Super::IsInstance(clazz); }
+    static PlainText* Instantiate(Headers* headers, const char* contentTypeOverride)
+        { return new PlainText(headers, contentTypeOverride); }
+  }
+  const PlainText* (*initialize) (Headers* headers, const char* contentTypeOverride)
+      classPlainText = &PlainText::Instantiate;
+
+  The definition of typedef Super is just to move most of the knowlege of the
+  exact class hierarchy up to the file's header, instead of it being scattered
+  through the various methods. It allows you to call Super::ParseEOF(...);
+
+  PlainText* plain = classPlainText(...);
+  plain->IsInstance(classText) => true
+
+  =========================================================================
+
   Code style follows the Mozilla Style Guide
   <https://developer.mozilla.org/en-US/docs/Mozilla/Developer_guide/Coding_Style>
   Blocks will be indented 2 space.
@@ -104,12 +136,18 @@
 namespace mozilla {
 namespace mime {
 
-#ifdef ENABLE_SMIME
-class nsICMSMessage;
-#endif // ENABLE_SMIME
-
 #define cpp_stringify_noop_helper(x)#x
 #define cpp_stringify(x) cpp_stringify_noop_helper(x)
+
+#define DECLARE_MIME_CLASS(CLASS) \
+    void* Clazz() { return &CLASS::Instantiate; } \
+    bool IsInstance(void* clazz) override { return clazz == Clazz() || Super::IsInstance(clazz); } \
+    static CLASS* Instantiate(Headers* headers, const char* contentTypeOverride) \
+        { return new CLASS(headers, contentTypeOverride); }
+
+#define DEFINE_MIME_CLASS_VARIABLE(CLASS) \
+  const CLASS* (*initialize) (Headers* headers, const char* contentTypeOverride) \
+      class##CLASS = &CLASS::Instantiate;
 
 /**
  * Given a MIME content-type string, finds and returns
