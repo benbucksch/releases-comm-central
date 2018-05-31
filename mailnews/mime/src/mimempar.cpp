@@ -5,17 +5,3 @@
 
 #include "mimempar.h"
 #include "prlog.h"
-
-#define MIME_SUPERCLASS mimeMultipartClass
-MimeDefClass(MimeMultipartParallel, MimeMultipartParallelClass,
-       mimeMultipartParallelClass, &MIME_SUPERCLASS);
-
-static int
-MimeMultipartParallelClassInitialize(MimeMultipartParallelClass *clazz)
-{
-#ifdef DEBUG
-  PartClass *oclass = (MimeObjectClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-#endif
-  return 0;
-}

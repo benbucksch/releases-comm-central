@@ -8,25 +8,23 @@
 
 #include "mimemult.h"
 
-/* The MimeMultipartParallel class implements the multipart/parallel MIME
-   container, which is currently no different from multipart/mixed, since
-   it's not clear that there's anything useful it could do differently.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MultipartParallel class implements the multipart/parallel MIME
+ * container, which is currently no different from multipart/mixed, since
+ * it's not clear that there's anything useful it could do differently.
  */
+class MultipartParallel : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeMultipartParallelClass MimeMultipartParallelClass;
-typedef struct MimeMultipartParallel      MimeMultipartParallel;
-
-struct MimeMultipartParallelClass {
-  MimeMultipartClass multipart;
+public:
+  MultipartParallel() {}
+  virtual ~MultipartParallel() {}
 };
 
-extern MimeMultipartParallelClass mimeMultipartParallelClass;
-
-struct MimeMultipartParallel {
-  MimeMultipart multipart;
-};
-
-#define MimeMultipartParallelClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMPAR_H_ */
