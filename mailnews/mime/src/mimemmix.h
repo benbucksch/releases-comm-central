@@ -8,25 +8,23 @@
 
 #include "mimemult.h"
 
-/* The MimeMultipartMixed class implements the multipart/mixed MIME container,
-   and is also used for any and all otherwise-unrecognised subparts of
-   multipart/.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MultipartMixed class implements the multipart/mixed MIME container,
+ * and is also used for any and all otherwise-unrecognised subparts of
+ * multipart/.
  */
+class MultipartMixed : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeMultipartMixedClass MimeMultipartMixedClass;
-typedef struct MimeMultipartMixed      MimeMultipartMixed;
-
-struct MimeMultipartMixedClass {
-  MimeMultipartClass multipart;
+public:
+  MultipartMixed() {}
+  virtual ~MultipartMixed() {}
 };
 
-extern MimeMultipartMixedClass mimeMultipartMixedClass;
-
-struct MimeMultipartMixed {
-  MimeMultipart multipart;
-};
-
-#define MimeMultipartMixedClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMMIX_H_ */
