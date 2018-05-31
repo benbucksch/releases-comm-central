@@ -8,36 +8,51 @@
 
 #include "mimeobj.h"
 
-/* MimeContainer is the class for the objects representing all MIME
-   types which can contain other MIME objects within them.  In addition
-   to the methods inherited from Part, it provides one method:
+namespace mozilla {
+namespace mime {
 
-   int add_child (Part *parent, MimeObject *child)
-
-     Given a parent (a subclass of MimeContainer) this method adds the
-     child (any MIME object) to the parent's list of children.
-
-     The MimeContainer `finalize' method will finalize the children as well.
+/**
+ * Container is the class for the objects representing all MIME
+ * types which can contain other MIME objects within them.
+ *
+ * The Container destructor will destroy the children as well.
  */
+class Container : public Part {
+  typedef Part Super;
 
-typedef struct MimeContainerClass MimeContainerClass;
-typedef struct MimeContainer      MimeContainer;
+protected:
+  Container()
+    : children(nullptr)
+    , nchildren(0)
+  {}
+  virtual ~Container();
 
-struct MimeContainerClass {
-  PartClass object;
-  int (*add_child) (Part *parent, MimeObject *child);
+public:
+  // Part overrides
+  virtual int ParseEOF(bool abort_p) override;
+  virtual int ParseEnd(bool abort_p) override;
+  virtual bool DisplayableInline(Headers* hdrs);
+#if defined(DEBUG) && defined(XP_UNIX)
+  virtual int DebugPrint(PRFileDesc* stream, int32_t depth) override;
+#endif
+
+  /**
+   * This method adds the child (any Part) to the parent's list of children.
+   */
+  virtual int AddChild(Part* child);
+
+private:
+  /**
+   * An array of contained objects.
+   */
+  Part **children;
+  /**
+   * The number of contained objects.
+   */
+  int32_t nchildren;
 };
 
-extern MimeContainerClass mimeContainerClass;
-
-struct MimeContainer {
-  Part object;    /* superclass variables */
-
-  Part **children;  /* list of contained objects */
-  int32_t nchildren;      /* how many */
-};
-
-#define MimeContainerClassInitializer(ITYPE,CSUPER) \
-  { PartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMECONT_H_ */

@@ -245,7 +245,7 @@ public:
   int WriteSeparator();
 
 #if defined(DEBUG) && defined(XP_UNIX)
-  int DebugPrint(PRFileDesc* stream, int32_t depth);
+  virtual int DebugPrint(PRFileDesc* stream, int32_t depth);
 #endif
 
 #ifdef ENABLE_SMIME
