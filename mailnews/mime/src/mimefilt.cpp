@@ -228,8 +228,7 @@ test(FILE *in, FILE *out,
 
   opt->variable_width_plaintext_p = variable_width_plaintext_p;
 
-  obj = mime_new ((PartClass *)&mimeMessageClass,
-          (MimeHeaders *) NULL,
+  obj = new mozilla::mime::MimeMessage(null,
           MESSAGE_RFC822);
   if (!obj)
   {
@@ -238,9 +237,9 @@ test(FILE *in, FILE *out,
   }
   obj->options = opt;
 
-  status = obj->class->initialize(obj);
+  status = obj->Initialize();
   if (status >= 0)
-  status = obj->class->ParseBegin(obj);
+  status = obj->ParseBegin();
   if (status < 0)
   {
     PR_Free(opt);
@@ -253,21 +252,21 @@ test(FILE *in, FILE *out,
     char buf[255];
     int size = fread(buf, sizeof(*buf), sizeof(buf), stdin);
     if (size <= 0) break;
-    status = obj->class->ParseBuffer(buf, size, obj);
+    status = obj->ParseBuffer(buf, size);
     if (status < 0)
     {
-      mime_free(obj);
+      delete obj;
       PR_Free(opt);
       return status;
     }
   }
 
-  status = obj->class->ParseEOF(obj, false);
+  status = obj->ParseEOF(false);
   if (status >= 0)
-  status = obj->class->ParseEnd(obj, false);
+  status = obj->ParseEnd(false);
   if (status < 0)
   {
-    mime_free(obj);
+    delete obj;
     PR_Free(opt);
     return status;
   }
@@ -276,12 +275,12 @@ test(FILE *in, FILE *out,
   {
     fprintf(out, "\n\n"
       "###############################################################\n");
-    obj->class->debug_print(obj, stderr, 0);
+    obj->DebugPrint(stderr, 0);
     fprintf(out,
       "###############################################################\n");
   }
 
-  mime_free (obj);
+  delete obj;
   PR_Free(opt);
   return 0;
 }
