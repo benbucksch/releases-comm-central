@@ -10,6 +10,9 @@
 
 class nsICMSMessage;
 
+namespace mozilla {
+namespace mime {
+
 /*
  * The MultipartSignedCMS class implements a multipart/signed MIME
  * container with protocol=application/x-CMS-signature, which passes the
@@ -32,8 +35,9 @@ public:
   virtual int CryptoSignatureInit(void* crypto_closure, Part* multipart_object, Headers* signature_hdrs);
   virtual char* CryptoGenerateHTML(void* crypto_closure);
   virtual void CryptoFree(void* crypto_closure);
-}
+};
 
-} // namespace mozilla::mime
+} // namespace mime
+} // namespace mozilla
 
 #endif // _MIMEMPKC_H_
