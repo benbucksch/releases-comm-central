@@ -12,40 +12,77 @@
 #include "nsNetUtil.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-/* The MimeMultipartRelated class implements the multipart/related MIME
-   container, which allows `sibling' sub-parts to refer to each other.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MultipartRelated class implements the multipart/related MIME
+ * container, which allows `sibling' sub-parts to refer to each other.
  */
+class MultipartRelated : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeMultipartRelatedClass MimeMultipartRelatedClass;
-typedef struct MimeMultipartRelated      MimeMultipartRelated;
+public:
+  MultipartRelated();
+  virtual ~MultipartRelated();
 
-struct MimeMultipartRelatedClass {
-  MimeMultipartClass multipart;
-};
+  // Part overrides
+  int ParseEOF(bool abort_p);
 
-extern "C" MimeMultipartRelatedClass mimeMultipartRelatedClass;
+  // Multipart overrides
+  bool OutputChild(Part* child);
+  int ParseChildLine(const char* line, int32_t length, bool first_line_p);
 
-struct MimeMultipartRelated {
-  MimeMultipart multipart;  /* superclass variables */
+private:
+  static int NukeHash(PLHashEntry* table, int indx, void* arg);
+  bool StartParamExists(Part* child);
+  bool ThisIsStartPart(Part* child);
+  int RealWrite(const char* buf, int32_t size);
+  int PushTag(const char* buf, int32_t size);
+  bool AcceptRelatedPart(Part* part_obj);
+  int FlushTag();
+  int ParseTags(const char* buf, int32_t size);
 
-  char* base_url;        /* Base URL (if any) for the whole
-                   multipart/related. */
-
-  char* head_buffer;      /* Buffer used to remember the text/html 'head'
-                   part. */
-  uint32_t head_buffer_fp;    /* Active length. */
-  uint32_t head_buffer_size;    /* How big it is. */
-
-  nsCOMPtr <nsIFile>          file_buffer;    /* The nsIFile of a temp file used when we
-                                               run out of room in the head_buffer. */
-  nsCOMPtr <nsIInputStream>   input_file_stream;    /* A stream to it. */
-  nsCOMPtr <nsIOutputStream>  output_file_stream;  /* A stream to it. */
-
-  MimeHeaders* buffered_hdrs;  /* The headers of the 'head' part. */
-
-  bool head_loaded;    /* Whether we've already passed the 'head'
-                   part. */
-  Part* headobj;    /* The actual text/html head object. */
+  /**
+   *  Base URL (if any) for the whole multipart/related.
+   */
+  char* base_url;
+  /**
+   * Buffer used to remember the text/html 'head' part.
+   */
+  char* head_buffer;
+  /**
+   * Active length.
+   */
+  uint32_t head_buffer_fp;
+  /**
+   * How big it is.
+   */
+  uint32_t head_buffer_size;
+  /**
+   * The nsIFile of a temp file used when we run out of room in the head_buffer.
+   */
+  nsCOMPtr <nsIFile>          file_buffer;
+  /**
+   * A stream to it.
+   */
+  nsCOMPtr <nsIInputStream>   input_file_stream;
+  /**
+   * A stream to it.
+   */
+  nsCOMPtr <nsIOutputStream>  output_file_stream;
+  /**
+   * The headers of the 'head' part.
+   */
+  Headers* buffered_hdrs;
+  /**
+   * Whether we've already passed the 'head' part.
+   */
+  bool head_loaded;
+  /**
+   * The actual text/html head object.
+   */
+  Part* headobj;
 
   PLHashTable    *hash;
 
@@ -55,12 +92,9 @@ struct MimeMultipartRelated {
   char* curtag;
   int32_t curtag_max;
   int32_t curtag_length;
-
-
-
 };
 
-#define MimeMultipartRelatedClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMREL_H_ */
