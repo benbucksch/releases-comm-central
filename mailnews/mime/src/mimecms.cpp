@@ -686,7 +686,7 @@ EncryptedCMS::CryptoFree(void* crypto_closure)
 }
 
 char*
-EncryptedCMS::GenerateHTML(void *crypto_closure)
+EncryptedCMS::CryptoGenerateHTML(void *crypto_closure)
 {
   return nullptr;
 }

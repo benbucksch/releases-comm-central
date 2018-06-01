@@ -16,7 +16,7 @@ namespace mime {
  * This is the base-class for the objects representing all other MIME types.
  * was: MimeObject
  */
-abstract class Part {
+class Part {
 public:
   Part(Headers* hdrs, const char* contentTypeOverride);
 
@@ -218,7 +218,7 @@ protected:
   char* obuffer;
   int32_t ibuffer_size;
   int32_t obuffer_size;
-  int32_t ibuffer_fp
+  int32_t ibuffer_fp;
   int32_t obuffer_fp;
 
 
@@ -262,7 +262,7 @@ public:
    * or signed.
    * Helper for GetMessageCryptoState().
    */
-  void GetCryptoState(bool* signed, bool* encrypted,
+  void GetCryptoState(bool* aSigned, bool* aEncrypted,
                    bool* signedOK, bool* encryptedOK);
 
   /**
@@ -277,7 +277,7 @@ public:
    * How the crypto code tells the MimeMessage object what the crypto stamp
    * on it says.
    */
-  void SetCryptoStamp(bool signed, bool encrypted);
+  void SetCryptoStamp(bool aSigned, bool aEncrypted);
 
   /**
    * Whether this |Part| contains encrypted content.

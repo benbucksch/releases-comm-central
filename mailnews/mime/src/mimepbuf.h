@@ -9,6 +9,9 @@
 #include "mimei.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
+namespace mozilla {
+namespace mime {
+
 /* This file provides the ability to save up the entire contents of a MIME
    object (of arbitrary size), and then emit it all at once later.  The
    buffering is done in an efficient way that works well for both very large
@@ -60,5 +63,8 @@ extern int
 MimePartBufferRead (MimePartBufferData *data,
           MimeConverterOutputCallback read_fn,
           void *closure);
+
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEPBUF_H_ */

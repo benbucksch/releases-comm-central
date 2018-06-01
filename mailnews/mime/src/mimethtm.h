@@ -14,11 +14,15 @@ namespace mime {
 /**
  * The HTML class implements the text/html MIME content type.
  */
-class HTML : public Text{
+class HTML : public Text {
+  typedef Text Super;
+
 public:
-  override int ParseBegin();
-  override int ParseLine(const char* line, int32_t length);
-  override int ParseEOF(bool abort_p);
+  HTML(Headers* hdrs, const char* contentTypeOverride);
+
+  virtual int ParseBegin() override;
+  virtual int ParseLine(const char* line, int32_t length) override;
+  virtual int ParseEOF(bool abort_p) override;
 
 protected:
   /**

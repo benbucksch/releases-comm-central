@@ -78,7 +78,6 @@ HTMLParsed::ParseEOF(bool abort_p)
   return status;
 }
 
-void
 HTMLParsed::~HTMLParsed()
 {
   if (this->complete_buffer) {

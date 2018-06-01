@@ -111,7 +111,13 @@ public:
   int ParseDecodedBuffer(const char* buf, int32_t size); // XXX TODO this is unusable as the callback that it's needed for
 
 protected:
-  Encrypted() {}
+  Encrypted(Headers* hdrs, const char* contentTypeOverride)
+    : Super(hdrs, contentTypeOverride)
+    , crypto_closure(nullptr)
+    , decoder_data(nullptr)
+    , hdrs(nullptr)
+    , part_buffer(nullptr)
+  {}
   virtual ~Encrypted();
   void Cleanup(bool finalizing_p);
   int CloseHeaders();

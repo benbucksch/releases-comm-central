@@ -29,10 +29,20 @@ enum class MultipartBoundaryType {
  * The MimeMultipart class class implements the objects representing all of
  * the "multipart/" MIME types.
  */
-class Multipart : Container {
+class Multipart : public Container {
+  typedef Container Super;
+
 public:
-  override int ParseLine(const char* line, int32_t length);
-  override int ParseEOF(bool abort_p);
+  Multipart(Headers* hdrs, const char* contentTypeOverride)
+    : Super(hdrs, contentTypeOverride)
+    , boundary(nullptr)
+    , hdrs(nullptr)
+    , state(MultipartParseState::Preamble)
+  {}
+
+  // Part overrides
+  virtual int ParseLine(const char* line, int32_t length) override;
+  virtual int ParseEOF(bool abort_p) override;
 
   /**
    * When it has been determined that a new sub-part should be created,
@@ -84,8 +94,6 @@ public:
    * Utility function that calles this.Write() with an nsCString
    */
   int WriteCString(const nsACString &string);
-
-  NotifyEmitter();
 
   /**
    * This is the type which should be assumed for sub-parts which have

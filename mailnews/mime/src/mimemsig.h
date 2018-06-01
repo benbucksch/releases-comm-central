@@ -74,7 +74,7 @@ public:
    * which explains the status of the dexlateion to the user (whether the
    * signature checks out, etc.)
    */
-  char* CryptoGenerateHtml(void* crypto_closure) = 0;
+  virtual char* CryptoGenerateHtml(void* crypto_closure) = 0;
   /**
    * This will be called when we're all done, after CryptoSignatureEOF() and
    * CryptoGenerateHTML().  It is intended to free any data represented by the
@@ -108,11 +108,11 @@ protected:
   /**
    * The headers of the signed object.
    */
-  MimeHeaders* body_hdrs;
+  Headers* body_hdrs;
   /**
    * The headers of the signature.
    */
-  MimeHeaders* sig_hdrs;
+  Headers* sig_hdrs;
   /**
    * The buffered body of the signed object (see mimepbuf.h)
    */

@@ -21,8 +21,9 @@ class Container : public Part {
   typedef Part Super;
 
 protected:
-  Container()
-    : children(nullptr)
+  Container(Headers* hdrs, const char* contentTypeOverride)
+    : Super(hdrs, contentTypeOverride)
+    , children(nullptr)
     , nchildren(0)
   {}
   virtual ~Container();

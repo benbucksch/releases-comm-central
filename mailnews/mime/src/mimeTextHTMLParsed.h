@@ -25,11 +25,19 @@ namespace mime {
  * That would remove the need for this workaround, and stop even more attack classes.
  */
 class HTMLParsed : public HTML {
+  typedef HTML Super;
+
 public:
-  ~HTMLParsed();
-  override int ParseBegin();
-  override int ParseLine(const char* line, int32_t length);
-  override int ParseEOF(bool abort_p);
+  HTMLParsed(Headers* hdrs, const char* overrideContentType)
+    : Super(hdrs, overrideCntentType)
+    , complete_buffer(nullptr)
+  {}
+  virtual ~HTMLParsed();
+
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseLine(const char* line, int32_t length) override;
+  virtual int ParseEOF(bool abort_p) override;
 
 protected:
   /**

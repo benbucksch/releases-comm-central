@@ -20,15 +20,22 @@ namespace mime {
  *
  * This class provides that service in its ParseBuffer() method.
  */
-abstract class Leaf : public Part {
+class Leaf : public Part {
+  typedef Part Super;
+
 public:
+  Leaf(Headers* hdrs, const char* contentTypeOverride)
+    : Super(hdrs, contentTypeOverride)
+    , decoder_data(nullptr)
+    , size_so_far(0)
+  {}
   virtual ~Leaf();
 
-  override int ParseBegin();
-  override int ParseBuffer(const char* buf, int32_t size);
-  override int ParseDecodedBuffer(const char* buf, int32_t size);
-  override int ParseLine(const char* line, int32_t length);
-  override int ParseEOF(bool abort_p);
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseBuffer(const char* buf, int32_t size) override;
+  virtual int ParseLine(const char* line, int32_t length) override;
+  virtual int ParseEOF(bool abort_p) override;
 
   /**
    * This is the callback that is handed to the decoder.

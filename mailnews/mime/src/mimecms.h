@@ -35,8 +35,8 @@ public:
   virtual void* CryptoInit(int (*output_fn)(const char* buf, int32_t bufSize, void* output_closure), void* output_closure) override;
   virtual int CryptoWrite(const char* buf, int32_t bufSize, void* closure) override;
   virtual int CryptoEOF(void* crypto_closure, bool abort_p) override;
-  virtual char* GenerateHTML(void* crypto_closure) override;
-  virtual int CryptoFree(void* crypto_closure) override;
+  virtual char* CryptoGenerateHTML(void* crypto_closure) override;
+  virtual void CryptoFree(void* crypto_closure) override;
 };
 
 } // namespace mime

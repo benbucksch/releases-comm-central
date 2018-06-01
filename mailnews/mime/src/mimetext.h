@@ -42,13 +42,15 @@ namespace mime {
     It's a nice coincidence that HTML's critical characters ("<", ">",
     and "&") have values under 0x40...
  */
-abstract class Text : public Leaf {
+class Text : public Leaf {
+  typedef Leaf Super;
+
 public:
-  Text();
+  Text(Headers* hdrs, const char* contentTypeOverride);
   virtual ~Text();
 
-  override int ParseDecodedBuffer(const char* buf, int32_t size);
-  override int ParseEOF(bool abort_p);
+  virtual int ParseDecodedBuffer(const char* buf, int32_t size) override;
+  virtual int ParseEOF(bool abort_p) override;
 
   int OpenDAM(char* line, int32_t length);
   int ROT13Line(char* line, int32_t length);
