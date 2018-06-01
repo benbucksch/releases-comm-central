@@ -25,12 +25,12 @@ public:
   ~MultipartAlternative();
 
   // Part overrides
-  int ParseEOF(bool abort_p);
+  virtual int ParseEOF(bool abort_p) override;
 
   // Multipart overrides
-  int CreateChild();
-  int ParseChildLine(const char* line, int32_t length, bool first_line_p);
-  int CloseChild();
+  virtual int CreateChild() override;
+  virtual int ParseChildLine(const char* line, int32_t length, bool first_line_p) override;
+  virtual int CloseChild() override;
 
 private:
   enum class Priority {

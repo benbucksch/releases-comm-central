@@ -27,11 +27,11 @@ public:
   virtual ~MultipartRelated();
 
   // Part overrides
-  int ParseEOF(bool abort_p);
+  virtual int ParseEOF(bool abort_p) override;
 
   // Multipart overrides
-  bool OutputChild(Part* child);
-  int ParseChildLine(const char* line, int32_t length, bool first_line_p);
+  virtual bool OutputChild(Part* child) override;
+  virtual int ParseChildLine(const char* line, int32_t length, bool first_line_p) override;
 
 private:
   static int NukeHash(PLHashEntry* table, int indx, void* arg);
