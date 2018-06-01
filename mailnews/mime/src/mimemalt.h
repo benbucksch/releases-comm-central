@@ -9,40 +9,63 @@
 #include "mimemult.h"
 #include "mimepbuf.h"
 
-/* The MimeMultipartAlternative class implements the multipart/alternative
-   MIME container, which displays only one (the `best') of a set of enclosed
-   documents.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The MultipartAlternative class implements the multipart/alternative
+ * MIME container, which displays only one (the `best') of a set of enclosed
+ * documents.
  */
+class MultipartAlternative : public Multipart {
+  typedef Multipart Super;
 
-typedef struct MimeMultipartAlternativeClass MimeMultipartAlternativeClass;
-typedef struct MimeMultipartAlternative      MimeMultipartAlternative;
+public:
+  MultipartAlternative();
+  ~MultipartAlternative();
 
-struct MimeMultipartAlternativeClass {
-  MimeMultipartClass multipart;
-};
+  // Part overrides
+  int ParseEOF(bool abort_p);
 
-extern "C" MimeMultipartAlternativeClass mimeMultipartAlternativeClass;
+  // Multipart overrides
+  int CreateChild();
+  int ParseChildLine(const char* line, int32_t length, bool first_line_p);
+  int CloseChild();
 
-enum priority_t {PRIORITY_UNDISPLAYABLE,
-                 PRIORITY_LOW,
-                 PRIORITY_TEXT_UNKNOWN,
-                 PRIORITY_TEXT_PLAIN,
-                 PRIORITY_NORMAL,
-                 PRIORITY_HIGH,
-                 PRIORITY_HIGHEST};
+private:
+  enum class Priority {
+    Undisplayable,
+    Low,
+    TextUnknown,
+    TextPlain,
+    Normal,
+    High,
+    Highest
+  };
 
-struct MimeMultipartAlternative {
-  MimeMultipart multipart;      /* superclass variables */
+  void Cleanup();
+  int FlushChildren(bool finished, Priority next_priority);
+  Priority DisplayPart(Headers *sub_hdrs);
+  Priority PrioritizePart(char* content_type, bool prefer_plaintext);
+  int DisplayCachedPart(Headers* hdrs, MimePartBufferData* buffer, bool do_display);
 
-  MimeHeaders **buffered_hdrs;    /* The headers of pending parts */
-  MimePartBufferData **part_buffers;  /* The data of pending parts
-                                         (see mimepbuf.h) */
+  /**
+   * The headers of pending parts.
+   */
+  Headers **buffered_hdrs;
+  /**
+   * The data of pending parts (see mimepbuf.h)
+   */
+  MimePartBufferData **part_buffers;
   int32_t pending_parts;
   int32_t max_parts;
-  priority_t buffered_priority; /* Priority of head of pending parts */
+  /**
+   * Priority of head of pending parts.
+   */
+  Priority buffered_priority;
 };
 
-#define MimeMultipartAlternativeClassInitializer(ITYPE,CSUPER) \
-  { MimeMultipartClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMALT_H_ */

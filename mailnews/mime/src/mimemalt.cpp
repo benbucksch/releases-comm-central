@@ -96,92 +96,41 @@
 #include "mimemoz2.h" // for prefs
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-extern "C" PartClass mimeMultipartRelatedClass;
+namespace mozilla {
+namespace mime {
 
-#define MIME_SUPERCLASS mimeMultipartClass
-MimeDefClass(MimeMultipartAlternative, MimeMultipartAlternativeClass,
-       mimeMultipartAlternativeClass, &MIME_SUPERCLASS);
-
-static int MimeMultipartAlternative_initialize (Part *);
-static void MimeMultipartAlternative_finalize (Part *);
-static int MimeMultipartAlternative_ParseEOF (Part *, bool);
-static int MimeMultipartAlternative_create_child(Part *);
-static int MimeMultipartAlternative_parse_child_line (Part *, const char *,
-                            int32_t, bool);
-static int MimeMultipartAlternative_close_child(Part *);
-
-static int MimeMultipartAlternative_flush_children(Part *, bool, priority_t);
-static priority_t MimeMultipartAlternative_display_part_p(Part *self,
-                             MimeHeaders *sub_hdrs);
-static priority_t MimeMultipartAlternative_prioritize_part(char *content_type,
-                             bool prefer_plaintext);
-
-static int MimeMultipartAlternative_display_cached_part(Part *,
-                                                        MimeHeaders *,
-                                                        MimePartBufferData *,
-                                                        bool);
-
-static int
-MimeMultipartAlternativeClassInitialize(MimeMultipartAlternativeClass *clazz)
+MultipartAlternative::MultipartAlternative()
+  : buffered_hdrs(nullptr)
+  , part_buffers(nullptr)
+  , pending_parts(0)
+  , max_parts(0)
+  , buffered_priority(Priority::Undisplayable)
 {
-  PartClass    *oclass = (MimeObjectClass *)    clazz;
-  MimeMultipartClass *mclass = (MimeMultipartClass *) clazz;
-  PR_ASSERT(!oclass->class_initialized);
-  oclass->initialize       = MimeMultipartAlternative_initialize;
-  oclass->finalize         = MimeMultipartAlternative_finalize;
-  oclass->ParseEOF        = MimeMultipartAlternative_parse_eof;
-  mclass->create_child     = MimeMultipartAlternative_create_child;
-  mclass->parse_child_line = MimeMultipartAlternative_parse_child_line;
-  mclass->close_child      = MimeMultipartAlternative_close_child;
-  return 0;
 }
 
-
-static int
-MimeMultipartAlternative_initialize (Part *obj)
+void
+MultipartAlternative::Cleanup()
 {
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
-
-  NS_ASSERTION(!malt->part_buffers, "object initialized multiple times");
-  NS_ASSERTION(!malt->buffered_hdrs, "object initialized multiple times");
-  malt->pending_parts = 0;
-  malt->max_parts = 0;
-  malt->buffered_priority = PRIORITY_UNDISPLAYABLE;
-  malt->buffered_hdrs = nullptr;
-  malt->part_buffers = nullptr;
-
-  return ((PartClass*)&MIME_SUPERCLASS)->initialize(obj);
-}
-
-static void
-MimeMultipartAlternative_cleanup(Part *obj)
-{
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
   int32_t i;
 
-  for (i = 0; i < malt->pending_parts; i++) {
-    MimeHeaders_free(malt->buffered_hdrs[i]);
-    MimePartBufferDestroy(malt->part_buffers[i]);
+  for (i = 0; i < this->pending_parts; i++) {
+    MimeHeaders_free(this->buffered_hdrs[i]);
+    MimePartBufferDestroy(this->part_buffers[i]);
   }
-  PR_FREEIF(malt->buffered_hdrs);
-  PR_FREEIF(malt->part_buffers);
-  malt->pending_parts = 0;
-  malt->max_parts = 0;
+  PR_FREEIF(this->buffered_hdrs);
+  PR_FREEIF(this->part_buffers);
+  this->pending_parts = 0;
+  this->max_parts = 0;
 }
 
-
-static void
-MimeMultipartAlternative_finalize (Part *obj)
+MultipartAlternative::~MultipartAlternative()
 {
-  MimeMultipartAlternative_cleanup(obj);
-  ((PartClass*)&MIME_SUPERCLASS)->finalize(obj);
+  Cleanup();
 }
 
 
-static int
-MimeMultipartAlternative_flush_children(Part *obj,
-                                        bool finished,
-                                        priority_t next_priority)
+int
+MultipartAlternative::FlushChildren(bool finished, MultipartAlternative::Priority next_priority)
 {
   /*
     The cache should always have at the head the part with highest priority.
@@ -208,14 +157,13 @@ MimeMultipartAlternative_flush_children(Part *obj,
     6. Not finished, and the cache contains one non-displayable body:
        create it with output off.
   */
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
   bool have_displayable, do_flush, do_display;
 
   /* Case 1 */
-  if (! malt->pending_parts)
+  if (! this->pending_parts)
     return 0;
 
-  have_displayable = (malt->buffered_priority > next_priority);
+  have_displayable = (this->buffered_priority > next_priority);
 
   if (finished && have_displayable) {
     /* Case 2 */
@@ -245,130 +193,114 @@ MimeMultipartAlternative_flush_children(Part *obj,
 
   if (do_flush) {
     int32_t i;
-    for (i = 0; i < malt->pending_parts; i++) {
-      MimeMultipartAlternative_display_cached_part(obj,
-                                                   malt->buffered_hdrs[i],
-                                                   malt->part_buffers[i],
-                                                   do_display && (i == 0));
-      MimeHeaders_free(malt->buffered_hdrs[i]);
-      MimePartBufferDestroy(malt->part_buffers[i]);
+    for (i = 0; i < this->pending_parts; i++) {
+      DisplayCachedPart(this->buffered_hdrs[i], this->part_buffers[i], do_display && (i == 0));
+      delete this->buffered_hdrs[i];
+      MimePartBufferDestroy(this->part_buffers[i]);
     }
-    malt->pending_parts = 0;
+    this->pending_parts = 0;
   }
   return 0;
 }
 
-static int
-MimeMultipartAlternative_ParseEOF (Part *obj, bool abort_p)
+int
+MultipartAlternative::ParseEOF(bool abort_p)
 {
   int status = 0;
 
-  if (obj->closed_p) return 0;
+  if (this->closed_p) return 0;
 
-  status = ((PartClass*)&MIME_SUPERCLASS)->ParseEOF(obj, abort_p);
+  status = Super::ParseEOF(abort_p);
   if (status < 0) return status;
 
 
-  status = MimeMultipartAlternative_flush_children(obj, true,
-                                                   PRIORITY_UNDISPLAYABLE);
+  status = FlushChildren(true, PRIORITY_UNDISPLAYABLE);
   if (status < 0)
     return status;
 
-  MimeMultipartAlternative_cleanup(obj);
+  Cleanup();
 
   return status;
 }
 
 
-static int
-MimeMultipartAlternative_create_child(Part *obj)
+int
+MultipartAlternative::CreateChild()
 {
-  MimeMultipart *mult = (MimeMultipart *) obj;
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
+  Priority priority = DisplayPart(this->hdrs);
 
-  priority_t priority =
-    MimeMultipartAlternative_display_part_p (obj, mult->hdrs);
+  FlushChildren(false, priority);
 
-  MimeMultipartAlternative_flush_children(obj, false, priority);
-
-  mult->state = MimeMultipartPartFirstLine;
-  int32_t i = malt->pending_parts++;
+  this->state = MimeMultipartPartFirstLine;
+  int32_t i = this->pending_parts++;
 
   if (i==0) {
-    malt->buffered_priority = priority;
+    this->buffered_priority = priority;
   }
 
-  if (malt->pending_parts > malt->max_parts) {
-    malt->max_parts = malt->pending_parts;
+  if (this->pending_parts > this->max_parts) {
+    this->max_parts = this->pending_parts;
     MimeHeaders **newBuf = (MimeHeaders **)
       PR_REALLOC(malt->buffered_hdrs,
                  malt->max_parts * sizeof(*malt->buffered_hdrs));
     NS_ENSURE_TRUE(newBuf, MIME_OUT_OF_MEMORY);
-    malt->buffered_hdrs = newBuf;
+    this->buffered_hdrs = newBuf;
 
     MimePartBufferData **newBuf2 = (MimePartBufferData **)
       PR_REALLOC(malt->part_buffers,
                  malt->max_parts * sizeof(*malt->part_buffers));
     NS_ENSURE_TRUE(newBuf2, MIME_OUT_OF_MEMORY);
-    malt->part_buffers = newBuf2;
+    this->part_buffers = newBuf2;
   }
 
-  malt->buffered_hdrs[i] = MimeHeaders_copy(mult->hdrs);
+  this->buffered_hdrs[i] = new MimeHeaders(*this->hdrs);
   NS_ENSURE_TRUE(malt->buffered_hdrs[i], MIME_OUT_OF_MEMORY);
 
-  malt->part_buffers[i] = MimePartBufferCreate();
-  NS_ENSURE_TRUE(malt->part_buffers[i], MIME_OUT_OF_MEMORY);
+  this->part_buffers[i] = MimePartBufferCreate();
+  NS_ENSURE_TRUE(this->part_buffers[i], MIME_OUT_OF_MEMORY);
 
   return 0;
 }
 
 
-static int
-MimeMultipartAlternative_parse_child_line (Part *obj,
-                       const char *line, int32_t length,
-                       bool first_line_p)
+int
+MultipartAlternative::ParseChildLine(const char *line, int32_t length, bool first_line_p)
 {
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
-
-  NS_ASSERTION(malt->pending_parts, "should be pending parts, but there aren't");
-  if (!malt->pending_parts)
+  NS_ASSERTION(this->pending_parts, "should be pending parts, but there aren't");
+  if (!this->pending_parts)
     return -1;
-  int32_t i = malt->pending_parts - 1;
+  int32_t i = this->pending_parts - 1;
 
   /* Push this line into the buffer for later retrieval. */
-  return MimePartBufferWrite (malt->part_buffers[i], line, length);
+  return MimePartBufferWrite(this->part_buffers[i], line, length);
 }
 
 
-static int
-MimeMultipartAlternative_close_child(Part *obj)
+int
+MultipartAlternative::CloseChild()
 {
-  MimeMultipartAlternative *malt = (MimeMultipartAlternative *) obj;
-  MimeMultipart *mult = (MimeMultipart *) obj;
+  /* PR_ASSERT(this->part_buffer);      Some Mac brokenness trips this->..
+  if (!this->part_buffer) return -1; */
 
-  /* PR_ASSERT(malt->part_buffer);      Some Mac brokenness trips this->..
-  if (!malt->part_buffer) return -1; */
+  if (this->pending_parts)
+    MimePartBufferClose(this->part_buffers[this->pending_parts-1]);
 
-  if (malt->pending_parts)
-    MimePartBufferClose(malt->part_buffers[malt->pending_parts-1]);
+  /* PR_ASSERT(this->hdrs);         I expect the Mac trips this too */
 
-  /* PR_ASSERT(mult->hdrs);         I expect the Mac trips this too */
-
-  if (mult->hdrs) {
-    MimeHeaders_free(mult->hdrs);
-    mult->hdrs = 0;
+  if (this->hdrs) {
+    delete this->hdrs;
+    this->hdrs = nullptr;
   }
 
   return 0;
 }
 
 
-static priority_t
-MimeMultipartAlternative_display_part_p(Part *self,
-                    MimeHeaders *sub_hdrs)
+MultipartAlternative::Priority
+MultipartAlternative::DisplayPart(MimeHeaders *sub_hdrs)
 {
-  priority_t priority = PRIORITY_UNDISPLAYABLE;
-  char *ct = MimeHeaders_get (sub_hdrs, HEADER_CONTENT_TYPE, true, false);
+  Priority priority = PRIORITY_UNDISPLAYABLE;
+  char *ct = sub_hdrs->Get(HEADER_CONTENT_TYPE, true, false);
   if (!ct)
     return priority;
 
@@ -382,20 +314,20 @@ MimeMultipartAlternative_display_part_p(Part *self,
 
   // We must pass 'true' as last parameter so that text/calendar is
   // only displayable when Lightning is installed.
-  PartClass *clazz = mime_find_class(ct, sub_hdrs, self->options, true);
+  PartClass *clazz = mime_find_class(ct, sub_hdrs, this->options, true);
   if (clazz && clazz->displayable_inline_p(clazz, sub_hdrs)) {
     // prefer_plaintext pref
     bool prefer_plaintext = false;
-    nsIPrefBranch *prefBranch = GetPrefBranch(self->options);
+    nsIPrefBranch *prefBranch = GetPrefBranch(this->options);
     if (prefBranch) {
       prefBranch->GetBoolPref("mailnews.display.prefer_plaintext",
                               &prefer_plaintext);
     }
     prefer_plaintext = prefer_plaintext &&
-           (self->options->format_out != nsMimeOutput::nsMimeMessageSaveAs) &&
-           (self->options->format_out != nsMimeOutput::nsMimeMessageRaw);
+           (this->options->format_out != nsMimeOutput::nsMimeMessageSaveAs) &&
+           (this->options->format_out != nsMimeOutput::nsMimeMessageRaw);
 
-    priority = MimeMultipartAlternative_prioritize_part(ct, prefer_plaintext);
+    priority = PrioritizePart(ct, prefer_plaintext);
   }
 
   PR_FREEIF(ct);
@@ -407,9 +339,8 @@ MimeMultipartAlternative_display_part_p(Part *self,
 * But for various reasons (mainly to improve the user experience) we choose
 * to ignore that in some cases, and rather pick one that we prioritize.
 */
-static priority_t
-MimeMultipartAlternative_prioritize_part(char *content_type,
-                                         bool prefer_plaintext)
+MultipartAlternative::Priority
+MultipartAlternative::PrioritizePart(char* content_type, bool prefer_plaintext)
 {
   /*
    * PRIORITY_NORMAL is the priority of text/html, multipart/..., etc. that
@@ -477,19 +408,16 @@ MimeMultipartAlternative_prioritize_part(char *content_type,
   return PRIORITY_NORMAL;
 }
 
-static int
-MimeMultipartAlternative_display_cached_part(Part *obj,
-                                             MimeHeaders *hdrs,
-                                             MimePartBufferData *buffer,
-                                             bool do_display)
+int
+MultipartAlternative::DisplayCachedPart(Headers* hdrs, MimePartBufferData *buffer, bool do_display)
 {
   int status;
   bool old_options_no_output_p;
 
   char *ct = (hdrs
-        ? MimeHeaders_get (hdrs, HEADER_CONTENT_TYPE, true, false)
+        ? hdrs->Get(HEADER_CONTENT_TYPE, true, false)
         : 0);
-  const char *dct = (((MimeMultipartClass *) obj->clazz)->default_part_type);
+  const char *dct = this->default_part_type;
   Part *body;
   /** Don't pass in NULL as the content-type (this means that the
    * auto-uudecode-hack won't ever be done for subparts of a
@@ -498,22 +426,22 @@ MimeMultipartAlternative_display_cached_part(Part *obj,
   const char *uct = (ct && *ct) ? ct : (dct ? dct: TEXT_PLAIN);
 
   // We always want to display the cached part inline.
-  body = mime_create(uct, hdrs, obj->options, true);
+  body = mime_create(uct, hdrs, this->options, true);
   PR_FREEIF(ct);
   if (!body) return MIME_OUT_OF_MEMORY;
   body->output_p = do_display;
 
-  status = ((MimeContainerClass *) obj->clazz)->add_child(obj, body);
+  status = AddChild(body);
   if (status < 0)
   {
-    mime_free(body);
+    delete body;
     return status;
   }
   /* add_child assigns body->options from obj->options, but that's
      just a pointer so if we muck with it in the child it'll modify
      the parent as well, which we definitely don't want. Therefore we
      need to make a copy of the old value and restore it later. */
-  old_options_no_output_p = obj->options->no_output_p;
+  old_options_no_output_p = this->options->no_output_p;
   if (! do_display)
     body->options->no_output_p = true;
 
@@ -524,15 +452,15 @@ MimeMultipartAlternative_display_cached_part(Part *obj,
      in order to set the correct content-type. But don't call MimePartBufferRead
   */
   bool multipartRelatedChild = mime_typep(obj->parent,(PartClass*)&mimeMultipartRelatedClass);
-  bool decomposeFile = do_display && obj->options &&
-                  obj->options->decompose_file_p &&
-                  obj->options->decompose_file_init_fn &&
+  bool decomposeFile = do_display && this->options &&
+                  this->options->decompose_file_p &&
+                  this->options->decompose_file_init_fn &&
                   !mime_typep(body, (PartClass *) &mimeMultipartClass);
 
   if (decomposeFile)
   {
-    status = obj->options->decompose_file_init_fn (
-                        obj->options->stream_closure, hdrs);
+    status = this->options->decompose_file_init_fn(
+                        this->options->stream_closure, hdrs);
     if (status < 0) return status;
   }
 #endif /* MIME_DRAFTS */
@@ -541,35 +469,35 @@ MimeMultipartAlternative_display_cached_part(Part *obj,
    notify emitters and start its parser going. */
   MimeMultipart_notify_emitter(body);
 
-  status = body->clazz->ParseBegin(body);
+  status = body->ParseBegin(body);
   if (status < 0) return status;
 
 #ifdef MIME_DRAFTS
   if (decomposeFile && !multipartRelatedChild)
     status = MimePartBufferRead (buffer,
-                  obj->options->decompose_file_output_fn,
-                  obj->options->stream_closure);
+                  this->options->decompose_file_output_fn,
+                  this->options->stream_closure);
   else
 #endif /* MIME_DRAFTS */
 
   status = MimePartBufferRead (buffer,
                   /* The MimeConverterOutputCallback cast is to turn the
                    `void' argument into `Part'. */
-                  ((MimeConverterOutputCallback) body->clazz->ParseBuffer),
+                  ((MimeConverterOutputCallback) body->ParseBuffer),
                   body);
 
   if (status < 0) return status;
 
   /* Done parsing. */
-  status = body->clazz->ParseEOF(body, false);
+  status = body->ParseEOF(body, false);
   if (status < 0) return status;
-  status = body->clazz->ParseEnd(body, false);
+  status = body->ParseEnd(body, false);
   if (status < 0) return status;
 
 #ifdef MIME_DRAFTS
   if (decomposeFile)
   {
-    status = obj->options->decompose_file_close_fn ( obj->options->stream_closure );
+    status = this->options->decompose_file_close_fn(this->options->stream_closure);
     if (status < 0) return status;
   }
 #endif /* MIME_DRAFTS */
@@ -579,3 +507,6 @@ MimeMultipartAlternative_display_cached_part(Part *obj,
 
   return 0;
 }
+
+} // namespace mime
+} // namespace mozilla
