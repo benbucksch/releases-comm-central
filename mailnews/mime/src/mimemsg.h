@@ -8,20 +8,36 @@
 
 #include "mimecont.h"
 
-/* The MimeMessage class implements the message/rfc822 and message/news
-   MIME containers, which is to say, mail and news messages.
+namespace mozilla {
+namespace mime {
+
+/**
+ * The Message class implements the message/rfc822 and message/news
+ * MIME containers, which is to say, mail and news messages.
  */
+class Message : public Container {
+  typedef Container Super;
 
-typedef struct MimeMessageClass MimeMessageClass;
-typedef struct MimeMessage      MimeMessage;
+protected:
+  Message();
+  virtual ~Message();
 
-struct MimeMessageClass {
-  MimeContainerClass container;
-};
+public:
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseLine(const char* aLine, int32_t aLength) override;
+  virtual int ParseEOF(bool abort_p) override;
+#if defined(DEBUG) && defined(XP_UNIX)
+  virtual int DebugPrint(PRFileDesc* stream, int32_t depth);
+#endif
 
-extern MimeMessageClass mimeMessageClass;
+  // Container overrides
+  virtual int AddChild(Part* child) override;
 
-class Message {
+private:
+  int CloseHeaders();
+  char* DetermindMailCharset();
+  int WriteHeadersHTML();
 
   /**
    * Whether this |Part| has written out the HTML version of its headers
@@ -45,7 +61,7 @@ class Message {
                         finished. */
 };
 
-#define MimeMessageClassInitializer(ITYPE,CSUPER) \
-  { MimeContainerClassInitializer(ITYPE,CSUPER) }
+} // namespace mime
+} // namespace mozilla
 
 #endif /* _MIMEMSG_H_ */
