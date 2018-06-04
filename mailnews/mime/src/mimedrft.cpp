@@ -2228,13 +2228,13 @@ mime_bridge_create_draft_stream(
   newPluginObj2->GetOriginalMsgURI(&mdd->originalMsgURI);
   newPluginObj2->GetOrigMsgHdr(getter_AddRefs(mdd->origMsgHdr));
   mdd->format_out = format_out;
-  mdd->options = new MimeDisplayOptions ;
+  mdd->options = new DisplayOptions();
   if (!mdd->options)
     goto FAIL;
 
   mdd->options->url = strdup(mdd->url_name);
   mdd->options->format_out = format_out;     // output format
-  mdd->options->decompose_file_p = true; /* new field in MimeDisplayOptions */
+  mdd->options->decompose_file_p = true; /* new field in DisplayOptions */
   mdd->options->stream_closure = mdd;
   mdd->options->html_closure = mdd;
   mdd->options->decompose_headers_info_fn = make_mime_headers_copy;

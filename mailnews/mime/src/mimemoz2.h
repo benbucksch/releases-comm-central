@@ -92,7 +92,7 @@ public:
   void                *pluginObj2;  /* The new XP-COM stream converter object */
   nsMIMESession       *istream;     /* Holdover - new stream we're writing out image data-if any. */
   Part          *obj;         /* The root parser object */
-  MimeDisplayOptions  *options;     /* Data for communicating with libmime.a */
+  DisplayOptions*     options;     /* Data for communicating with libmime.a */
   MimeHeaders         *headers;     /* Copy of outer most mime header */
 
   nsIMimeEmitter      *output_emitter;  /* Output emitter engine for libmime */
@@ -110,7 +110,7 @@ public:
   nsMimeOutputType    format_out;          // intended output format; should be FO_OPEN_DRAFT */
   nsMIMESession       *stream;             // not used for now
   Part          *obj;                // The root
-  MimeDisplayOptions  *options;            // data for communicating with libmime
+  DisplayOptions*     options;            // data for communicating with libmime
   MimeHeaders         *headers;            // Copy of outer most mime header
   nsTArray<nsMsgAttachedFile*> attachments;// attachments
   nsMsgAttachedFile   *messageBody;        // message body
@@ -144,31 +144,31 @@ void         *mime_bridge_create_display_stream(nsIMimeEmitter      *newEmitter,
                                                 nsIChannel          *aChannel);
 
 // To get the mime emitter...
-extern "C" nsIMimeEmitter   *GetMimeEmitter(MimeDisplayOptions *opt);
+extern "C" nsIMimeEmitter* GetMimeEmitter(DisplayOptions* opt);
 
 // To support 2 types of emitters...we need these routines :-(
 extern "C" nsresult     mimeSetNewURL(nsMIMESession *stream, char *url);
-extern "C" nsresult     mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const char *value);
-extern "C" nsresult     mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char *value);
-extern "C" nsresult     mimeEmitterAddAllHeaders(MimeDisplayOptions *opt, const char *allheaders, const int32_t allheadersize);
-extern "C" nsresult     mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char *contentType, const char *url,
+extern "C" nsresult     mimeEmitterAddAttachmentField(DisplayOptions* opt, const char* field, const char* value);
+extern "C" nsresult     mimeEmitterAddHeaderField(DisplayOptions* opt, const char* field, const char* value);
+extern "C" nsresult     mimeEmitterAddAllHeaders(DisplayOptions* opt, const char* allheaders, const int32_t allheadersize);
+extern "C" nsresult     mimeEmitterStartAttachment(DisplayOptions* opt, const char* name, const char* contentType, const char* url,
                                                    bool aIsExternalAttachment);
-extern "C" nsresult     mimeEmitterEndAttachment(MimeDisplayOptions *opt);
-extern "C" nsresult     mimeEmitterEndAllAttachments(MimeDisplayOptions *opt);
-extern "C" nsresult     mimeEmitterStartBody(MimeDisplayOptions *opt, bool bodyOnly, const char *msgID, const char *outCharset);
-extern "C" nsresult     mimeEmitterEndBody(MimeDisplayOptions *opt);
-extern "C" nsresult     mimeEmitterEndHeader(MimeDisplayOptions *opt, Part *obj);
-extern "C" nsresult     mimeEmitterStartHeader(MimeDisplayOptions *opt, bool rootMailHeader, bool headerOnly, const char *msgID,
+extern "C" nsresult     mimeEmitterEndAttachment(DisplayOptions* opt);
+extern "C" nsresult     mimeEmitterEndAllAttachments(DisplayOptions* opt);
+extern "C" nsresult     mimeEmitterStartBody(DisplayOptions* opt, bool bodyOnly, const char* msgID, const char* outCharset);
+extern "C" nsresult     mimeEmitterEndBody(DisplayOptions* opt);
+extern "C" nsresult     mimeEmitterEndHeader(DisplayOptions* opt, Part* obj);
+extern "C" nsresult     mimeEmitterStartHeader(DisplayOptions* opt, bool rootMailHeader, bool headerOnly, const char* msgID,
                                                const char *outCharset);
-extern "C" nsresult     mimeEmitterUpdateCharacterSet(MimeDisplayOptions *opt, const char *aCharset);
+extern "C" nsresult     mimeEmitterUpdateCharacterSet(DisplayOptions* opt, const char* aCharset);
 
 extern "C" nsresult     MimeGetAttachmentList(Part *tobj, const char *aMessageURL, nsMsgAttachmentData **data);
 
 /* To Get the connection to prefs service manager */
-extern "C" nsIPrefBranch      *GetPrefBranch(MimeDisplayOptions *opt);
+extern "C" nsIPrefBranch* GetPrefBranch(DisplayOptions* opt);
 
 // Get the text converter...
-mozITXTToHTMLConv           *GetTextConverter(MimeDisplayOptions *opt);
+mozITXTToHTMLConv* GetTextConverter(DisplayOptions* opt);
 
 nsresult
 HTML2Plaintext(const nsString& inString, nsString& outString,

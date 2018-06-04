@@ -263,7 +263,7 @@ ValidateRealName(nsMsgAttachmentData *aAttach, MimeHeaders *aHdrs)
 static  int32_t     attIndex = 0;
 
 nsresult
-GenerateAttachmentData(Part *object, const char *aMessageURL, MimeDisplayOptions *options,
+GenerateAttachmentData(Part* object, const char* aMessageURL, DisplayOptions* options,
                        bool isAnAppleDoublePart, int32_t attSize, nsMsgAttachmentData *aAttachData)
 {
   nsCString imappart;
@@ -644,7 +644,7 @@ MimeFreeAttachmentList(nsMsgAttachmentData *data)
 }
 
 extern "C" void
-NotifyEmittersOfAttachmentList(MimeDisplayOptions     *opt,
+NotifyEmittersOfAttachmentList(DisplayOptions* opt,
                                nsMsgAttachmentData    *data)
 {
   int32_t     i = 0;
@@ -1260,7 +1260,7 @@ bool PartIsMessageBody(MimeObject *looking_for)
 
 // Get the connection to prefs service manager
 nsIPrefBranch *
-GetPrefBranch(MimeDisplayOptions *opt)
+GetPrefBranch(DisplayOptions* opt)
 {
   if (!opt)
     return nullptr;
@@ -1270,7 +1270,7 @@ GetPrefBranch(MimeDisplayOptions *opt)
 
 // Get the text converter...
 mozITXTToHTMLConv *
-GetTextConverter(MimeDisplayOptions *opt)
+GetTextConverter(DisplayOptions* opt)
 {
   if (!opt)
     return nullptr;
@@ -1278,7 +1278,7 @@ GetTextConverter(MimeDisplayOptions *opt)
   return opt->conv;
 }
 
-MimeDisplayOptions::MimeDisplayOptions()
+DisplayOptions::DisplayOptions()
 {
   conv = nullptr;        // For text conversion...
   format_out = 0;   // The format out type
@@ -1358,7 +1358,7 @@ MimeDisplayOptions::MimeDisplayOptions()
   metadata_only = false;
 }
 
-MimeDisplayOptions::~MimeDisplayOptions()
+DisplayOptions::~DisplayOptions()
 {
   PR_FREEIF(part_to_load);
   PR_FREEIF(default_charset);
@@ -1417,7 +1417,7 @@ mime_bridge_create_display_stream(
   msd->format_out = format_out;       // output format
   msd->pluginObj2 = newPluginObj2;    // the plugin object pointer
 
-  msd->options = new MimeDisplayOptions;
+  msd->options = new DisplayOptions();
   if (!msd->options)
   {
     delete msd;
@@ -1604,7 +1604,7 @@ mime_bridge_create_display_stream(
 // Emitter Wrapper Routines!
 //
 nsIMimeEmitter *
-GetMimeEmitter(MimeDisplayOptions *opt)
+GetMimeEmitter(DisplayOptions* opt)
 {
   mime_stream_data  *msd = (mime_stream_data *)opt->stream_closure;
   if (!msd)
@@ -1615,7 +1615,7 @@ GetMimeEmitter(MimeDisplayOptions *opt)
 }
 
 mime_stream_data *
-GetMSD(MimeDisplayOptions *opt)
+GetMSD(DisplayOptions* opt)
 {
   if (!opt)
     return nullptr;
@@ -1634,7 +1634,7 @@ NoEmitterProcessing(nsMimeOutputType    format_out)
 }
 
 extern "C" nsresult
-mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const char *value)
+mimeEmitterAddAttachmentField(DisplayOptions* opt, const char* field, const char* value)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1654,7 +1654,7 @@ mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const 
 }
 
 extern "C" nsresult
-mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char *value)
+mimeEmitterAddHeaderField(DisplayOptions* opt, const char* field, const char* value)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1674,7 +1674,7 @@ mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char
 }
 
 extern "C" nsresult
-mimeEmitterAddAllHeaders(MimeDisplayOptions *opt, const char *allheaders, const int32_t allheadersize)
+mimeEmitterAddAllHeaders(DisplayOptions* opt, const char* allheaders, const int32_t allheadersize)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1695,7 +1695,7 @@ mimeEmitterAddAllHeaders(MimeDisplayOptions *opt, const char *allheaders, const 
 }
 
 extern "C" nsresult
-mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char *contentType, const char *url,
+mimeEmitterStartAttachment(DisplayOptions* opt, const char* name, const char* contentType, const char* url,
                            bool aIsExternalAttachment)
 {
   // Check for draft processing...
@@ -1717,7 +1717,7 @@ mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char
 }
 
 extern "C" nsresult
-mimeEmitterEndAttachment(MimeDisplayOptions *opt)
+mimeEmitterEndAttachment(DisplayOptions* opt)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1740,7 +1740,7 @@ mimeEmitterEndAttachment(MimeDisplayOptions *opt)
 }
 
 extern "C" nsresult
-mimeEmitterEndAllAttachments(MimeDisplayOptions *opt)
+mimeEmitterEndAllAttachments(DisplayOptions* opt)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1763,7 +1763,7 @@ mimeEmitterEndAllAttachments(MimeDisplayOptions *opt)
 }
 
 extern "C" nsresult
-mimeEmitterStartBody(MimeDisplayOptions *opt, bool bodyOnly, const char *msgID, const char *outCharset)
+mimeEmitterStartBody(DisplayOptions* opt, bool bodyOnly, const char* msgID, const char* outCharset)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1783,7 +1783,7 @@ mimeEmitterStartBody(MimeDisplayOptions *opt, bool bodyOnly, const char *msgID, 
 }
 
 extern "C" nsresult
-mimeEmitterEndBody(MimeDisplayOptions *opt)
+mimeEmitterEndBody(DisplayOptions* opt)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1803,7 +1803,7 @@ mimeEmitterEndBody(MimeDisplayOptions *opt)
 }
 
 extern "C" nsresult
-mimeEmitterEndHeader(MimeDisplayOptions *opt, Part *obj)
+mimeEmitterEndHeader(DisplayOptions* opt, Part* obj)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1842,7 +1842,7 @@ mimeEmitterEndHeader(MimeDisplayOptions *opt, Part *obj)
 }
 
 extern "C" nsresult
-mimeEmitterUpdateCharacterSet(MimeDisplayOptions *opt, const char *aCharset)
+mimeEmitterUpdateCharacterSet(DisplayOptions* opt, const char* aCharset)
 {
   // Check for draft processing...
   if (NoEmitterProcessing(opt->format_out))
@@ -1862,7 +1862,7 @@ mimeEmitterUpdateCharacterSet(MimeDisplayOptions *opt, const char *aCharset)
 }
 
 extern "C" nsresult
-mimeEmitterStartHeader(MimeDisplayOptions *opt, bool rootMailHeader, bool headerOnly, const char *msgID,
+mimeEmitterStartHeader(DisplayOptions* opt, bool rootMailHeader, bool headerOnly, const char* msgID,
                        const char *outCharset)
 {
   // Check for draft processing...

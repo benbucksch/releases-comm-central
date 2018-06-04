@@ -66,7 +66,7 @@ enum class HeadersState {
 };
 
 
-/* The signature for various callbacks in the MimeDisplayOptions structure.
+/* The signature for various callbacks in the DisplayOptions structure.
  */
 typedef char *(*MimeHTMLGeneratorFunction) (const char *data, void *closure,
                       Headers *headers);
@@ -74,7 +74,7 @@ typedef char *(*MimeHTMLGeneratorFunction) (const char *data, void *closure,
 class DisplayOptions
 {
 public:
-  MimeDisplayOptions();
+  DisplayOptions();
   virtual ~DisplayOptions();
   mozITXTToHTMLConv   *conv;        // For text conversion...
   nsCOMPtr<nsIPrefBranch> m_prefBranch; /* prefBranch-service */
@@ -83,7 +83,7 @@ public:
   const char *url;      /* Base URL for the document.  This string should
                  be freed by the caller, after the parser
                  completes (possibly at the same time as the
-                 MimeDisplayOptions itself.) */
+                 DisplayOptions itself.) */
 
   HeadersState headers;  /* How headers should be displayed. */
   bool fancy_headers_p;  /* Whether to do clever formatting of headers

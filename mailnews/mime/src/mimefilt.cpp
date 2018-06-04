@@ -195,7 +195,7 @@ test(FILE *in, FILE *out,
 {
   int status = 0;
   Part *obj = 0;
-  MimeDisplayOptions *opt = new MimeDisplayOptions;
+  DisplayOptions* opt = new DisplayOptions();
 //  memset(opt, 0, sizeof(*opt));
 
   if (dexlate_p) html_p = false;

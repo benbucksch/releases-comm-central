@@ -70,5 +70,5 @@ XPCOM_Part_write(void *mimeObject,
 extern "C" void *
 XPCOM_Mime_create(char *content_type, void* hdrs, void* opts)
 {
-  return mime_create(content_type, (MimeHeaders *)hdrs, (MimeDisplayOptions *)opts);
+  return mime_create(content_type, (MimeHeaders *)hdrs, (DisplayOptions*)opts);
 }
