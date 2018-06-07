@@ -21,12 +21,14 @@ namespace mime {
  */
 class ExternalBody : public Part {
 public:
-  override int ParseBegin();
-  override int ParseBuffer(const char* buf, int32_t size);
-  override int ParseDecodedBuffer(const char* buf, int32_t size);
-  override int ParseLine(const char* line, int32_t length);
-  override int ParseEOF(bool abort_p);
-  override int ParseEnd(bool abort_p);
+  virtual ~ExternalBody();
+
+  // Part overrides
+  virtual int ParseBegin() override;
+  virtual int ParseBuffer(const char* buf, int32_t size) override;
+  virtual int ParseLine(const char* line, int32_t length) override;
+  virtual int ParseEOF(bool abort_p) override;
+  virtual int ParseEnd(bool abort_p) override;
 
 public:
   /**

@@ -19,7 +19,6 @@ Container::~Container()
    */
   if (!this->closed_p)
     this->ParseEOF(false);
-  object->clazz->ParseEOF (object, false);
   if (!this->parsed_p)
     this->ParseEnd(false);
 
@@ -33,7 +32,7 @@ Container::~Container()
       this->children[i] = nullptr;
     }
     PR_FREEIF(this->children);
-    this->nchildren = nullptr;
+    this->nchildren = 0;
   }
 }
 

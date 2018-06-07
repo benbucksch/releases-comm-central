@@ -32,10 +32,20 @@ namespace mime {
 
 #define SUPERCLASS Leaf
 
-Text::Text()
+Text::Text(Headers* hdrs, const char* contentTypeOverride)
+  : Super(hdrs, contentTypeOverride)
+  , charset(nullptr)
+  , charsetOverridable(false)
+  , needUpdateMsgWinCharset(false)
+  , cbuffer(nullptr)
+  , cbuffer_size(0)
+  , inputAutodetect(false)
+  , initializedCharset(false)
+  , lastLaneInDam(0)
+  , curDamOffset(0)
+  , lineDamBuffer(nullptr)
+  , lineDamPtrs(nullptr)
 {
-  this->initializedCharset = false;
-  this->needUpdateMsgWinCharset = false;
 }
 
 int

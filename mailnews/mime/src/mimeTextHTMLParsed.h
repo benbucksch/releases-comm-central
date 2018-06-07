@@ -29,7 +29,7 @@ class HTMLParsed : public HTML {
 
 public:
   HTMLParsed(Headers* hdrs, const char* overrideContentType)
-    : Super(hdrs, overrideCntentType)
+    : Super(hdrs, overrideContentType)
     , complete_buffer(nullptr)
   {}
   virtual ~HTMLParsed();

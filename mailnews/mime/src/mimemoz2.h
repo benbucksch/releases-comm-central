@@ -23,9 +23,8 @@
 
 #include "mimei.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+namespace mozilla {
+namespace mime {
 
 #include "nsIPrefBranch.h"
 
@@ -187,9 +186,8 @@ extern "C" nsresult SetMailCharacterSetToMsgWindow(Part *obj, const char *aChara
 extern "C"  nsresult GetMailNewsFont(Part *obj, bool styleFixed, int32_t *fontPixelSize, int32_t *fontSizePercentage, nsCString& fontLang);
 
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+} // namespace mime
+} // namespace mozilla
 
-#endif /* _MIMEMOZ_H_ */
+#endif // _MIMEMOZ_H_
 

@@ -348,7 +348,7 @@ int MIMEGetRelativeCryptoNestLevel(Part *obj)
           ++aTopMessageNestLevel;
         }
       }
-      if (!aAlreadyFoundTop && !strcmp(mime_part_address(walker), walker->options->part_to_load)) {
+      if (!aAlreadyFoundTop && !strcmp(walker->PartAddress(), walker->options->part_to_load)) {
         aAlreadyFoundTop = true;
         aTopShownObject = walker;
       }
@@ -403,7 +403,7 @@ EncryptedCMS::CryptoInit(int (*output_fn)(const char* buf, int32_t buf_size, voi
 
   data->self = this;
   data->output_fn = output_fn;
-  date->output_closure = this;
+  data->output_closure = this;
   PR_SetError(0, 0);
   data->decoder_context = do_CreateInstance(NS_CMSDECODER_CONTRACTID, &rv);
   if (NS_FAILED(rv))
@@ -488,7 +488,7 @@ EncryptedCMS::CryptoInit(int (*output_fn)(const char* buf, int32_t buf_size, voi
 }
 
 int
-EncryptedCMS::CryptoWrite(const char* buf, int32_t buf_size, void* closure);
+EncryptedCMS::CryptoWrite(const char* buf, int32_t buf_size, void* closure)
 {
   CMSdata* data = (CMSdata*)closure;
   nsresult rv;

@@ -19,13 +19,11 @@
 namespace mozilla {
 namespace mime {
 
-#define SUPERCLASS HTML
-
 int
 HTMLParsed::ParseBegin()
 {
   this->complete_buffer = new nsString();
-  int status = SUPERCLASS::ParseBegin();
+  int status = Super::ParseBegin();
   if (status < 0)
     return status;
 
@@ -37,7 +35,7 @@ HTMLParsed::ParseEOF(bool abort_p)
 {
   if (this->closed_p)
     return 0;
-  int status = SUPERCLASS::ParseEOF(abort_p);
+  int status = Super::ParseEOF(abort_p);
   if (status < 0)
     return status;
 
@@ -72,7 +70,7 @@ HTMLParsed::ParseEOF(bool abort_p)
 
   // Write it out.
   NS_ConvertUTF16toUTF8 resultCStr(parsed);
-  status = SUPERCLASS::ParseLine(
+  status = Super::ParseLine(
     resultCStr.BeginWriting(), resultCStr.Length());
   rawHTML.Truncate();
   return status;

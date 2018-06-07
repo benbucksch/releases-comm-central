@@ -27,7 +27,7 @@ public:
   Leaf(Headers* hdrs, const char* contentTypeOverride)
     : Super(hdrs, contentTypeOverride)
     , decoder_data(nullptr)
-    , size_so_far(0)
+    , sizeSoFar(0)
   {}
   virtual ~Leaf();
 
@@ -58,7 +58,7 @@ protected:
   /**
    * If we're doing Base64, Quoted-Printable, or UU decoding,
    * this is the state object for the decoder. */
-  DecoderData* decoder_data;
+  Decoder* decoder_data;
 
   /**
    * We want to count the size of the |Part| to offer consumers the

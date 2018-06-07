@@ -42,7 +42,7 @@ public:
    */
   virtual int AddChild(Part* child);
 
-private:
+protected:
   /**
    * An array of contained objects.
    */
