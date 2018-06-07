@@ -213,7 +213,7 @@ bridge_new_new_uri(void *bridgeStream, nsIURI *aURI, int32_t aOutputType)
 }
 
 static int
-mime_headers_callback ( void *closure, MimeHeaders *headers )
+mime_headers_callback(void* closure, Headers* headers)
 {
   // We get away with this because this doesn't get called on draft operations.
   mime_stream_data *msd = (mime_stream_data *)closure;
@@ -1006,7 +1006,7 @@ nsStreamConverter::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresul
     if (mMimeStreamConverterListener)
     {
 
-      MimeHeaders    **workHeaders = nullptr;
+      Headers** workHeaders = nullptr;
 
       if  ( (mOutputType == nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
             (mOutputType == nsMimeOutput::nsMimeMessageEditorTemplate) )

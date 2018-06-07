@@ -774,7 +774,7 @@ MimeMessage::WriteHeadersHTML()
 
 static char *
 MimeMessage_partial_message_html(const char *data, void *closure,
-                                 MimeHeaders *headers)
+                                 Headers* headers)
 {
   Message *msg = (Message *)closure;
   nsAutoCString orig_url(data);

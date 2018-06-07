@@ -287,7 +287,7 @@ ExternalBody::ParseEOF(bool abort_p)
       PL_strncpyz(h, STR ": ", hlen); \
         PL_strcatn(h, hlen, VAR); \
           PL_strcatn(h, hlen, MSG_LINEBREAK); \
-            status = MimeHeaders_ParseLine(h, strlen(h), hdrs); \
+            status = hdrs->ParseLine(h, strlen(h)); \
               if (status < 0) goto FAIL; \
     }
     FROB("Access-Type",  at);

@@ -217,7 +217,7 @@ CountTotalMimeAttachments(MimeContainer *aObj)
 }
 
 void
-ValidateRealName(nsMsgAttachmentData *aAttach, MimeHeaders *aHdrs)
+ValidateRealName(nsMsgAttachmentData *aAttach, Headers* aHdrs)
 {
   // Sanity.
   if (!aAttach)

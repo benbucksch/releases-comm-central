@@ -121,7 +121,7 @@ Container::AddChild(Part *child)
 }
 
 bool
-Container::DisplayableInline(MimeHeaders *hdrs)
+Container::DisplayableInline(Headers* hdrs)
 {
   return true;
 }

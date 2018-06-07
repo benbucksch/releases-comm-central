@@ -93,7 +93,7 @@ public:
   nsMIMESession       *istream;     /* Holdover - new stream we're writing out image data-if any. */
   Part          *obj;         /* The root parser object */
   DisplayOptions*     options;     /* Data for communicating with libmime.a */
-  MimeHeaders         *headers;     /* Copy of outer most mime header */
+  Headers*            headers;     /* Copy of outer most mime header */
 
   nsIMimeEmitter      *output_emitter;  /* Output emitter engine for libmime */
   bool                firstCheck;   /* Is this the first look at the stream data */
@@ -111,7 +111,7 @@ public:
   nsMIMESession       *stream;             // not used for now
   Part          *obj;                // The root
   DisplayOptions*     options;            // data for communicating with libmime
-  MimeHeaders         *headers;            // Copy of outer most mime header
+  Headers*            headers;            // Copy of outer most mime header
   nsTArray<nsMsgAttachedFile*> attachments;// attachments
   nsMsgAttachedFile   *messageBody;        // message body
   nsMsgAttachedFile   *curAttachment;       // temp

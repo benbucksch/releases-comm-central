@@ -297,7 +297,7 @@ MultipartAlternative::CloseChild()
 
 
 MultipartAlternative::Priority
-MultipartAlternative::DisplayPart(MimeHeaders *sub_hdrs)
+MultipartAlternative::DisplayPart(Headers* sub_hdrs)
 {
   Priority priority = PRIORITY_UNDISPLAYABLE;
   char *ct = sub_hdrs->Get(HEADER_CONTENT_TYPE, true, false);
