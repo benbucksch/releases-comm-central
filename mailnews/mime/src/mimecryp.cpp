@@ -14,8 +14,8 @@
 #include "mimemult.h"
 #include "modmimee.h" // for MimeConverterOutputCallback
 
-static int MimeHandleDecryptedOutput (const char *, int32_t, void *);
-static int MimeHandleDecryptedOutputLine (char *, int32_t, Part *);
+namespace mozilla {
+namespace mime {
 
 int
 Encrypted::ParseBegin()
@@ -25,7 +25,7 @@ Encrypted::ParseBegin()
   if (this->crypto_closure)
   return -1;
 
-  this->crypto_closure = CryptoInit(MimeHandleDecryptedOutput, this);
+  this->crypto_closure = CryptoInit(HandleDecryptedOutputClosure, this);
   if (!this->crypto_closure)
   return -1;
 
@@ -46,7 +46,7 @@ Encrypted::ParseBegin()
     which = Decoder::Encoding::UUEncode;
   else if (!PL_strcasecmp(this->encoding, ENCODING_YENCODE))
     which = Decoder::Encoding::YEncode;
-  if (which)
+  if (which != Decoder::Encoding::None)
   {
     this->decoder_data = new Decoder(which, ParseDecodedBuffer, this, this);
 
@@ -110,8 +110,8 @@ Encrypted::ParseEOF(bool abort_p)
   if (!abort_p &&
     this->ibuffer_fp > 0)
   {
-    int status = MimeHandleDecryptedOutputLine(this->ibuffer,
-                          this->ibuffer_fp, this);
+    int status = HandleDecryptedOutputLine(this->ibuffer,
+                          this->ibuffer_fp);
     this->ibuffer_fp = 0;
     if (status < 0)
     {
@@ -190,9 +190,15 @@ Encrypted::~Encrypted()
 }
 
 
-static int
-MimeHandleDecryptedOutput (const char *buf, int32_t buf_size,
+int
+Encrypted::HandleDecryptedOutputClosure(const char* buf, int32_t buf_size,
                void *output_closure)
+{
+  return ((Encrypted*)output_closure)->HandleDecryptedOutput(buf, buf_size);
+}
+
+int
+Encrypted::HandleDecryptedOutput(const char* buf, int32_t buf_size)
 {
   /* This method is invoked by the underlying decryption module.
    The module is assumed to return a MIME object, and its associated
@@ -207,55 +213,55 @@ MimeHandleDecryptedOutput (const char *buf, int32_t buf_size,
    blank line, as usual) and will then handle the included data as
    appropriate.
    */
-  Part* obj = (Part*)output_closure;
 
   /* Is it truly safe to use ibuffer here?  I think so... */
   return mime_LineBuffer (buf, buf_size,
-             &obj->ibuffer, &obj->ibuffer_size, &obj->ibuffer_fp,
-             true,
-             ((int (*) (char *, int32_t, void *))
-              /* This cast is to turn void into Part */
-              MimeHandleDecryptedOutputLine),
-             obj);
+             &this->ibuffer, &this->ibuffer_size, &this->ibuffer_fp,
+             true, HandleDecryptedOutputLineClosure, this);
 }
 
-static int
-MimeHandleDecryptedOutputLine (char *line, int32_t length, Part *obj)
+int
+Encrypted::HandleDecryptedOutputLineClosure(char* line, int32_t length, void* obj)
+{
+  return ((Encrypted*)obj)->HandleDecryptedOutputLine(line, length);
+}
+
+int
+Encrypted::HandleDecryptedOutputLine(char* line, int32_t length)
 {
   /* Largely the same as Message::ParseLine (the other MIME container
    type which contains exactly one child.)
    */
-  Encrypted* enc = (Encrypted*)obj;
   int status = 0;
 
   if (!line || !*line) return -1;
 
   /* If we're supposed to write this object, but aren't supposed to convert
    it to HTML, simply pass it through unaltered. */
-  if (obj->output_p &&
-    obj->options &&
-    !obj->options->write_html_p &&
-    obj->options->output_fn)
-  return Part_write(obj, line, length, true);
+  if (this->output_p &&
+    this->options &&
+    !this->options->write_html_p &&
+    this->options->output_fn)
+  return this->Write(line, length, true);
 
   /* If we already have a child object in the buffer, then we're done parsing
    headers, and all subsequent lines get passed to the inferior object
    without further processing by us.  (Our parent will stop feeding us
    lines when this Message part is out of data.)
    */
-  if (enc->part_buffer)
-  return MimePartBufferWrite (enc->part_buffer, line, length);
+  if (this->part_buffer)
+  return MimePartBufferWrite (this->part_buffer, line, length);
 
   /* Otherwise we don't yet have a child object in the buffer, which means
    we're not done parsing our headers yet.
    */
-  if (!enc->hdrs)
+  if (!this->hdrs)
   {
-    enc->hdrs = new Headers();
-    if (!enc->hdrs) return MIME_OUT_OF_MEMORY;
+    this->hdrs = new Headers();
+    if (!this->hdrs) return MIME_OUT_OF_MEMORY;
   }
 
-  status = enc->hdrs->ParseLine(line, length);
+  status = this->hdrs->ParseLine(line, length);
   if (status < 0) return status;
 
   /* If this line is blank, we're now done parsing headers, and should
@@ -263,7 +269,7 @@ MimeHandleDecryptedOutputLine (char *line, int32_t length, Part *obj)
    */
   if (*line == '\r' || *line == '\n')
   {
-    status = enc->CloseHeaders();
+    status = this->CloseHeaders();
     if (status < 0) return status;
   }
 
@@ -340,7 +346,7 @@ Encrypted::EmitBufferedChild()
     if (this->options &&
       this->options->state &&
       this->options->generate_post_header_html_fn &&
-      !this->options->state->post_header_html_run_p)
+      !this->options->state->postHeaderHTMLRun)
     {
       Headers* outer_headers = nullptr;
       Part* p;
@@ -350,10 +356,10 @@ Encrypted::EmitBufferedChild()
       html = this->options->generate_post_header_html_fn(NULL,
                           this->options->html_closure,
                               outer_headers);
-      this->options->state->post_header_html_run_p = true;
+      this->options->state->postHeaderHTMLRun = true;
       if (html)
       {
-        status = Part_write(this, html, strlen(html), false);
+        status = this->Write(html, strlen(html), false);
         PR_FREEIF(html);
         if (status < 0) return status;
       }
@@ -393,13 +399,13 @@ Encrypted::EmitBufferedChild()
   status = AddChild(body);
   if (status < 0)
   {
-    mime_free(body);
+    delete body;
     return status;
   }
 
   /* Now that we've added this new object to our list of children,
    start its parser going. */
-  status = body->clazz->ParseBegin(body);
+  status = body->ParseBegin();
   if (status < 0) return status;
 
   /* If this object (or the parent) is being output, then by definition
@@ -415,7 +421,7 @@ Encrypted::EmitBufferedChild()
    write its headers as well. */
   if (body->output_p && this->output_p && !this->options->write_html_p)
   {
-    status = Part_write(body, "", 0, false);  /* initialize */
+    status = body->Write("", 0, false);  /* initialize */
     if (status < 0) return status;
     status = body->headers->WriteRawHeaders(this->options, false);
     if (status < 0) return status;
@@ -450,10 +456,10 @@ Encrypted::EmitBufferedChild()
 
   /* The child has been fully processed.  Close it off.
    */
-  status = body->clazz->ParseEOF(body, false);
+  status = body->ParseEOF(false);
   if (status < 0) return status;
 
-  status = body->clazz->ParseEnd(body, false);
+  status = body->ParseEnd(false);
   if (status < 0) return status;
 
 #ifdef MIME_DRAFTS
@@ -462,10 +468,13 @@ Encrypted::EmitBufferedChild()
 #endif /* MIME_DRAFTS */
 
   /* Put out a separator after every encrypted object. */
-  status = Part_write_separator(this);
+  status = WriteSeparator();
   if (status < 0) return status;
 
   Cleanup(false);
 
   return 0;
 }
+
+} // namespace mime
+} // namsepace mozilla

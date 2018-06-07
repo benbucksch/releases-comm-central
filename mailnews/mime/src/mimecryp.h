@@ -109,6 +109,11 @@ public:
    * a subclass will need to specialize this.
    */
   int ParseDecodedBuffer(const char* buf, int32_t size); // XXX TODO this is unusable as the callback that it's needed for
+  static int ParseDecodedBuffer(const char* buffer, int32_t size, void* obj);
+  static int HandleDecryptedOutputClosure(const char*, int32_t, void*);
+  int HandleDecryptedOutput(const char*, int32_t);
+  static int HandleDecryptedOutputLineClosure(char*, int32_t, void*);
+  int HandleDecryptedOutputLine(char*, int32_t);
 
 protected:
   Encrypted(Headers* hdrs, const char* contentTypeOverride)
