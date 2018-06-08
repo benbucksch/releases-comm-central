@@ -247,7 +247,7 @@ Decoder::DecodeBase64Buffer(const char* buffer, int32_t length, int32_t* outSize
        a problem for the first chunk in each buffer, so in that
        case, just write prematurely. */
       int n;
-      n = mime_decode_base64_token (token, token);
+      n = DecodeBase64Token(token, token);
       n = this->write_buffer(token, n, this->closure);
       if (n < 0) /* abort */
       return n;
@@ -261,7 +261,7 @@ Decoder::DecodeBase64Buffer(const char* buffer, int32_t length, int32_t* outSize
     }
     else
     {
-      int n = mime_decode_base64_token (token, out);
+      int n = DecodeBase64Token(token, out);
       /* Advance "out" by the number of bytes just written to it. */
       out += n;
     }
@@ -304,7 +304,7 @@ Decoder::DecodeUUEBuffer(const char* input_buffer, int32_t input_length, int32_t
   NS_ASSERTION(this->encoding == Encoding::UUEncode, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   if (this->encoding != Encoding::UUEncode) return -1;
 
-  if (this->ds_state == DS_END)
+  if (this->ds_state == State::DS_END)
   {
     status = 0;
     goto DONE;
@@ -377,7 +377,7 @@ Decoder::DecodeUUEBuffer(const char* input_buffer, int32_t input_length, int32_t
      */
 
 
-    if (this->ds_state == DS_BODY &&
+    if (this->ds_state == State::DS_BODY &&
       line[0] == 'e' &&
       line[1] == 'n' &&
       line[2] == 'd' &&
@@ -385,25 +385,25 @@ Decoder::DecodeUUEBuffer(const char* input_buffer, int32_t input_length, int32_t
        line[3] == '\n'))
     {
       /* done! */
-      this->ds_state = DS_END;
+      this->ds_state = State::DS_END;
       *line = 0;
       break;
     }
-    else if (this->ds_state == DS_BEGIN)
+    else if (this->ds_state == State::DS_BEGIN)
     {
       if (!strncmp (line, "begin ", 6))
-      this->ds_state = DS_BODY;
+      this->ds_state = State::DS_BODY;
       *line = 0;
       continue;
     }
     else
     {
-      /* We're in DS_BODY.  Decode the line. */
+      /* We're in State::State::DS_BODY.  Decode the line. */
       char *in, *out;
       int32_t i;
       long lost;
 
-      NS_ASSERTION (this->ds_state == DS_BODY, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
+      NS_ASSERTION (this->ds_state == State::DS_BODY, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
 
       /* We map down `line', reading four bytes and writing three.
        That means that `out' always stays safely behind `in'.
@@ -516,7 +516,7 @@ Decoder::DecodeUUEBuffer(const char* input_buffer, int32_t input_length, int32_t
 }
 
 int
-Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_t* outSize)
+Decoder::DecodeYEncBuffer(const char* input_buffer, int32_t input_length, int32_t* outSize)
 {
   /* First, copy input_buffer into state->line_buffer until we have
    a complete line.
@@ -542,7 +542,7 @@ Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_
   NS_ASSERTION(this->encoding == Encoding::YEncode, "wrong decoder!");
   if (this->encoding != Encoding::YEncode) return -1;
 
-  if (this->ds_state == DS_END)
+  if (this->ds_state == State::DS_END)
     return 0;
 
   while (input_length > 0)
@@ -609,7 +609,7 @@ Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_
      */
     const char * endOfLine = line + strlen(line);
 
-    if (this->ds_state == DS_BEGIN)
+    if (this->ds_state == State::DS_BEGIN)
     {
       int new_line_size = 0;
       /* this yenc decoder does not support yenc v2 or multipart yenc.
@@ -639,7 +639,7 @@ Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_
             /* we have found the yenc header line.
                Now check if we need to grow our buffer line
             */
-            this->ds_state = DS_BODY;
+            this->ds_state = State::DS_BODY;
             if (new_line_size > this->line_buffer_size && new_line_size <= 997) /* don't let bad value hurt us! */
             {
               PR_Free(this->line_buffer);
@@ -656,19 +656,19 @@ Decoder::DecodeYencBuffer(const char* input_buffer, int32_t input_length, int32_
       continue;
     }
 
-    if (this->ds_state == DS_BODY && line[0] == '=')
+    if (this->ds_state == State::DS_BODY && line[0] == '=')
     {
       /* look if this this the final line */
       if (!strncmp (line, "=yend size=", 11))
       {
         /* done! */
-        this->ds_state = DS_END;
+        this->ds_state = State::DS_END;
         *line = 0;
         break;
       }
     }
 
-    /* We're in DS_BODY.  Decode the line in place. */
+    /* We're in State::DS_BODY.  Decode the line in place. */
     {
       char *src = line;
       char *dest = src;
@@ -742,7 +742,7 @@ Decoder::Decoder(Encoding which,
            Part *object)
   : encoding(which)
   , token_size(0)
-  , ds_state(DS_BEGIN)
+  , ds_state(State::DS_BEGIN)
   , line_buffer(nullptr)
   , line_buffer_size(0)
   , objectToDecode(object)
@@ -754,17 +754,16 @@ Decoder::Decoder(Encoding which,
 int
 Decoder::Write(const char* buffer, int32_t size, int32_t* outSize)
 {
-  NS_ASSERTION(data, "1.1 <rhp@netscape.com> 19 Mar 1999 12:00");
   switch (this->encoding)
   {
   case Encoding::Base64:
-    return DecodeBase64Buffer(data, buffer, size, outSize);
+    return DecodeBase64Buffer(buffer, size, outSize);
   case Encoding::QuotedPrintable:
-    return DecodeQPBuffer(data, buffer, size, outSize);
+    return DecodeQPBuffer(buffer, size, outSize);
   case Encoding::UUEncode:
-    return DecodeUUEBuffer(data, buffer, size, outSize);
+    return DecodeUUEBuffer(buffer, size, outSize);
   case Encoding::YEncode:
-    return DecodeYEncBuffer(data, buffer, size, outSize);
+    return DecodeYEncBuffer(buffer, size, outSize);
   default:
     NS_ERROR("Invalid decoding");
     return -1;
